@@ -11,14 +11,14 @@ namespace JRunner.Panels
     public partial class XeBuildPanel : UserControl
     {
         List<CB> cbList;
-        List<string> patches = new List<string>(new string[8]);
+        List<string> patches = new List<string>(new string[9]);
         // -a nofcrt
         // -a noSShdd
         // -a nointmu
         // -a nohdd
         // -a nohdmiwait
         // -a nolan
-        // -r WB/WB4G/13182
+        // -r WB/WB4G/13182/ELPIS
 
         public XeBuildPanel()
         {
@@ -872,11 +872,11 @@ namespace JRunner.Panels
             // Don't do it twice
             if (!chkWB4G.Checked && chkWB.Checked)
             {
-                updateWB();
+                updateWBAndElpis();
             }
             else if (!chkWB.Checked && !chkWB4G.Checked)
             {
-                updateWB();
+                updateWBAndElpis();
             }
         }
 
@@ -890,6 +890,8 @@ namespace JRunner.Panels
             {
                 Console.WriteLine("Elpis CB_B deselected");
             }
+
+            updateWBAndElpis();
         }
 
         private void chkWB4G_CheckedChanged(object sender, EventArgs e)
@@ -908,18 +910,19 @@ namespace JRunner.Panels
             // Don't do it twice
             if (!chkWB.Checked && chkWB4G.Checked)
             {
-                updateWB();
+                updateWBAndElpis();
             }
             else if (!chkWB.Checked && !chkWB4G.Checked)
             {
-                updateWB();
+                updateWBAndElpis();
             }
         }
 
-        private void updateWB()
+        private void updateWBAndElpis()
         {
             if (chkWB.Checked) patches[7] = "-r WB";
             else if (chkWB4G.Checked) patches[7] = "-r WB4G";
+            else if (chkElpis.Checked) patches[7] = "-r ELPIS";
             else patches[7] = "";
 
             updateCommand();
