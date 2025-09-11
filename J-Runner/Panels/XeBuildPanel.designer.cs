@@ -32,6 +32,7 @@
             this.groupBox7 = new System.Windows.Forms.GroupBox();
             this.MainTabs = new System.Windows.Forms.TabControl();
             this.tabXeBuild = new System.Windows.Forms.TabPage();
+            this.chkElpis = new System.Windows.Forms.CheckBox();
             this.Rgh3Label2 = new System.Windows.Forms.Label();
             this.Rgh3Label = new System.Windows.Forms.Label();
             this.Rgh3Mhz = new System.Windows.Forms.ComboBox();
@@ -143,6 +144,7 @@
             // tabXeBuild
             // 
             this.tabXeBuild.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(240)))), ((int)(((byte)(240)))), ((int)(((byte)(240)))));
+            this.tabXeBuild.Controls.Add(this.chkElpis);
             this.tabXeBuild.Controls.Add(this.Rgh3Label2);
             this.tabXeBuild.Controls.Add(this.Rgh3Label);
             this.tabXeBuild.Controls.Add(this.Rgh3Mhz);
@@ -174,6 +176,19 @@
             this.tabXeBuild.Size = new System.Drawing.Size(323, 110);
             this.tabXeBuild.TabIndex = 0;
             this.tabXeBuild.Text = "Home";
+            // 
+            // chkElpis
+            // 
+            this.chkElpis.AutoSize = true;
+            this.chkElpis.ForeColor = System.Drawing.SystemColors.ControlText;
+            this.chkElpis.Location = new System.Drawing.Point(229, 70);
+            this.chkElpis.Name = "chkElpis";
+            this.chkElpis.Size = new System.Drawing.Size(48, 17);
+            this.chkElpis.TabIndex = 100;
+            this.chkElpis.Text = "Elpis";
+            this.toolTip1.SetToolTip(this.chkElpis, "Xenon only, use 7378 CB_B for consoles with Elpis or Rhea GPUs");
+            this.chkElpis.UseVisualStyleBackColor = true;
+            this.chkElpis.CheckedChanged += new System.EventHandler(this.chkElpis_CheckedChanged);
             // 
             // Rgh3Label2
             // 
@@ -211,7 +226,7 @@
             // 
             this.chkRgh3.AutoSize = true;
             this.chkRgh3.ForeColor = System.Drawing.SystemColors.ControlText;
-            this.chkRgh3.Location = new System.Drawing.Point(229, 63);
+            this.chkRgh3.Location = new System.Drawing.Point(229, 53);
             this.chkRgh3.Name = "chkRgh3";
             this.chkRgh3.Size = new System.Drawing.Size(56, 17);
             this.chkRgh3.TabIndex = 19;
@@ -237,7 +252,7 @@
             // chkCR4
             // 
             this.chkCR4.AutoSize = true;
-            this.chkCR4.Location = new System.Drawing.Point(229, 31);
+            this.chkCR4.Location = new System.Drawing.Point(229, 21);
             this.chkCR4.Name = "chkCR4";
             this.chkCR4.Size = new System.Drawing.Size(47, 17);
             this.chkCR4.TabIndex = 17;
@@ -304,7 +319,7 @@
             // 
             this.chkSMCP.AutoSize = true;
             this.chkSMCP.ForeColor = System.Drawing.SystemColors.ControlText;
-            this.chkSMCP.Location = new System.Drawing.Point(229, 47);
+            this.chkSMCP.Location = new System.Drawing.Point(229, 37);
             this.chkSMCP.Name = "chkSMCP";
             this.chkSMCP.Size = new System.Drawing.Size(55, 17);
             this.chkSMCP.TabIndex = 18;
@@ -1119,5 +1134,6 @@
         private System.Windows.Forms.Button btnXEUpdate;
         private System.Windows.Forms.CheckBox chkXLBoth;
         private System.Windows.Forms.CheckBox chkCoronaKeyFix;
+        private System.Windows.Forms.CheckBox chkElpis;
     }
 }
