@@ -2164,6 +2164,12 @@ namespace JRunner
                     xPanel.setWBChecked(true);
                 }
 
+                // Elpis CB_B for Xenon consoles with CB 73xx
+                if( nand.bl.CB_A >= 7373 && nand.bl.CB_A <= 7378 )
+                {
+                    xPanel.setElpisChecked(true);
+                }
+
                 // Patches
                 xPanel.setXLUSBChecked(variables.foundXlUsb);
                 xPanel.setXLHDDChecked(variables.foundXlHdd);
