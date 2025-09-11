@@ -18,6 +18,7 @@ namespace JRunner.Forms
                                     "Nick Stefanou: Original J-Runner \nDevelopment and Software",
                                     "Orpheus: Updates to KV Info/Bugfixes",
                                     "SGCSam: 6717/9199 XeBuild Patches",
+                                    "wurthless-elektroniks: Hacked 7378 CB_B for Elpis+Samsung",
                                     "Xvistaman2005: XDKbuild",
         };
         static int contribloc = 0;
