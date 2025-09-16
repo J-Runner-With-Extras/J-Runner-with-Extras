@@ -922,7 +922,6 @@ namespace JRunner.Panels
         {
             if (chkWB.Checked) patches[7] = "-r WB";
             else if (chkWB4G.Checked) patches[7] = "-r WB4G";
-            else if (chkElpis.Checked) patches[7] = "-r ELPIS";
             else patches[7] = "";
 
             updateCommand();
