@@ -1718,8 +1718,6 @@ namespace JRunner.Panels
             RegexOptions options = RegexOptions.None;
             Regex regex = new Regex(@"[ ]{2,}", options);
             c = regex.Replace(c, @" ");
-
-            Console.WriteLine("command: {0}", c);
         }
 
         private void txtMBname_TextChanged(object sender, EventArgs e)
