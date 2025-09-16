@@ -18,7 +18,8 @@ namespace JRunner.Panels
         // -a nohdd
         // -a nohdmiwait
         // -a nolan
-        // -r WB/WB4G/13182/ELPIS
+        // -r WB/WB4G/13182
+        // -r ELPIS
 
         public XeBuildPanel()
         {
@@ -872,11 +873,11 @@ namespace JRunner.Panels
             // Don't do it twice
             if (!chkWB4G.Checked && chkWB.Checked)
             {
-                updateWBAndElpis();
+                updateWB();
             }
             else if (!chkWB.Checked && !chkWB4G.Checked)
             {
-                updateWBAndElpis();
+                updateWB();
             }
         }
 
@@ -891,7 +892,7 @@ namespace JRunner.Panels
                 Console.WriteLine("Elpis CB_B deselected");
             }
 
-            updateWBAndElpis();
+            updateElpis();
         }
 
         private void chkWB4G_CheckedChanged(object sender, EventArgs e)
@@ -910,20 +911,28 @@ namespace JRunner.Panels
             // Don't do it twice
             if (!chkWB.Checked && chkWB4G.Checked)
             {
-                updateWBAndElpis();
+                updateWB();
             }
             else if (!chkWB.Checked && !chkWB4G.Checked)
             {
-                updateWBAndElpis();
+                updateWB();
             }
         }
 
-        private void updateWBAndElpis()
+        private void updateWB()
         {
             if (chkWB.Checked) patches[7] = "-r WB";
             else if (chkWB4G.Checked) patches[7] = "-r WB4G";
             else if (chkElpis.Checked) patches[7] = "-r ELPIS";
             else patches[7] = "";
+
+            updateCommand();
+        }
+
+        private void updateElpis()
+        {
+            if (chkElpis.Checked) patches[8] = "-r ELPIS";
+            else patches[8] = "";
 
             updateCommand();
         }
@@ -1711,6 +1720,8 @@ namespace JRunner.Panels
             RegexOptions options = RegexOptions.None;
             Regex regex = new Regex(@"[ ]{2,}", options);
             c = regex.Replace(c, @" ");
+
+            Console.WriteLine("command: {0}", c);
         }
 
         private void txtMBname_TextChanged(object sender, EventArgs e)
