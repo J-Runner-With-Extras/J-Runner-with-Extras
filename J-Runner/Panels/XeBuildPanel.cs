@@ -319,7 +319,6 @@ namespace JRunner.Panels
             chkCR4.Visible = rbtnGlitch2.Checked || rbtnGlitch2m.Checked;
             chkSMCP.Visible = rbtnGlitch2.Checked || rbtnGlitch2m.Checked;
             chkRgh3.Visible = rbtnGlitch2.Checked || rbtnGlitch2m.Checked;
-            chkElpis.Visible = rbtnGlitch2.Checked;
             chkAudClamp.Visible = rbtnJtag.Checked;
             chkRJtag.Visible = rbtnJtag.Checked;
             chk0Fuse.Visible = rbtnDevGL.Checked;
