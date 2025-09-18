@@ -11,7 +11,7 @@ namespace JRunner.Panels
     public partial class XeBuildPanel : UserControl
     {
         List<CB> cbList;
-        List<string> patches = new List<string>(new string[8]);
+        List<string> patches = new List<string>(new string[9]);
         // -a nofcrt
         // -a noSShdd
         // -a nointmu
@@ -19,6 +19,7 @@ namespace JRunner.Panels
         // -a nohdmiwait
         // -a nolan
         // -r WB/WB4G/13182
+        // -r ELPIS
 
         public XeBuildPanel()
         {
@@ -153,12 +154,21 @@ namespace JRunner.Panels
             else if (chkWB4G.Checked) return 2;
             else return 0;
         }
+        public bool getElpisChecked()
+        {
+            return chkElpis.Checked;
+        }
 
         // Checkbox Setters
         public void setWBChecked(bool check)
         {
             if (check && (!chkWB.Enabled || !chkWB.Visible)) return;
             chkWB.Checked = check;
+        }
+        public void setElpisChecked(bool check)
+        {
+            if (check && (!chkElpis.Enabled || !chkElpis.Visible)) return;
+            chkElpis.Checked = check;
         }
         public void setCleanSMCChecked(bool check)
         {
@@ -256,10 +266,16 @@ namespace JRunner.Panels
 
                 if (txt.Contains("Xenon"))
                 {
+                    chkElpis.Enabled = true;
                     chkAudClamp.Checked = false;
                     chkAudClamp.Enabled = false;
                 }
-                else chkAudClamp.Enabled = true;
+                else
+                {
+                    chkElpis.Enabled = false;
+                    chkElpis.Checked = false;
+                    chkAudClamp.Enabled = true;
+                }
 
                 checkRgh3(txt);
             }));
@@ -306,12 +322,18 @@ namespace JRunner.Panels
             chkAudClamp.Visible = rbtnJtag.Checked;
             chkRJtag.Visible = rbtnJtag.Checked;
             chk0Fuse.Visible = rbtnDevGL.Checked;
+            chkElpis.Visible = rbtnGlitch2.Checked;
 
             checkWBXdkBuild();
             checkBigffs(variables.boardtype);
             checkDashSpecificPatches();
 
             if (!rbtnRetail.Checked && !rbtnGlitch.Checked && !rbtnGlitch2.Checked && !rbtnGlitch2m.Checked && !rbtnDevGL.Checked) chkCleanSMC.Checked = false;
+
+            if(!rbtnGlitch2.Checked)
+            {
+                chkElpis.Checked = false;
+            }
 
             if (!rbtnGlitch2.Checked && !rbtnGlitch2m.Checked)
             {
@@ -858,6 +880,20 @@ namespace JRunner.Panels
             }
         }
 
+        private void chkElpis_CheckedChanged(object sender, EventArgs e)
+        {
+            if (chkElpis.Checked)
+            {
+                Console.WriteLine("Elpis CB_B selected");
+            }
+            else if (!chkElpis.Checked) // Don't uselessly spam the console
+            {
+                Console.WriteLine("Elpis CB_B deselected");
+            }
+
+            updateElpis();
+        }
+
         private void chkWB4G_CheckedChanged(object sender, EventArgs e)
         {
             if (chkWB4G.Checked)
@@ -887,6 +923,14 @@ namespace JRunner.Panels
             if (chkWB.Checked) patches[7] = "-r WB";
             else if (chkWB4G.Checked) patches[7] = "-r WB4G";
             else patches[7] = "";
+
+            updateCommand();
+        }
+
+        private void updateElpis()
+        {
+            if (chkElpis.Checked) patches[8] = "-r ELPIS";
+            else patches[8] = "";
 
             updateCommand();
         }
@@ -1150,6 +1194,8 @@ namespace JRunner.Panels
             Rgh3Mhz.Visible = false;
             chkWB.Visible = false;
             chkWB4G.Enabled = false;
+            chkElpis.Enabled = false;
+            chkElpis.Visible = false;
             chkXdkBuild.Visible = false;
             chkRJtag.Visible = false;
             chkAudClamp.Visible = false;

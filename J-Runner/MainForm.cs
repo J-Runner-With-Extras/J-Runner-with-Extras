@@ -2164,6 +2164,12 @@ namespace JRunner
                     xPanel.setWBChecked(true);
                 }
 
+                // Elpis CB_B for Xenon consoles with CB 73xx
+                if( nand.bl.CB_A >= 7373 && nand.bl.CB_A <= 7378 )
+                {
+                    xPanel.setElpisChecked(true);
+                }
+
                 // Patches
                 xPanel.setXLUSBChecked(variables.foundXlUsb);
                 xPanel.setXLHDDChecked(variables.foundXlHdd);
@@ -2373,9 +2379,11 @@ namespace JRunner
                 string wb = "";
                 string smcp = "";
                 string cr4 = "";
+                string elpis = "";
                 if (xPanel.getWBChecked() > 0) wb = "_WB";
                 if (xPanel.getSMCPChecked()) smcp = "_SMC+";
                 else if (xPanel.getCR4Checked()) cr4 = "_CR4";
+                if (xPanel.getElpisChecked()) elpis = "_ELPIS";
 
                 switch (variables.ctype.ID)
                 {
@@ -2395,7 +2403,7 @@ namespace JRunner
                         variables.filename1 = Path.Combine(variables.rootfolder, @"common\xell-images\glitch2", variables.Glitch2_jasper + cr4 + smcp + ".ecc");
                         break;
                     case 8:
-                        variables.filename1 = Path.Combine(variables.rootfolder, @"common\xell-images\glitch2", variables.Glitch2_xenon + ".ecc"); // No CR4 or SMC+
+                        variables.filename1 = Path.Combine(variables.rootfolder, @"common\xell-images\glitch2", variables.Glitch2_xenon + elpis + ".ecc"); // No CR4 or SMC+
                         break;
                     case 9:
                         variables.filename1 = Path.Combine(variables.rootfolder, @"common\xell-images\glitch2", variables.Glitch2_corona + wb + cr4 + smcp + ".ecc");
