@@ -411,7 +411,7 @@
             this.comboDash.FormattingEnabled = true;
             this.comboDash.Location = new System.Drawing.Point(16, 28);
             this.comboDash.Name = "comboDash";
-            this.comboDash.Size = new System.Drawing.Size(71, 21);
+            this.comboDash.Size = new System.Drawing.Size(96, 21);
             this.comboDash.TabIndex = 5;
             this.toolTip1.SetToolTip(this.comboDash, "Select the kernel/dashboard version used for XeBuild");
             this.comboDash.ValueMember = "Dash";
