@@ -4871,6 +4871,10 @@ namespace JRunner
                 try
                 {
                     variables.dashes_all = new List<string>();
+
+                    // Regular expression to match either a folder containing just numbers,
+                    // or a folder beginning with a number, then an underscore, and then
+                    // any amount of alphanumeric or underscore characters
                     Regex regex = new Regex(@"^\d+(?:_[A-Za-z0-9_]+)?$");
 
                     foreach (string a in Directory.GetDirectories(Path.Combine(variables.currentdir, "xeBuild")))
