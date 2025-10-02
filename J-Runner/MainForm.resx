@@ -124,9 +124,9 @@
   <data name="btnIPGetCPU.BtnImage" type="System.Drawing.Bitmap, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
     <value>
         iVBORw0KGgoAAAANSUhEUgAAABQAAAAQCAYAAAAWGF8bAAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAA
-        IwAAACMB1fQWXQAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAABfSURBVDhP7cwt
-        CoQAEAbQF4RFLJbFbrGaPYB39gCbBW9hsmxfi2kQ/zYJPpgyM9/H43beKDcmjYE9FUb8VqbDKwaOqDGF
-        sg+y+HhGg+9S1iOPD1e0GFDEwz+SuHjcwAxmPREDK+286QAAAABJRU5ErkJggg==
+        IwAAACMB1fQWXQAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAABUSURBVDhPYxgF
+        Qw+IArESHswJxCQBdSB+CcT/seCdQMwOxCQDAyB+D8TIhh0FYm4gJhtYAfEXIAYZdh6IBYCYYuAGxJeA
+        WBzMoxJggdKjYOgABgYAZj0RA3vw/0YAAAAASUVORK5CYII=
 </value>
   </data>
   <metadata name="getCpuKeyMenu.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
@@ -135,17 +135,17 @@
   <data name="btnIPGetCPU.Image" type="System.Drawing.Bitmap, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
     <value>
         iVBORw0KGgoAAAANSUhEUgAAABQAAAAQCAYAAAAWGF8bAAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAA
-        IwAAACMB1fQWXQAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAABfSURBVDhP7cwt
-        CoQAEAbQF4RFLJbFbrGaPYB39gCbBW9hsmxfi2kQ/zYJPpgyM9/H43beKDcmjYE9FUb8VqbDKwaOqDGF
-        sg+y+HhGg+9S1iOPD1e0GFDEwz+SuHjcwAxmPREDK+286QAAAABJRU5ErkJggg==
+        IwAAACMB1fQWXQAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAABUSURBVDhPYxgF
+        Qw+IArESHswJxCQBdSB+CcT/seCdQMwOxCQDAyB+D8TIhh0FYm4gJhtYAfEXIAYZdh6IBYCYYuAGxJeA
+        WBzMoxJggdKjYOgABgYAZj0RA3vw/0YAAAAASUVORK5CYII=
 </value>
   </data>
   <data name="btnShowWorkingFolder.BtnImage" type="System.Drawing.Bitmap, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
     <value>
         iVBORw0KGgoAAAANSUhEUgAAABQAAAAQCAYAAAAWGF8bAAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAA
-        IwAAACMB1fQWXQAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAABfSURBVDhP7cwt
-        CoQAEAbQF4RFLJbFbrGaPYB39gCbBW9hsmxfi2kQ/zYJPpgyM9/H43beKDcmjYE9FUb8VqbDKwaOqDGF
-        sg+y+HhGg+9S1iOPD1e0GFDEwz+SuHjcwAxmPREDK+286QAAAABJRU5ErkJggg==
+        IwAAACMB1fQWXQAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAABUSURBVDhPYxgF
+        Qw+IArESHswJxCQBdSB+CcT/seCdQMwOxCQDAyB+D8TIhh0FYm4gJhtYAfEXIAYZdh6IBYCYYuAGxJeA
+        WBzMoxJggdKjYOgABgYAZj0RA3vw/0YAAAAASUVORK5CYII=
 </value>
   </data>
   <metadata name="showWorkingFolderMenu.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
@@ -154,9 +154,9 @@
   <data name="btnShowWorkingFolder.Image" type="System.Drawing.Bitmap, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
     <value>
         iVBORw0KGgoAAAANSUhEUgAAABQAAAAQCAYAAAAWGF8bAAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAA
-        IwAAACMB1fQWXQAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAABfSURBVDhP7cwt
-        CoQAEAbQF4RFLJbFbrGaPYB39gCbBW9hsmxfi2kQ/zYJPpgyM9/H43beKDcmjYE9FUb8VqbDKwaOqDGF
-        sg+y+HhGg+9S1iOPD1e0GFDEwz+SuHjcwAxmPREDK+286QAAAABJRU5ErkJggg==
+        IwAAACMB1fQWXQAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAABUSURBVDhPYxgF
+        Qw+IArESHswJxCQBdSB+CcT/seCdQMwOxCQDAyB+D8TIhh0FYm4gJhtYAfEXIAYZdh6IBYCYYuAGxJeA
+        WBzMoxJggdKjYOgABgYAZj0RA3vw/0YAAAAASUVORK5CYII=
 </value>
   </data>
   <metadata name="backupContextMenu.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">

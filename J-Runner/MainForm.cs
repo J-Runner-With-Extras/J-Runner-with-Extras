@@ -3161,6 +3161,20 @@ namespace JRunner
             }
         }
 
+        private void injectXeLLToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            OpenFileDialog ofd = new OpenFileDialog();
+            ofd.Filter = "XeLL binary (xell*.bin)|xell*.bin|All files (*.*)|*.*";
+            ofd.Title = "Select XeLL Binary";
+            ofd.InitialDirectory = Path.Combine(variables.rootfolder, @"xeBuild\data");
+            ofd.RestoreDirectory = false;
+
+            if (ofd.ShowDialog() == DialogResult.OK)
+            {
+                Nand.Nand.injectXell(variables.filename1, ofd.FileName);
+            }
+        }
+
         private void sMCConfigViewerToolStripMenuItem1_Click(object sender, EventArgs e)
         {
             SMCConfigEditor smcedit = new SMCConfigEditor();
