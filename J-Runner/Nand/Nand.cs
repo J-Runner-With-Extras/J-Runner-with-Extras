@@ -6,6 +6,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Windows.Forms;
+using JRunner.Classes;
 
 namespace JRunner.Nand
 {
@@ -2609,30 +2610,148 @@ namespace JRunner.Nand
             return false;
         }
 
-        public static void injectXell(string filename, byte[] xell, bool ecc)
+        public static void injectXell(string flashFilePath, string xellFilePath)
         {
-            int[] xelloffsets = {0x70000, // ggBoot main xell-gggggg
-								0x95060, // FreeBOOT Single-NAND main xell-2f
-								0x100000, // XeLL-Only Image
-								0xC0000,
-                                0xE0000,
-                                0xB80000};
+            int[] xellOffsets = { 0x70000,   // Glitch, Glitch2, Glitch2m, DevGL: xell-gggggg
+                                  0x95060 }; // JTAG: xell-2f
 
-            byte[] doublexell = new byte[xell.Length * 2];
-            Buffer.BlockCopy(xell, 0, doublexell, 0, xell.Length);
-            Buffer.BlockCopy(xell, 0, doublexell, xell.Length, xell.Length);
-            int blocksize = 0x4000;
-            int startblock = 0x30;
-            if (ecc)
+            // Remaining XeLL locations:
+            // 0x100000 - XeLL-Only Image (Main XeLL)
+            // 0xC0000 -  XeLL-Only Image (Backup XeLL)
+            // 0xE0000 - ?
+            // 0xB80000 - ?
+
+            BLOCK_TYPE blockType = BLOCK_TYPE.NONE;
+            bool flashHasEcc = false;
+
+            int pagesz = 0x200;
+            int pagesz_phys = 0x210;
+
+            int xellOffset = 0;
+            int xellOffsetPhys = 0;
+
+            int xellPageNumber = 0;
+            int xellOffsetInPage = 0;
+
+            // Read in flash data
+            byte[] flashData = File.ReadAllBytes(flashFilePath);
+            byte[] xellData = File.ReadAllBytes(xellFilePath);
+
+            // Determine whether this image has ECC
+            if (flashData.Length == 17301504 || flashData.Length == 69206016)
             {
-                blocksize = 0x4200;
-                doublexell = addecc_v2(doublexell, true, startblock * blocksize, 1);
+                flashHasEcc = true;
             }
-            BinaryWriter bw = new BinaryWriter(new FileStream(filename, FileMode.Open, FileAccess.ReadWrite));
+            else if (flashData.Length == 50331648)
+            {
+                flashHasEcc = false;
+            }
+            else
+            {
+                Console.WriteLine("Couldn't inject XeLL: Invalid image size.");
+                return;
+            }
 
-            bw.Seek(startblock * blocksize, SeekOrigin.Begin);
-            bw.Write(doublexell);
-            bw.Close();
+            // If the flash has ECC data, 
+            if(flashHasEcc)
+            {
+                byte[] spareSample = flashData.Skip(0x4400).Take(0x10).ToArray();
+                if (spareSample[0] == 0xFF)
+                {
+                    blockType = BLOCK_TYPE.BIG;
+                }
+                else if (spareSample[5] == 0xFF)
+                {
+                    if (Oper.ByteArrayCompare(spareSample, 0, new byte[] { 0x01, 0x00 }, 0, 2))
+                    {
+                        blockType = BLOCK_TYPE.SMALL;
+                    }
+                    else if (Oper.ByteArrayCompare(spareSample, 0, new byte[] { 0x00, 0x01 }, 0, 2))
+                    {
+                        blockType = BLOCK_TYPE.BIG_ON_SMALL;
+                    }
+                    else
+                    {
+                        Console.WriteLine("Couldn't inject XeLL: invalid flash block type");
+                        return;
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("Couldn't inject XeLL: invalid flash block type");
+                    return;
+                }
+            }
+
+            // Determine where in the world XeLL lives in this image
+            foreach (int testXellOffset in xellOffsets)
+            {
+                // Calculate WHERE in the image we should be able to find XeLL
+                if(flashHasEcc)
+                {
+                    xellOffsetInPage = testXellOffset % pagesz;
+                    xellPageNumber = testXellOffset / pagesz;
+                    xellOffsetPhys = xellPageNumber * pagesz_phys + xellOffsetInPage;
+                }
+                else
+                {
+                    xellOffset = testXellOffset;
+                }
+
+                if (Oper.ByteArrayCompare(flashData,xellOffsetPhys, Oper.StringToByteArray("48000020480000EC4800000048000000"), 0, 0x10))
+                {
+                    xellOffset = testXellOffset;
+                    Console.WriteLine("XeLL found!");
+                    Console.WriteLine("   Page 0x" + xellPageNumber.ToString("x"));
+                    Console.WriteLine("   Page Offset 0x" + xellOffsetInPage.ToString("x"));
+                    Console.WriteLine("   Offset 0x" + testXellOffset.ToString("x"));
+                    Console.WriteLine("   Physical Offset 0x" + xellOffsetPhys.ToString("x"));
+
+                    break;
+                }
+            }
+
+            if( 0 == xellOffset )
+            {
+                Console.WriteLine("Couldn't inject XeLL: did not find XeLL in this flash image!");
+                return;
+            }
+
+            if( flashHasEcc )
+            {
+                // We've got to handle the ECC data
+                if(xellOffsetInPage != 0)
+                {
+                    Console.WriteLine("Couldn't inject XeLL: Not implemented yet gg no re");
+                    return;
+                }
+
+                // Need to calculate the block number otherwise the ECC data is incorrect
+                // XeLL doesn't really give a fuck though
+                /*
+                int blocksize = 0x4000;
+                int startblock = 0x30;
+                if (ecc)
+                {
+                    blocksize = 0x4200;
+                    doublexell = addecc_v2(doublexell, true, startblock * blocksize, 1);
+                }
+                */
+
+                xellData = addecc_v2(xellData, true, 0, (int)blockType);
+            }
+            else
+            {
+                // We can just do a plain copy if there's no ECC data
+                Buffer.BlockCopy(xellData,0,flashData,xellOffset,xellData.Length);
+            }
+
+            // So we've updated the flashData, write it back to disk!
+            File.WriteAllBytes(flashFilePath, flashData);
+
+
+
+                Console.WriteLine("Done.");
         }
 
         private static byte[] CalculateCPUKeyECD(byte[] key)
@@ -3429,12 +3548,21 @@ namespace JRunner.Nand
         {
             if (sparedata[5] == 0x00 && sparedata[0] == 0xFF)
             {
+                // BLOCK_TYPE.BIG
                 return 2;
             }
             else if (sparedata[5] == 0xFF)
             {
-                if (sparedata[0] == 0x00) return 1;
-                else return 0;
+                if (sparedata[0] == 0x00)
+                {
+                    // BLOCK_TYPE.BIG_ON_SMALL
+                    return 1;
+                }
+                else
+                {
+                    // BLOCK_TYPE.SMALL
+                    return 0;
+                }
             }
             return 1;
         }
