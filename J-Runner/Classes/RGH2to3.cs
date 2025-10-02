@@ -8,10 +8,10 @@ namespace JRunner.Classes
 {
     public enum BLOCK_TYPE
     {
-        NONE,
-        SMALL,
-        BIG_ON_SMALL,
-        BIG
+        NONE = -1,
+        SMALL = 0,
+        BIG_ON_SMALL = 1,
+        BIG = 2
     };
 
     public enum RGH_CONVERT_ERROR
@@ -65,15 +65,6 @@ namespace JRunner.Classes
                 .Where(x => x % 2 == 0)
                 .Select(x => Convert.ToByte(hex.Substring(x, 2), 16))
                 .ToArray();
-        }
-
-        internal static bool ByteArrayCompare(byte[] data0, int offset0, byte[] data1, int offset1, int size = 0)
-        {
-            if (data0.Length < size || data1.Length < size)
-                return false;
-            if (size == 0)
-                size = data0.Length;
-            return data0.Skip(offset0).Take(size).SequenceEqual(data1.Skip(offset1).Take(size));
         }
 
         internal static string ReadString(byte[] data, int offset, int length)
@@ -315,11 +306,11 @@ namespace JRunner.Classes
                 }
                 else if (spareSample[5] == 0xFF)
                 {
-                    if (ByteArrayCompare(spareSample, 0, new byte[] { 0x01, 0x00 }, 0, 2))
+                    if (Oper.ByteArrayCompare(spareSample, 0, new byte[] { 0x01, 0x00 }, 0, 2))
                     {
                         blockType = BLOCK_TYPE.SMALL;
                     }
-                    else if (ByteArrayCompare(spareSample, 0, new byte[] { 0x00, 0x01 }, 0, 2))
+                    else if (Oper.ByteArrayCompare(spareSample, 0, new byte[] { 0x00, 0x01 }, 0, 2))
                     {
                         blockType = BLOCK_TYPE.BIG_ON_SMALL;
                     }
@@ -335,7 +326,7 @@ namespace JRunner.Classes
             }
 
             bool xellNotFound = false;
-            if (!ByteArrayCompare(flashData, (int)xellOffs, Unhexlify("48000020480000EC4800000048000000"), 0, 0x10))
+            if (!Oper.ByteArrayCompare(flashData, (int)xellOffs, Unhexlify("48000020480000EC4800000048000000"), 0, 0x10))
                 xellNotFound = true;
 
             // Flash Loader Offset
@@ -412,8 +403,8 @@ namespace JRunner.Classes
             // Decrypt CBB
             flashCba = DecryptCBA(flashCba);
             flashCbb = DecryptCBB(flashCbb, flashCba.Skip(0x10).Take(0x10).ToArray(), cpuKey);
-            if (!ByteArrayCompare(flashCbb, 0x392, Unhexlify("58424F585F524F4D"), 0, 8) &&
-                !ByteArrayCompare(flashCbb, 0x392, Unhexlify("0000000000000000"), 0, 8)
+            if (!Oper.ByteArrayCompare(flashCbb, 0x392, Unhexlify("58424F585F524F4D"), 0, 8) &&
+                !Oper.ByteArrayCompare(flashCbb, 0x392, Unhexlify("0000000000000000"), 0, 8)
                 )
             {
                 return RGH_CONVERT_ERROR.ERROR_FLASH_CBB_DECRYPT_FAILED;
