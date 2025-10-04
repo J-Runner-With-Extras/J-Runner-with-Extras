@@ -2612,14 +2612,12 @@ namespace JRunner.Nand
 
         public static void injectXell(string flashFilePath, string xellFilePath)
         {
-            int[] xellOffsets = { 0x70000,   // Glitch, Glitch2, Glitch2m, DevGL: xell-gggggg
-                                  0x95060 }; // JTAG: xell-2f
-
-            // Remaining XeLL locations:
-            // 0x100000 - XeLL-Only Image (Main XeLL)
-            // 0xC0000 -  XeLL-Only Image (Backup XeLL)
-            // 0xE0000 - ?
-            // 0xB80000 - ?
+            int[] xellOffsets = { 0x70000,    // Glitch, Glitch2, Glitch2m, DevGL: xell-gggggg
+                                  0x95060,    // JTAG: xell-2f
+                                  0x100000,   // XeLL-Only Image (Main XeLL)
+                                  0xC0000,    // XeLL-Only Image (Backup XeLL)
+                                  0xE0000,    // Unknown, but listed in libxenon updxell function
+                                  0xB80000 }; // Unknown, but listed in libxenon updxell function
 
             BLOCK_TYPE blockType = BLOCK_TYPE.NONE;
             bool flashHasEcc = false;
@@ -2630,12 +2628,17 @@ namespace JRunner.Nand
             int xellOffset = 0;
             int xellOffsetPhys = 0;
 
+            int xellFirstPageOffsetPhys = 0;
             int xellPageNumber = 0;
             int xellOffsetInPage = 0;
+            int xellPageCount = 0;
 
             // Read in flash data
             byte[] flashData = File.ReadAllBytes(flashFilePath);
             byte[] xellData = File.ReadAllBytes(xellFilePath);
+
+            // XeLL should be an even multiple of the page size
+            xellPageCount = xellData.Length / pagesz;
 
             // Determine whether this image has ECC
             if (flashData.Length == 17301504 || flashData.Length == 69206016)
@@ -2652,7 +2655,7 @@ namespace JRunner.Nand
                 return;
             }
 
-            // If the flash has ECC data, 
+            // If the flash has ECC data, determine the block type so ECC data can be recalculated
             if(flashHasEcc)
             {
                 byte[] spareSample = flashData.Skip(0x4400).Take(0x10).ToArray();
@@ -2686,27 +2689,27 @@ namespace JRunner.Nand
             // Determine where in the world XeLL lives in this image
             foreach (int testXellOffset in xellOffsets)
             {
-                // Calculate WHERE in the image we should be able to find XeLL
                 if(flashHasEcc)
                 {
+                    // Calculate WHERE in the physical image we should be able to find XeLL,
+                    // and calculate a few other values that will help us later
                     xellOffsetInPage = testXellOffset % pagesz;
                     xellPageNumber = testXellOffset / pagesz;
-                    xellOffsetPhys = xellPageNumber * pagesz_phys + xellOffsetInPage;
+                    xellFirstPageOffsetPhys = xellPageNumber * pagesz_phys;
+                    xellOffsetPhys = xellFirstPageOffsetPhys + xellOffsetInPage;
                 }
                 else
                 {
-                    xellOffset = testXellOffset;
+                    // For a non-ECC flash image, the offset is the physical offset as there
+                    // is no ECC data to take in to account
+                    xellOffsetPhys = testXellOffset;
                 }
 
+                // Look for the XeLL header to see if we're at the right spot
                 if (Oper.ByteArrayCompare(flashData,xellOffsetPhys, Oper.StringToByteArray("48000020480000EC4800000048000000"), 0, 0x10))
                 {
                     xellOffset = testXellOffset;
-                    Console.WriteLine("XeLL found!");
-                    Console.WriteLine("   Page 0x" + xellPageNumber.ToString("x"));
-                    Console.WriteLine("   Page Offset 0x" + xellOffsetInPage.ToString("x"));
-                    Console.WriteLine("   Offset 0x" + testXellOffset.ToString("x"));
-                    Console.WriteLine("   Physical Offset 0x" + xellOffsetPhys.ToString("x"));
-
+                    Console.WriteLine("XeLL found at offset 0x" + xellOffset.ToString("x"));
                     break;
                 }
             }
@@ -2717,28 +2720,29 @@ namespace JRunner.Nand
                 return;
             }
 
+            if ( 0 != xellOffsetInPage )
+            {
+                // If XeLL is not stored on a page boundary (thank you JTAG)
+                // then we need to read one more page from the flash data
+                xellPageCount += 1;
+            }
+
             if( flashHasEcc )
             {
-                // We've got to handle the ECC data
-                if(xellOffsetInPage != 0)
-                {
-                    Console.WriteLine("Couldn't inject XeLL: Not implemented yet gg no re");
-                    return;
-                }
+                // Get the physical pages from the flash image that we need to modify
+                byte[] xellFlashPages = flashData.Skip(xellFirstPageOffsetPhys).Take(xellPageCount * pagesz_phys).ToArray();
 
-                // Need to calculate the block number otherwise the ECC data is incorrect
-                // XeLL doesn't really give a fuck though
-                /*
-                int blocksize = 0x4000;
-                int startblock = 0x30;
-                if (ecc)
-                {
-                    blocksize = 0x4200;
-                    doublexell = addecc_v2(doublexell, true, startblock * blocksize, 1);
-                }
-                */
+                // Strip the ECC data
+                xellFlashPages = unecc(xellFlashPages);
 
-                xellData = addecc_v2(xellData, true, 0, (int)blockType);
+                // Copy the xell data into the pages
+                Buffer.BlockCopy(xellData, 0, xellFlashPages, xellOffsetInPage, xellData.Length);
+
+                // Re-add ECC data
+                xellFlashPages = addecc_v2(xellFlashPages, true, xellPageNumber * pagesz_phys, (int)blockType);
+
+                // Copy the ECC'ed pages back to the NAND image
+                Buffer.BlockCopy(xellFlashPages, 0, flashData, xellFirstPageOffsetPhys, xellFlashPages.Length);
             }
             else
             {
@@ -2746,12 +2750,17 @@ namespace JRunner.Nand
                 Buffer.BlockCopy(xellData,0,flashData,xellOffset,xellData.Length);
             }
 
+            // Do a final sanity check to make sure something didn't go wrong
+            if (!Oper.ByteArrayCompare(flashData, xellOffsetPhys, Oper.StringToByteArray("48000020480000EC4800000048000000"), 0, 0x10))
+            {
+                Console.WriteLine("Couldn't inject XeLL: couldn't detect XeLL in the resulting flash image");
+                return;
+            }
+
             // So we've updated the flashData, write it back to disk!
             File.WriteAllBytes(flashFilePath, flashData);
 
-
-
-                Console.WriteLine("Done.");
+            Console.WriteLine("Successfully injected XeLL");
         }
 
         private static byte[] CalculateCPUKeyECD(byte[] key)
