@@ -3172,6 +3172,7 @@ namespace JRunner
             if (ofd.ShowDialog() == DialogResult.OK)
             {
                 Nand.Nand.injectXell(variables.filename1, ofd.FileName);
+                nand_init();
             }
         }
 
