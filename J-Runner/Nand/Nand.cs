@@ -2651,12 +2651,22 @@ namespace JRunner.Nand
             }
             else
             {
-                Console.WriteLine("Couldn't inject XeLL: Invalid image size.");
+                Console.WriteLine("Couldn't inject XeLL: Invalid flash image size");
                 return;
             }
 
+            // XeLL binaries should always be 256kb. If not, either they've made it
+            // larger and this check needs to change, or something has gone wrong.
+            if (xellData.Length != 262144)
+            {
+                Console.WriteLine("Couldn't inject XeLL: Invalid XeLL binary size");
+                return;
+            }
+
+            Console.WriteLine("Injecting " + Path.GetFileName(xellFilePath) + " into " + Path.GetFileName(flashFilePath));
+
             // If the flash has ECC data, determine the block type so ECC data can be recalculated
-            if(flashHasEcc)
+            if (flashHasEcc)
             {
                 byte[] spareSample = flashData.Skip(0x4400).Take(0x10).ToArray();
                 if (spareSample[0] == 0xFF)
@@ -2716,7 +2726,7 @@ namespace JRunner.Nand
 
             if( 0 == xellOffset )
             {
-                Console.WriteLine("Couldn't inject XeLL: did not find XeLL in this flash image!");
+                Console.WriteLine("Couldn't inject XeLL: did not find XeLL in this flash image");
                 return;
             }
 
@@ -2761,6 +2771,7 @@ namespace JRunner.Nand
             File.WriteAllBytes(flashFilePath, flashData);
 
             Console.WriteLine("Successfully injected XeLL");
+            Console.WriteLine("");
         }
 
         private static byte[] CalculateCPUKeyECD(byte[] key)
