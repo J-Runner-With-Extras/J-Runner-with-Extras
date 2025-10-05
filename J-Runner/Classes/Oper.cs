@@ -184,13 +184,18 @@ namespace JRunner
 
             return true;
         }
-        public static bool ByteArrayCompare(byte[] data0, int offset0, byte[] data1, int offset1, int size = 0)
+        public static bool ByteArrayCompare(byte[] a1, byte[] a2, int a1startoffset, int a2startoffset, int size)
         {
-            if (data0.Length < size || data1.Length < size)
-                return false;
-            if (size == 0)
-                size = data0.Length;
-            return data0.Skip(offset0).Take(size).SequenceEqual(data1.Skip(offset1).Take(size));
+            if (a1 == null || a2 == null) return false;
+            if ((a1.Length - a1startoffset < size || a2.Length - a2startoffset < size) && a1.Length - a1startoffset != a2.Length - a2startoffset) return false;
+
+            int length = a1.Length - a1startoffset < size ? a1.Length - a1startoffset : size;
+
+            for (int i = 0; i < length; i++)
+                if (a1[i + a1startoffset] != a2[i + a2startoffset])
+                    return false;
+
+            return true;
         }
 
 

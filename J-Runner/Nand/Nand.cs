@@ -6,7 +6,6 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Windows.Forms;
-using JRunner.Classes;
 
 namespace JRunner.Nand
 {
@@ -2619,7 +2618,7 @@ namespace JRunner.Nand
                                   0xE0000,    // Unknown, but listed in libxenon updxell function
                                   0xB80000 }; // Unknown, but listed in libxenon updxell function
 
-            BLOCK_TYPE blockType = BLOCK_TYPE.NONE;
+            int blockType = 0;
             bool flashHasEcc = false;
 
             int pagesz = 0x200;
@@ -2668,32 +2667,14 @@ namespace JRunner.Nand
             // If the flash has ECC data, determine the block type so ECC data can be recalculated
             if (flashHasEcc)
             {
-                byte[] spareSample = flashData.Skip(0x4400).Take(0x10).ToArray();
-                if (spareSample[0] == 0xFF)
-                {
-                    blockType = BLOCK_TYPE.BIG;
-                }
-                else if (spareSample[5] == 0xFF)
-                {
-                    if (Oper.ByteArrayCompare(spareSample, 0, new byte[] { 0x01, 0x00 }, 0, 2))
-                    {
-                        blockType = BLOCK_TYPE.SMALL;
-                    }
-                    else if (Oper.ByteArrayCompare(spareSample, 0, new byte[] { 0x00, 0x01 }, 0, 2))
-                    {
-                        blockType = BLOCK_TYPE.BIG_ON_SMALL;
-                    }
-                    else
-                    {
-                        Console.WriteLine("Couldn't inject XeLL: invalid flash block type");
-                        return;
-                    }
-                }
-                else
-                {
-                    Console.WriteLine("Couldn't inject XeLL: invalid flash block type");
-                    return;
-                }
+                byte[] sparedata = flashData.Skip(0x4400).Take(0x10).ToArray();
+
+                // Block Types
+                // 0 = Small block NAND (XSB)
+                // 1 = Small block NAND on BB controller (PSB/KSB)
+                // 2 = Big block NAND on BB controller (PSB/KSB)
+                blockType = identifylayout(sparedata);
+
             }
 
             // Determine where in the world XeLL lives in this image
@@ -2716,7 +2697,7 @@ namespace JRunner.Nand
                 }
 
                 // Look for the XeLL header to see if we're at the right spot
-                if (Oper.ByteArrayCompare(flashData,xellOffsetPhys, Oper.StringToByteArray("48000020480000EC4800000048000000"), 0, 0x10))
+                if (Oper.ByteArrayCompare(flashData, Oper.StringToByteArray("48000020480000EC4800000048000000"), xellOffsetPhys, 0, 0x10))
                 {
                     xellOffset = testXellOffset;
                     Console.WriteLine("XeLL found at offset 0x" + xellOffset.ToString("x"));
@@ -2749,7 +2730,7 @@ namespace JRunner.Nand
                 Buffer.BlockCopy(xellData, 0, xellFlashPages, xellOffsetInPage, xellData.Length);
 
                 // Re-add ECC data
-                xellFlashPages = addecc_v2(xellFlashPages, true, xellPageNumber * pagesz_phys, (int)blockType);
+                xellFlashPages = addecc_v2(xellFlashPages, true, xellPageNumber * pagesz_phys, blockType);
 
                 // Copy the ECC'ed pages back to the NAND image
                 Buffer.BlockCopy(xellFlashPages, 0, flashData, xellFirstPageOffsetPhys, xellFlashPages.Length);
@@ -2761,7 +2742,7 @@ namespace JRunner.Nand
             }
 
             // Do a final sanity check to make sure something didn't go wrong
-            if (!Oper.ByteArrayCompare(flashData, xellOffsetPhys, Oper.StringToByteArray("48000020480000EC4800000048000000"), 0, 0x10))
+            if (!Oper.ByteArrayCompare(flashData, Oper.StringToByteArray("48000020480000EC4800000048000000"), xellOffsetPhys, 0, 0x10))
             {
                 Console.WriteLine("Couldn't inject XeLL: couldn't detect XeLL in the resulting flash image");
                 return;
