@@ -3549,21 +3549,12 @@ namespace JRunner.Nand
         {
             if (sparedata[5] == 0x00 && sparedata[0] == 0xFF)
             {
-                // BLOCK_TYPE.BIG
                 return 2;
             }
             else if (sparedata[5] == 0xFF)
             {
-                if (sparedata[0] == 0x00)
-                {
-                    // BLOCK_TYPE.BIG_ON_SMALL
-                    return 1;
-                }
-                else
-                {
-                    // BLOCK_TYPE.SMALL
-                    return 0;
-                }
+                if (sparedata[0] == 0x00) return 1;
+                else return 0;
             }
             return 1;
         }
