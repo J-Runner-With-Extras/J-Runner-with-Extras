@@ -3163,6 +3163,12 @@ namespace JRunner
 
         private void injectXeLLToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            if(String.IsNullOrEmpty(variables.filename1))
+            {
+                MessageBox.Show("Please load a source NAND image before injecting XeLL","Error",MessageBoxButtons.OK,MessageBoxIcon.Error);
+                return;
+            }
+
             OpenFileDialog ofd = new OpenFileDialog();
             ofd.Filter = "XeLL binary (xell*.bin)|xell*.bin|All files (*.*)|*.*";
             ofd.Title = "Select XeLL Binary";
