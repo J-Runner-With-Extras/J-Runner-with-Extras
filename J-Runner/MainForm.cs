@@ -3161,6 +3161,27 @@ namespace JRunner
             }
         }
 
+        private void injectXeLLToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if(String.IsNullOrEmpty(variables.filename1))
+            {
+                MessageBox.Show("Please load a source NAND image before injecting XeLL","Error",MessageBoxButtons.OK,MessageBoxIcon.Error);
+                return;
+            }
+
+            OpenFileDialog ofd = new OpenFileDialog();
+            ofd.Filter = "XeLL binary (xell*.bin)|xell*.bin|All files (*.*)|*.*";
+            ofd.Title = "Select XeLL Binary";
+            ofd.InitialDirectory = Path.Combine(variables.rootfolder, @"xeBuild\data");
+            ofd.RestoreDirectory = false;
+
+            if (ofd.ShowDialog() == DialogResult.OK)
+            {
+                Nand.Nand.injectXell(variables.filename1, ofd.FileName);
+                nand_init();
+            }
+        }
+
         private void sMCConfigViewerToolStripMenuItem1_Click(object sender, EventArgs e)
         {
             SMCConfigEditor smcedit = new SMCConfigEditor();
