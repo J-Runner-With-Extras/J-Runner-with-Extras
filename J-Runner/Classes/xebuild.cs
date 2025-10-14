@@ -26,7 +26,7 @@ namespace JRunner.Classes
         private bool success = false;
         private string _cpukey;
         private variables.hacktypes _ttype;
-        private int _dash;
+        private string _dash;
         private consoles _ctype;
         private bool _audclamp;
         private bool _CR4;
@@ -53,7 +53,7 @@ namespace JRunner.Classes
         private Nand.PrivateN _nand;
         private List<string> _patches;
 
-        public void loadvariables(string cpukey, variables.hacktypes ttype, int dash, consoles ctype, List<string> patches, Nand.PrivateN nand, bool altoptions, bool DLpatches, bool includeLaunch, bool audclamp, bool rjtag, bool cleansmc, bool cr4, bool smcp, bool rgh3, bool bigffs, bool zfuse, bool xdkbuild, bool xlusb, bool xlhdd, bool xlboth, bool usbdsec, bool coronakeyfix, bool fullDataClean)
+        public void loadvariables(string cpukey, variables.hacktypes ttype, string dash, consoles ctype, List<string> patches, Nand.PrivateN nand, bool altoptions, bool DLpatches, bool includeLaunch, bool audclamp, bool rjtag, bool cleansmc, bool cr4, bool smcp, bool rgh3, bool bigffs, bool zfuse, bool xdkbuild, bool xlusb, bool xlhdd, bool xlboth, bool usbdsec, bool coronakeyfix, bool fullDataClean)
         {
             this._cpukey = cpukey;
             this._ttype = ttype;
@@ -477,7 +477,7 @@ namespace JRunner.Classes
             if (string.IsNullOrEmpty(_cpukey)) return XebuildError.nocpukey;
 
             if (_ctype.ID == -1) return XebuildError.noconsole;
-            if (_dash == 0) return XebuildError.nodash;
+            if (_dash.Equals("")) return XebuildError.nodash;
             string ini = (variables.launchpath + @"\" + _dash + @"\_" + _ttype + ".ini");
 
             // Type overrides, check doSomeChecks() if changing
@@ -828,7 +828,7 @@ namespace JRunner.Classes
         ////////////////////////////////////////////////
 
 
-        public void Uloadvariables(int dash, variables.hacktypes ttype, List<string> patches, bool altoptions, bool nowrite, bool noava, bool clean, bool noreeb, bool DLpatches, bool includeLaunch)
+        public void Uloadvariables(string dash, variables.hacktypes ttype, List<string> patches, bool altoptions, bool nowrite, bool noava, bool clean, bool noreeb, bool DLpatches, bool includeLaunch)
         {
             this._dash = dash;
             this._ttype = ttype;
@@ -845,7 +845,7 @@ namespace JRunner.Classes
         public XebuildError createxebuild()
         {
             XebuildError result = XebuildError.none;
-            if (_dash == 0) result = XebuildError.nodash;
+            if (_dash.Equals("")) result = XebuildError.nodash;
             if (result != XebuildError.none) return result;
             moveOptions();
 

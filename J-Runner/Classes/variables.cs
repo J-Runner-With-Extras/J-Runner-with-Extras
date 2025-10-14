@@ -299,7 +299,7 @@ namespace JRunner
         public static string FindFolder = "";
         public static bool rgh2 = false, xefinished = false;
         public static bool rgh1able = true;
-        public static int dashversion = 0;
+        public static string dashversion = "";
         public static bool copiedSMC = false;
         public static bool copiedXLDrive = false;
         public static bool foundXlUsb = false, foundXlHdd = false, foundXlBoth = false, foundUsbdSec = false, foundCoronaKeyFix = false;

@@ -4892,13 +4892,26 @@ namespace JRunner
                 try
                 {
                     variables.dashes_all = new List<string>();
-                    Regex regex = new Regex("^[0-9]+$");
+
+                    // Regular expression to match either a folder containing just numbers,
+                    // or a folder beginning with a number, then an underscore, and then
+                    // any amount of alphanumeric or underscore characters
+                    Regex regex = new Regex(@"^\d+(?:_[A-Za-z0-9_]+)?$");
 
                     foreach (string a in Directory.GetDirectories(Path.Combine(variables.currentdir, "xeBuild")))
                     {
                         if (regex.IsMatch(Path.GetFileNameWithoutExtension(a))) variables.dashes_all.Add(Path.GetFileNameWithoutExtension(a));
                     }
-                    variables.dashes_all.Sort((a, b) => Convert.ToInt32(a) - Convert.ToInt32(b));
+
+                    // Sort by the leading number of the dashboard folder
+                    variables.dashes_all.Sort((a, b) =>
+                    {
+                        int numA = int.TryParse(Regex.Match(a, @"^\d+").Value, out var nA) ? nA : 0;
+                        int numB = int.TryParse(Regex.Match(b, @"^\d+").Value, out var nB) ? nB : 0;
+
+                        return numA.CompareTo(numB);
+                    });
+
                     if (variables.debugMode) Console.WriteLine("Checking dashes");
                     foreach (string valueName in variables.dashes_all)
                     {
@@ -4922,18 +4935,16 @@ namespace JRunner
                 else if (xPanelCount == 2)
                 {
                     xPanel.getComboDash().SelectedIndex = 1;
-                    int n = 0;
-                    bool isNumeric = int.TryParse(xPanel.getComboDash().Text, out n);
-                    if (isNumeric) variables.dashversion = n;
+                    string n = xPanel.getComboDash().Text;
+                    if (char.IsDigit(n[0])) variables.dashversion = n;
                 }
                 else
                 {
                     if (variables.dashes_all.Contains(variables.preferredDash))
                     {
                         if (xPanelCount >= variables.dashes_all.IndexOf(variables.preferredDash)) xPanel.getComboDash().SelectedIndex = variables.dashes_all.IndexOf(variables.preferredDash) + 1;
-                        int n = 0;
-                        bool isNumeric = int.TryParse(xPanel.getComboDash().Text, out n);
-                        if (isNumeric) variables.dashversion = n;
+                        string n = xPanel.getComboDash().Text;
+                        if (char.IsDigit(n[0])) variables.dashversion = n;
                     }
                     else if (xPanelCount > 1) xPanel.BeginInvoke((Action)(() => xPanel.getComboDash().SelectedIndex = xPanelCount - 1));
                 }

@@ -388,7 +388,7 @@ namespace JRunner.Panels
             if (comboDash.SelectedIndex > 0)
             {
                 variables.preferredDash = comboDash.Text;
-                variables.dashversion = Convert.ToInt32(comboDash.Text);
+                variables.dashversion = comboDash.Text;
                 lblDash.Text = comboDash.Text;
             }
 
@@ -497,7 +497,7 @@ namespace JRunner.Panels
         private void checkGlitch2m(string board)
         {
             if (board == null) board = "None";
-            if (variables.dashversion == 17489 && File.Exists(variables.rootfolder + @"\xeBuild\17489\!XDKbuild Only!.txt"))
+            if (variables.dashversion.Equals("17489") && File.Exists(variables.rootfolder + @"\xeBuild\17489\!XDKbuild Only!.txt"))
             {
                 rbtnGlitch2m.Enabled = true;
             }
@@ -596,7 +596,7 @@ namespace JRunner.Panels
         bool chkWB4GEn = true;
         public void checkWBXdkBuild()
         {
-            if (rbtnGlitch2m.Checked && variables.dashversion == 17489 && File.Exists(variables.rootfolder + @"\xeBuild\17489\!XDKbuild Only!.txt"))
+            if (rbtnGlitch2m.Checked && variables.dashversion.Equals("17489") && File.Exists(variables.rootfolder + @"\xeBuild\17489\!XDKbuild Only!.txt"))
             {
                 chkWB.Visible = false;
                 chkWB.Checked = false;
@@ -1738,7 +1738,7 @@ namespace JRunner.Panels
             {
                 comboCB.Items.Clear();
                 cbList = new List<CB>();
-                if (variables.dashversion != 0)
+                if (!variables.dashversion.Equals(""))
                 {
                     string ini = (variables.launchpath + @"\" + variables.dashversion + @"\_retail.ini");
                     List<string> labels = new List<string>();
