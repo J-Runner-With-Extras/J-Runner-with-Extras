@@ -710,7 +710,7 @@ namespace JRunner.Classes
             pProcess.StartInfo.RedirectStandardInput = true;
             pProcess.StartInfo.RedirectStandardOutput = true;
             pProcess.StartInfo.CreateNoWindow = true;
-            if (!_xdkbuild && !_rgh3) pProcess.Exited += new EventHandler(xeExit);
+            if (!(_xdkbuild && _ttype != variables.hacktypes.devgl) && !_rgh3) pProcess.Exited += new EventHandler(xeExit);
             //pProcess.OutputDataReceived += new System.Diagnostics.DataReceivedEventHandler(DataReceived);
             //pProcess.Exited += new EventHandler(xe_Exited);
             //pProcess.OutputDataReceived += new System.Diagnostics.DataReceivedEventHandler(process_OutputDataReceived);
@@ -728,7 +728,7 @@ namespace JRunner.Classes
                         Console.WriteLine(e.Data);
                         if (e.Data != null && e.Data.Contains("image built")) {
                             success = true;
-                            if (!_xdkbuild && !_rgh3) variables.xefinished = true;
+                            if (!(_xdkbuild && _ttype != variables.hacktypes.devgl) && !_rgh3) variables.xefinished = true;
                         }
                     }
                 };
@@ -749,7 +749,7 @@ namespace JRunner.Classes
                         MainForm.mainForm.XDKbuild.create(boardtype, true);
                         MainForm.mainForm.rgh3Build.create(_ctype.Text, "00000000000000000000000000000000", true);
                     }
-                    else if (_xdkbuild) MainForm.mainForm.XDKbuild.create(boardtype);
+                    else if (_xdkbuild && _ttype != variables.hacktypes.devgl) MainForm.mainForm.XDKbuild.create(boardtype);
                     else if (_rgh3) MainForm.mainForm.rgh3Build.create(_ctype.Text, _cpukey, true);
                 }
             }
@@ -804,7 +804,7 @@ namespace JRunner.Classes
                         if (e.Data != null && e.Data.Contains("image built"))
                         {
                             success = true;
-                            if (!_xdkbuild && !_rgh3) variables.xefinished = true;
+                            if (!(_xdkbuild && _ttype != variables.hacktypes.devgl) && !_rgh3) variables.xefinished = true;
                         }
                     }
                 };
