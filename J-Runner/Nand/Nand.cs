@@ -2616,6 +2616,7 @@ namespace JRunner.Nand
                                   0x100000,   // XeLL-Only Image (Main XeLL)
                                   0xC0000,    // XeLL-Only Image (Backup XeLL)
                                   0xE0000,    // Unknown, but listed in libxenon updxell function
+                                  0xF0000,    // XeLL in the flashfs of XDKBuild and RGLoader images
                                   0xB80000 }; // Unknown, but listed in libxenon updxell function
 
             int blockType = 0;
