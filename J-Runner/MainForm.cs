@@ -3182,6 +3182,51 @@ namespace JRunner
             }
         }
 
+        private void patch64MbDevkitNANDToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            string khvPatchPath, vfusesPath;
+
+            if (String.IsNullOrEmpty(variables.filename1))
+            {
+                MessageBox.Show("Please load a source NAND image before patching!", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            // TODO is there a better InitialDirectory to pick?
+            OpenFileDialog ofd = new OpenFileDialog();
+
+            ofd.FileName = "";
+            ofd.Filter = "xeBuild KHV patch (*.bin)|*.bin|All files (*.*)|*.*";
+            ofd.Title = "Select KHV patch";
+            ofd.InitialDirectory = Path.Combine(variables.rootfolder, @"xeBuild");
+            ofd.RestoreDirectory = false;
+
+            if (ofd.ShowDialog() != DialogResult.OK)
+            {
+                Console.WriteLine("Cancelled Devkit Image Patch");
+            }
+
+            khvPatchPath = ofd.FileName;
+
+            ofd.FileName = "";
+            ofd.Filter = "Virtual Fuses (fuses.bin)|fuses.bin|All files (*.*)|*.*";
+            ofd.Title = "Select Virtual Fuses";
+            ofd.InitialDirectory = Path.Combine(variables.rootfolder, @"xeBuild");
+            ofd.RestoreDirectory = false;
+
+            if (ofd.ShowDialog() != DialogResult.OK)
+            {
+                Console.WriteLine("Cancelled Devkit Image Patch");
+            }
+
+            vfusesPath = ofd.FileName;
+
+            Nand.Nand.injectDevkitVfusesAndKhvPatches(variables.filename1, khvPatchPath, vfusesPath);
+
+            nand_init();
+
+        }
+
         private void sMCConfigViewerToolStripMenuItem1_Click(object sender, EventArgs e)
         {
             SMCConfigEditor smcedit = new SMCConfigEditor();

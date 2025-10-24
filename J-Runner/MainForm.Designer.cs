@@ -154,6 +154,7 @@ namespace JRunner
             this.toolStripMenuItem11 = new System.Windows.Forms.ToolStripSeparator();
             this.loadGlitch2XeLLToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.loadJTAGXeLLToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.injectXeLLToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem9 = new System.Windows.Forms.ToolStripSeparator();
             this.sMCConfigViewerToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             this.patchKVToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -168,7 +169,7 @@ namespace JRunner
             this.jRPBLToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.updateJRPToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.keyDatabaseToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.injectXeLLToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.patch64MbDevkitNANDToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.groupBox8.SuspendLayout();
             this.getCpuKeyMenu.SuspendLayout();
             this.showWorkingFolderMenu.SuspendLayout();
@@ -1184,6 +1185,7 @@ namespace JRunner
             this.loadGlitch2XeLLToolStripMenuItem,
             this.loadJTAGXeLLToolStripMenuItem,
             this.injectXeLLToolStripMenuItem,
+            this.patch64MbDevkitNANDToolStripMenuItem,
             this.toolStripMenuItem9,
             this.sMCConfigViewerToolStripMenuItem1,
             this.patchKVToolStripMenuItem,
@@ -1254,6 +1256,13 @@ namespace JRunner
             this.loadJTAGXeLLToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
             this.loadJTAGXeLLToolStripMenuItem.Text = "Load JTAG XeLL...";
             this.loadJTAGXeLLToolStripMenuItem.Click += new System.EventHandler(this.loadJTAGXeLLToolStripMenuItem_Click);
+            // 
+            // injectXeLLToolStripMenuItem
+            // 
+            this.injectXeLLToolStripMenuItem.Name = "injectXeLLToolStripMenuItem";
+            this.injectXeLLToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
+            this.injectXeLLToolStripMenuItem.Text = "Inject XeLL";
+            this.injectXeLLToolStripMenuItem.Click += new System.EventHandler(this.injectXeLLToolStripMenuItem_Click);
             // 
             // toolStripMenuItem9
             // 
@@ -1366,12 +1375,12 @@ namespace JRunner
             this.keyDatabaseToolStripMenuItem.Text = "Key Database";
             this.keyDatabaseToolStripMenuItem.Click += new System.EventHandler(this.keyDatabaseToolStripMenuItem_Click);
             // 
-            // injectXeLLToolStripMenuItem
+            // patch64MbDevkitNANDToolStripMenuItem
             // 
-            this.injectXeLLToolStripMenuItem.Name = "injectXeLLToolStripMenuItem";
-            this.injectXeLLToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
-            this.injectXeLLToolStripMenuItem.Text = "Inject XeLL";
-            this.injectXeLLToolStripMenuItem.Click += new System.EventHandler(this.injectXeLLToolStripMenuItem_Click);
+            this.patch64MbDevkitNANDToolStripMenuItem.Name = "patch64MbDevkitNANDToolStripMenuItem";
+            this.patch64MbDevkitNANDToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
+            this.patch64MbDevkitNANDToolStripMenuItem.Text = "Patch 64Mb Devkit NAND";
+            this.patch64MbDevkitNANDToolStripMenuItem.Click += new System.EventHandler(this.patch64MbDevkitNANDToolStripMenuItem_Click);
             // 
             // MainForm
             // 
@@ -1562,5 +1571,6 @@ namespace JRunner
         private ToolStripMenuItem nANDAlignmentToolStripMenuItem;
         private ToolStripMenuItem gB16MBToolStripMenuItem;
         private ToolStripMenuItem injectXeLLToolStripMenuItem;
+        private ToolStripMenuItem patch64MbDevkitNANDToolStripMenuItem;
     }
 }

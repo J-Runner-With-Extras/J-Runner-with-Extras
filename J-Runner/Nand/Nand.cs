@@ -2617,7 +2617,8 @@ namespace JRunner.Nand
                                   0xC0000,    // XeLL-Only Image (Backup XeLL)
                                   0xE0000,    // Unknown, but listed in libxenon updxell function
                                   0xF0000,    // XeLL in the flashfs of XDKBuild and RGLoader images
-                                  0xB80000 }; // Unknown, but listed in libxenon updxell function
+                                  0xF4000,    // XeLL in the flashfs of Devkit images
+                                  0xB80000 }; // XeLL in the flashfs of BB Jasper and BB Trinity XDKBuild images
 
             int blockType = 0;
             bool flashHasEcc = false;
@@ -2754,6 +2755,133 @@ namespace JRunner.Nand
 
             Console.WriteLine("Successfully injected XeLL");
             Console.WriteLine("");
+        }
+
+        public static void injectDevkitVfusesAndKhvPatches(string flashFilePath, string khvFilePath, string vfuseFilePath)
+        {
+            // This is where the XDKbuild patches expect the KHV and vfuses.bin to live
+            int patchOffset = 0xE0000;
+
+            byte[] flashData = File.ReadAllBytes(flashFilePath);
+            byte[] khvData = File.ReadAllBytes(khvFilePath);
+            byte[] vfusesData = File.ReadAllBytes(vfuseFilePath);
+
+            // Just for testing, we're going to assume that the image has ECC
+            int blockType = 0;
+            bool flashHasEcc = true;
+
+            int pagesz = 0x200;
+            int pagesz_phys = 0x210;
+
+            int patchPageNumber = patchOffset / pagesz;
+            int patchOffsetPhys = patchPageNumber * pagesz_phys;
+
+            Console.WriteLine("Physical Offset:" + patchOffsetPhys.ToString("x"));
+
+            // If the flash has ECC data, determine the block type so ECC data can be recalculated
+            if (flashHasEcc)
+            {
+                byte[] sparedata = flashData.Skip(0x4400).Take(0x10).ToArray();
+
+                // Block Types
+                // 0 = Small block NAND (XSB)
+                // 1 = Small block NAND on BB controller (PSB/KSB)
+                // 2 = Big block NAND on BB controller (PSB/KSB)
+                blockType = identifylayout(sparedata);
+            }
+
+            byte[] vfuseAndKernelPatchData = new byte[vfusesData.Length + khvData.Length];
+
+            // Copy the vfuse data first, then the KHV patch data
+            Buffer.BlockCopy(vfusesData, 0, vfuseAndKernelPatchData, 0, vfusesData.Length);
+            Buffer.BlockCopy(khvData,0, vfuseAndKernelPatchData, vfusesData.Length, khvData.Length);
+
+            // Get the physical pages we need to patch by finding out how many
+            // logical pages are needed to store the patch data add 1 in case it's
+            // not an even multiple of the page size, doesn't really matter if we
+            // populate the buffer with an extra page since it's not at the end of NAND
+            byte[] nandPatchPages = flashData.Skip(patchOffsetPhys).Take(((vfuseAndKernelPatchData.Length / pagesz) + 1) * pagesz_phys).ToArray();
+
+            // remove the ECC, copy the vfuse + kernel patches, re-add ECC,
+            // then copy the data back to the NAND data buffer 
+            nandPatchPages = unecc(nandPatchPages);
+            Buffer.BlockCopy(vfuseAndKernelPatchData, 0, nandPatchPages, 0, vfuseAndKernelPatchData.Length);
+            nandPatchPages = addecc_v2(nandPatchPages, true, patchOffsetPhys, blockType);
+
+            Buffer.BlockCopy(nandPatchPages, 0, flashData, patchOffsetPhys, nandPatchPages.Length);
+
+
+            // Now, let's re-encrypt the KV with whatever is in the fuses.bin because otherwise only XeLL will boot
+            // We're taking the value from fuseline 4 and 5 because it's contiguous. You could combine fuseline 3
+            // and 6, or some other combination too
+            byte[] vCpuKey = vfusesData.Skip(0x20).Take(0x10).ToArray();
+
+            // Theoretically we need to look at byte 0x6c in the NAND to find the KV offset and size but it doesn't really
+            // matter for a test. we're gonna pretent it's at physical offset 0x4200
+            // if (xenon_get_logical_nand_data(&ret, 0x6C, 4) == 0)
+
+            // We also assume that the KV is on a page boundary, and is an even multiple of a page size
+
+            byte[] kvData = flashData.Skip(0x4200).Take(0x4200).ToArray();
+
+            kvData = unecc(kvData);
+
+            kvData = decryptkv(kvData, keyZero);
+
+            kvData = encryptkv_hmac(kvData, vCpuKey);
+            //kvData = encryptkv(kvData, vCpuKey);
+
+            kvData = addecc_v2(kvData,true,0x4200,blockType);
+
+            Buffer.BlockCopy(kvData, 0, flashData, 0x4200, 0x4200);
+
+            // For our final trick, we're going to patch the startup reason values at 0x4E and 0x4F...
+            // this is where the SD looks to know to boot XeLL with the eject button (or elsewhere)
+            // and is what is normally patched by xeBuild on a non-devkit image.
+
+            // This is always in the first page, and we only need to take one page for patching
+            byte[] firstPage = flashData.Take(pagesz_phys).ToArray();
+
+            firstPage = unecc(firstPage);
+
+            /* Powerup cause values:
+             * 
+             * class PowerUpCause(Enum):
+                    POWER           = 0x11
+                    EJECT           = 0x12
+                    UNDOCUMENTED_15 = 0x15
+                    UNDOCUMENTED_16 = 0x16
+                    REMOPOWER       = 0x20
+                    UNDOCUMENTED_21 = 0x21
+                    REMOX           = 0x22
+                    WINBUTTON       = 0x24
+                    UNDOCUMENTED_30 = 0x30
+                    UNDOCUMENTED_31 = 0x31
+                    KIOSK           = 0x41
+                    WIRELESSX       = 0x55
+                    WIREDXF1        = 0x56
+                    WIREDXF2        = 0x57
+                    WIREDXB2        = 0x58
+                    WIREDXB1        = 0x59
+                    WIREDXB3        = 0x5A
+             */
+
+            // Patch the powerup causes to 0x0 (ignore)
+            // and 0x12 (eject)
+            firstPage[0x4E] = 0x0;
+            firstPage[0x4F] = 0x12;
+
+            firstPage = addecc_v2(firstPage, true, 0, blockType);
+
+            Buffer.BlockCopy(firstPage, 0, flashData, 0, firstPage.Length);
+
+
+            // So we've updated the flashData, write it back to disk!
+            File.WriteAllBytes(flashFilePath, flashData);
+
+            Console.WriteLine("Successfully injected Devkit Patch Data");
+            Console.WriteLine("");
+
         }
 
         private static byte[] CalculateCPUKeyECD(byte[] key)
