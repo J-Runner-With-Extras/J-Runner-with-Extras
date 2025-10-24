@@ -581,8 +581,17 @@ namespace JRunner.Classes
             pProcess.StartInfo.FileName = variables.rootfolder + @"\xeBuild\xeBuild.exe";
             string arguments = "";
             string boardtype = _ctype.XeBuild;
-            arguments = "-t " + _ttype;
 
+            if(variables.devkitnotdevgl && _ttype == variables.hacktypes.devgl)
+            {
+                Console.WriteLine("Using devkit image type for DevGL");
+                arguments = "-t " + variables.hacktypes.devkit;
+            }
+            else
+            {
+               arguments = "-t " + _ttype;
+            }
+                
             // Type overrides, check doSomeChecks() if changing
             if (_ttype == variables.hacktypes.glitch2 || _ttype == variables.hacktypes.glitch2m)
             {

@@ -4197,6 +4197,19 @@ namespace JRunner
                     variables.debugMode = true;
                 }
             }
+            else if (e.KeyCode == Keys.F4 && e.Control && e.Alt)
+            {
+                if (!variables.devkitnotdevgl)
+                {
+                    variables.devkitnotdevgl = true;
+                    Console.WriteLine("Devkit instead of DevGL On");
+                }
+                else
+                {
+                    variables.devkitnotdevgl = false;
+                    Console.WriteLine("Devkit instead of DevGL Off");
+                }
+            }
             else if (e.Control && e.KeyCode == Keys.F3)
             {
                 if (!variables.extractfiles) { variables.extractfiles = true; Console.WriteLine("Extract Files On"); }
