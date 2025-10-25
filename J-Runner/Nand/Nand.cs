@@ -358,7 +358,6 @@ namespace JRunner.Nand
                     }
                     else if (id == 5)
                     {
-                        // TODO do i have to decrypt this to get useful data? Probably?
                         bl.CE = block_build;
                         if (variables.extractfiles) Oper.savefile(data, "output\\CE.bin");
                         ce_dec = Nand.decrypt_CE(data, cd_dec);
