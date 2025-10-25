@@ -232,7 +232,7 @@ namespace JRunner.Nand
 
         void unpack_base_image(byte[] image, bool bigblock)
         {
-            byte[] data, cb_dec = { }, cd_dec = { };
+            byte[] data, cb_dec = { }, cd_dec = { }, ce_dec = { };
             byte[] CB_A = null, CB_B = null; //SMC = null, CD = null, CE = null, Keyvault = null;
             bl.CB_A = 0; bl.CB_B = 0; bl.CD = 0; bl.CE = 0; bl.CF_0 = 0; bl.CG_0 = 0; bl.CF_1 = 0; bl.CG_1 = 0;
             uf.ldv_p0 = 0; uf.ldv_p1 = 0; uf.ldv_cb = 0; uf.pd_cb = ""; uf.pd_0 = ""; uf.pd_1 = "";
@@ -358,8 +358,11 @@ namespace JRunner.Nand
                     }
                     else if (id == 5)
                     {
+                        // TODO do i have to decrypt this to get useful data? Probably?
                         bl.CE = block_build;
                         if (variables.extractfiles) Oper.savefile(data, "output\\CE.bin");
+                        ce_dec = Nand.decrypt_CE(data, cd_dec);
+                        if (variables.extractfiles) Oper.savefile(data, "output\\CE_dec.bin");
                         //CE = data;
                     }
                     block_offset_b += block_size;
@@ -1554,6 +1557,12 @@ namespace JRunner.Nand
                 else finalimage[i] = imfordec[i - 0x20];
             }
             return finalimage;
+        }
+
+        public static byte[] decrypt_CE(byte[] CE, byte[] CD)
+        {
+            // CE is encrypted the exact same way the CD is
+            return decrypt_CD(CE, CD);
         }
 
         public static byte[] encrypt_CB_cpukey(byte[] image, byte[] CB_A_key, byte[] cpukey)
@@ -2826,6 +2835,11 @@ namespace JRunner.Nand
 
             kvData = unecc(kvData);
 
+            // TODO MUSTFIX
+            // We're currently assuming this is a zero CPU key. HOWEVER
+            // if you're running DevGL on an actual devkit or something
+            // and are using vfuses like a madman then it might be non-zero
+            // Or, when we zero-pair the SB
             kvData = decryptkv(kvData, keyZero);
 
             kvData = encryptkv_hmac(kvData, vCpuKey);
@@ -2835,7 +2849,7 @@ namespace JRunner.Nand
 
             Buffer.BlockCopy(kvData, 0, flashData, 0x4200, 0x4200);
 
-            // For our final trick, we're going to patch the startup reason values at 0x4E and 0x4F...
+            // For the second final trick, we're going to patch the startup reason values at 0x4E and 0x4F...
             // this is where the SD looks to know to boot XeLL with the eject button (or elsewhere)
             // and is what is normally patched by xeBuild on a non-devkit image.
 
@@ -2875,6 +2889,49 @@ namespace JRunner.Nand
 
             Buffer.BlockCopy(firstPage, 0, flashData, 0, firstPage.Length);
 
+
+            // For the last trick we need to zero-pair the SB. Notes for later:
+            //
+            // Based on
+            // https://github.com/InvoxiPlayGames/xenon-bltool/blob/master/include/xenon-bootloader.h#L58
+            // https://github.com/GoobyCorp/Xbox-360-Crypto/blob/master/build_lib.py
+            //
+            // Bytes 0x0 through 0x1F are not encrypted at all
+            //
+            // - Eyecatcher: 0x00, 0x01
+            // - Build Number: 0x02, 0x03
+            // - QFE???: 0x04, 0x05
+            // - Flags: 0x06, 0x07
+            // - Entrypoint: 0x08-0XB
+            // - BL size: 0xC-0xF
+            // - Nonce: 0x10-0x1F
+            //
+            // Decrypted CB/CB_B/SB:
+            //
+            // Goodies (all zero on a zero paired devkit CB):
+            // - Pairing Data: 0x20-0x22
+            // - LDV: 0x23
+            // - CB auth hash: 0x30-0x3f
+            //
+            // Signature:
+            // - Signature Padding: 0x40 - 0x11F
+            // - Signature (random byte?): 0x120
+            // - Signature salt: 0x121 - 0x12A
+            // - Signature Hash: 0x12B - 0x13E
+            // - Signature End: 0x13F
+            // 
+            // Remaining:
+            // - Globals???: 0x140 - 0x267
+            // - devkit public key RSA 2048: 0x268 - 0x376
+            // - SC key 0x378 - 0x387
+            // - SC salt 0x388 - 0x391 (XBOX_ROM_3)
+            // - SD salt 0x392 - 0x39B (XBOX_ROM_4)
+            // - Hash (CB_A has CB_B hash, CB_B has CD hash): 0x39C - 0x3AF
+            // - Remaining variables: 0x3B0
+            // - LDV???: 0x3B1
+            // - Remaining Variables: 0x3B2 - 0x3BF
+            //
+            // CB entrypoint is after this
 
             // So we've updated the flashData, write it back to disk!
             File.WriteAllBytes(flashFilePath, flashData);
