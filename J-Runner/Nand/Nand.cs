@@ -2824,17 +2824,13 @@ namespace JRunner.Nand
             // logical pages are needed to store the patch data add 1 in case it's
             // not an even multiple of the page size, doesn't really matter if we
             // populate the buffer with an extra page since it's not at the end of NAND
-            byte[] nandPatchPages = flashData.Skip(patchOffsetPhys).Take(((vfuseAndKernelPatchData.Length / pagesz) + 1) * pagesz_phys).ToArray();
+            byte[] nandPatchPages = flashData.Take(patchOffsetPhys + (((vfuseAndKernelPatchData.Length / pagesz) + 1) * pagesz_phys)).ToArray();
 
             // remove the ECC, copy the vfuse + kernel patches, re-add ECC,
             // then copy the data back to the NAND data buffer 
             nandPatchPages = unecc(nandPatchPages);
             
-            Buffer.BlockCopy(vfuseAndKernelPatchData, 0, nandPatchPages, 0, vfuseAndKernelPatchData.Length);
-            
-            nandPatchPages = addecc_v2(nandPatchPages, true, patchOffsetPhys, blockType);
-
-            Buffer.BlockCopy(nandPatchPages, 0, flashData, patchOffsetPhys, nandPatchPages.Length);
+            Buffer.BlockCopy(vfuseAndKernelPatchData, 0, nandPatchPages, patchOffset, vfuseAndKernelPatchData.Length);
 
             //
             // Step 2: Patch the XeLL startup reason and zero-pair the SB 
@@ -2897,9 +2893,6 @@ namespace JRunner.Nand
             //
             #endregion
 
-            byte[] blPatchData = flashData.Take(patchOffsetPhys).ToArray();
-            blPatchData = unecc(blPatchData);
-
             // Step 2A: Patch the XeLL startup reason
             //
             // SD patches look at bytes 0x4E and 0x4F to determine when
@@ -2929,19 +2922,19 @@ namespace JRunner.Nand
             // WIREDXB3        = 0x5A
 
             // Set the powerup causes to 0x0 (ignore) and 0x12 (eject)
-            blPatchData[0x4E] = 0x0;
-            blPatchData[0x4F] = 0x12;
+            nandPatchPages[0x4E] = 0x0;
+            nandPatchPages[0x4F] = 0x12;
 
             //
             // Step 2b: Zero pair the SB
             //
 
             // Determine the offset and length of the SB
-            int sbOffset = BitConverter.ToInt32(blPatchData.Skip(0x8).Take(4).Reverse().ToArray(), 0);
-            int sbLength = BitConverter.ToInt32(blPatchData.Skip(sbOffset + 12).Take(4).Reverse().ToArray(), 0);
+            int sbOffset = BitConverter.ToInt32(nandPatchPages.Skip(0x8).Take(4).Reverse().ToArray(), 0);
+            int sbLength = BitConverter.ToInt32(nandPatchPages.Skip(sbOffset + 12).Take(4).Reverse().ToArray(), 0);
 
             // Extract the encrypted SB data
-            byte[] sb_crypt = blPatchData.Skip(sbOffset).Take(sbLength).ToArray();
+            byte[] sb_crypt = nandPatchPages.Skip(sbOffset).Take(sbLength).ToArray();
 
             // Decrypt the SB (it's encrypted the same way as a retail single CB or split CB_A)
             byte[] sb_decrypt = Nand.decrypt_CB(sb_crypt);
@@ -2961,11 +2954,11 @@ namespace JRunner.Nand
 
             // Re-encrypt the SB and place it back in the patch data
             sb_crypt = encrypt_CB(sb_decrypt, sb_nonce, ref sb_key);
-            Buffer.BlockCopy(sb_crypt, 0, blPatchData, sbOffset, sbLength);
+            Buffer.BlockCopy(sb_crypt, 0, nandPatchPages, sbOffset, sbLength);
 
             // Re-add ECC data and copy it over to the flash data buffer
-            blPatchData = addecc_v2(blPatchData,true,0,blockType);
-            Buffer.BlockCopy(blPatchData, 0, flashData, 0, blPatchData.Length);
+            nandPatchPages = addecc_v2(nandPatchPages,true,0,blockType);
+            Buffer.BlockCopy(nandPatchPages, 0, flashData, 0, nandPatchPages.Length);
 
             // So we've updated the flashData, write it back to disk!
             File.WriteAllBytes(flashFilePath, flashData);
@@ -3943,7 +3936,9 @@ namespace JRunner.Nand
                 val >>= 1;
             }
             val = ~val;
-            byte[] temp = Oper.StringToByteArray(((val << 6) & 0xFFFFFFFF).ToString("X"));
+
+            // TODO what are the implications of the X8? Why did i break this???
+            byte[] temp = Oper.StringToByteArray(((val << 6) & 0xFFFFFFFF).ToString("X8"));
             Array.Reverse(temp);
             for (int j = data.Length - 4; j != data.Length; j++) data[j] = temp[j - data.Length + 4];
             return data;
