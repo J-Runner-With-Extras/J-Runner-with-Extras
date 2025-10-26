@@ -2765,7 +2765,7 @@ namespace JRunner.Nand
             Console.WriteLine("");
         }
 
-        public static void injectDevkitVfusesAndKhvPatches(string flashFilePath, string khvFilePath)
+        public static void injectDevkitVfusesAndKhvPatches(string flashFilePath, string cpukey, string khvFilePath)
         {
             // This is where the XDKbuild patches expect the virtual fuses and kernel patches to be
             int patchOffset = 0xE0000;
@@ -2805,8 +2805,8 @@ namespace JRunner.Nand
             // bytes we use for making up the vfuses
             byte[] fuseline0 = { 0xC0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
             byte[] fuseline1_dev = { 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F };
-            byte[] fuseline3_4 = Oper.StringToByteArray(variables.cpukey.Substring(0, 16));
-            byte[] fuseline5_6 = Oper.StringToByteArray(variables.cpukey.Substring(16, 16));
+            byte[] fuseline3_4 = Oper.StringToByteArray(cpukey.Substring(0, 16));
+            byte[] fuseline5_6 = Oper.StringToByteArray(cpukey.Substring(16, 16));
 
             // Build the fake fuseset. Only need to set 0, 1, and the CPU key.
             // The others are left as zeros

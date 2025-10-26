@@ -3216,7 +3216,7 @@ namespace JRunner
 
             khvPatchPath = ofd.FileName;
 
-            Nand.Nand.injectDevkitVfusesAndKhvPatches(variables.filename1, khvPatchPath);
+            Nand.Nand.injectDevkitVfusesAndKhvPatches(variables.filename1, variables.cpukey, khvPatchPath);
 
             nand_init();
         }
