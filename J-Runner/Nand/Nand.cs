@@ -2765,16 +2765,16 @@ namespace JRunner.Nand
             Console.WriteLine("");
         }
 
-        public static void injectDevkitVfusesAndKhvPatches(string flashFilePath, string khvFilePath, string vfuseFilePath)
+        public static void injectDevkitVfusesAndKhvPatches(string flashFilePath, string khvFilePath)
         {
-            // This is where the XDKbuild patches expect the KHV and vfuses.bin to live
+            // This is where the XDKbuild patches expect the virtual fuses and kernel patches to be
             int patchOffset = 0xE0000;
 
             byte[] flashData = File.ReadAllBytes(flashFilePath);
             byte[] khvData = File.ReadAllBytes(khvFilePath);
-            byte[] vfusesData = File.ReadAllBytes(vfuseFilePath);
 
-            // Just for testing, we're going to assume that the image has ECC
+            // We're going to assume the image has ECC because this is only
+            // really needed for 64mb consoles (Xenon/Zephyr/Falcon).
             int blockType = 0;
             bool flashHasEcc = true;
 
@@ -2783,8 +2783,6 @@ namespace JRunner.Nand
 
             int patchPageNumber = patchOffset / pagesz;
             int patchOffsetPhys = patchPageNumber * pagesz_phys;
-
-            Console.WriteLine("Physical Offset:" + patchOffsetPhys.ToString("x"));
 
             // If the flash has ECC data, determine the block type so ECC data can be recalculated
             if (flashHasEcc)
@@ -2798,11 +2796,29 @@ namespace JRunner.Nand
                 blockType = identifylayout(sparedata);
             }
 
-            byte[] vfuseAndKernelPatchData = new byte[vfusesData.Length + khvData.Length];
+            //
+            // Step 1: Create vfuse patch and add kernel/hv patches
+            //
 
-            // Copy the vfuse data first, then the KHV patch data
-            Buffer.BlockCopy(vfusesData, 0, vfuseAndKernelPatchData, 0, vfusesData.Length);
-            Buffer.BlockCopy(khvData,0, vfuseAndKernelPatchData, vfusesData.Length, khvData.Length);
+            byte[] vfuseAndKernelPatchData = new byte[0x60 + khvData.Length];
+            
+            // bytes we use for making up the vfuses
+            byte[] fuseline0 = { 0xC0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+            byte[] fuseline1_dev = { 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F };
+            byte[] fuseline3_4 = Oper.StringToByteArray(variables.cpukey.Substring(0, 16));
+            byte[] fuseline5_6 = Oper.StringToByteArray(variables.cpukey.Substring(16, 16));
+
+            // Build the fake fuseset. Only need to set 0, 1, and the CPU key.
+            // The others are left as zeros
+            Buffer.BlockCopy(fuseline0,     0, vfuseAndKernelPatchData, 0   , 0x8);
+            Buffer.BlockCopy(fuseline1_dev, 0, vfuseAndKernelPatchData, 0x8 , 0x8);
+            Buffer.BlockCopy(fuseline3_4,   0, vfuseAndKernelPatchData, 0x18, 0x8);
+            Buffer.BlockCopy(fuseline3_4,   0, vfuseAndKernelPatchData, 0x20, 0x8);
+            Buffer.BlockCopy(fuseline5_6,   0, vfuseAndKernelPatchData, 0x28, 0x8);
+            Buffer.BlockCopy(fuseline5_6,   0, vfuseAndKernelPatchData, 0x30, 0x8);
+
+            // Copy over the kernel patches
+            Buffer.BlockCopy(khvData, 0, vfuseAndKernelPatchData, 0x60, khvData.Length);
 
             // Get the physical pages we need to patch by finding out how many
             // logical pages are needed to store the patch data add 1 in case it's
@@ -2813,82 +2829,18 @@ namespace JRunner.Nand
             // remove the ECC, copy the vfuse + kernel patches, re-add ECC,
             // then copy the data back to the NAND data buffer 
             nandPatchPages = unecc(nandPatchPages);
+            
             Buffer.BlockCopy(vfuseAndKernelPatchData, 0, nandPatchPages, 0, vfuseAndKernelPatchData.Length);
+            
             nandPatchPages = addecc_v2(nandPatchPages, true, patchOffsetPhys, blockType);
 
             Buffer.BlockCopy(nandPatchPages, 0, flashData, patchOffsetPhys, nandPatchPages.Length);
 
+            //
+            // Step 2: Patch the XeLL startup reason and zero-pair the SB 
+            //
 
-            // Now, let's re-encrypt the KV with whatever is in the fuses.bin because otherwise only XeLL will boot
-            // We're taking the value from fuseline 4 and 5 because it's contiguous. You could combine fuseline 3
-            // and 6, or some other combination too
-            byte[] vCpuKey = vfusesData.Skip(0x20).Take(0x10).ToArray();
-
-            // Theoretically we need to look at byte 0x6c in the NAND to find the KV offset and size but it doesn't really
-            // matter for a test. we're gonna pretent it's at physical offset 0x4200
-            // if (xenon_get_logical_nand_data(&ret, 0x6C, 4) == 0)
-
-            // We also assume that the KV is on a page boundary, and is an even multiple of a page size
-
-            byte[] kvData = flashData.Skip(0x4200).Take(0x4200).ToArray();
-
-            kvData = unecc(kvData);
-
-            // TODO MUSTFIX
-            // We're currently assuming this is a zero CPU key. HOWEVER
-            // if you're running DevGL on an actual devkit or something
-            // and are using vfuses like a madman then it might be non-zero
-            // Or, when we zero-pair the SB
-            kvData = decryptkv(kvData, keyZero);
-
-            kvData = encryptkv_hmac(kvData, vCpuKey);
-            //kvData = encryptkv(kvData, vCpuKey);
-
-            kvData = addecc_v2(kvData,true,0x4200,blockType);
-
-            Buffer.BlockCopy(kvData, 0, flashData, 0x4200, 0x4200);
-
-            // For the second final trick, we're going to patch the startup reason values at 0x4E and 0x4F...
-            // this is where the SD looks to know to boot XeLL with the eject button (or elsewhere)
-            // and is what is normally patched by xeBuild on a non-devkit image.
-
-            // This is always in the first page, and we only need to take one page for patching
-            byte[] firstPage = flashData.Take(pagesz_phys).ToArray();
-
-            firstPage = unecc(firstPage);
-
-            /* Powerup cause values:
-             * 
-             * class PowerUpCause(Enum):
-                    POWER           = 0x11
-                    EJECT           = 0x12
-                    UNDOCUMENTED_15 = 0x15
-                    UNDOCUMENTED_16 = 0x16
-                    REMOPOWER       = 0x20
-                    UNDOCUMENTED_21 = 0x21
-                    REMOX           = 0x22
-                    WINBUTTON       = 0x24
-                    UNDOCUMENTED_30 = 0x30
-                    UNDOCUMENTED_31 = 0x31
-                    KIOSK           = 0x41
-                    WIRELESSX       = 0x55
-                    WIREDXF1        = 0x56
-                    WIREDXF2        = 0x57
-                    WIREDXB2        = 0x58
-                    WIREDXB1        = 0x59
-                    WIREDXB3        = 0x5A
-             */
-
-            // Patch the powerup causes to 0x0 (ignore)
-            // and 0x12 (eject)
-            firstPage[0x4E] = 0x0;
-            firstPage[0x4F] = 0x12;
-
-            firstPage = addecc_v2(firstPage, true, 0, blockType);
-
-            Buffer.BlockCopy(firstPage, 0, flashData, 0, firstPage.Length);
-
-
+            #region cb notes
             // For the last trick we need to zero-pair the SB. Notes for later:
             //
             // Based on
@@ -2931,6 +2883,89 @@ namespace JRunner.Nand
             // - Remaining Variables: 0x3B2 - 0x3BF
             //
             // CB entrypoint is after this
+            //
+            // Encryption of the SC and later stages are different compared
+            // to retail CB/CD encryption- SC uses a zero key and nonce
+            // and the SD depends on the SC key. e.g.
+            //
+            // sb_key = XeCryptHmacSha(XECRYPT_1BL_KEY, sb_nonce)
+            // sc_key = XeCryptHmacSha(ZERO_KEY, sc_nonce)
+            // sd_key = XeCryptHmacSha(sc_key, sd_nonce)
+            // sd_key = XeCryptHmacSha(sd_key, se_nonce)
+            // 
+            // So, we can decrypt and zeropair the SB without touching later stages
+            //
+            #endregion
+
+            byte[] blPatchData = flashData.Take(patchOffsetPhys).ToArray();
+            blPatchData = unecc(blPatchData);
+
+            // Step 2A: Patch the XeLL startup reason
+            //
+            // SD patches look at bytes 0x4E and 0x4F to determine when
+            // to jump to XeLL rather than booting the kernel. This is
+            // normally patched in by XeBuild but we have to do it manually
+            // for a devkit image. This is always located in the first page,
+            // so we can set it at the same time as zeropairing the SB
+            //
+            // Powerup cause values:
+            //
+            // POWER           = 0x11
+            // EJECT           = 0x12
+            // UNDOCUMENTED_15 = 0x15
+            // UNDOCUMENTED_16 = 0x16
+            // REMOPOWER       = 0x20
+            // UNDOCUMENTED_21 = 0x21
+            // REMOX           = 0x22
+            // WINBUTTON       = 0x24
+            // UNDOCUMENTED_30 = 0x30
+            // UNDOCUMENTED_31 = 0x31
+            // KIOSK           = 0x41
+            // WIRELESSX       = 0x55
+            // WIREDXF1        = 0x56
+            // WIREDXF2        = 0x57
+            // WIREDXB2        = 0x58
+            // WIREDXB1        = 0x59
+            // WIREDXB3        = 0x5A
+
+            // Set the powerup causes to 0x0 (ignore) and 0x12 (eject)
+            blPatchData[0x4E] = 0x0;
+            blPatchData[0x4F] = 0x12;
+
+            //
+            // Step 2b: Zero pair the SB
+            //
+
+            // Determine the offset and length of the SB
+            int sbOffset = BitConverter.ToInt32(blPatchData.Skip(0x8).Take(4).Reverse().ToArray(), 0);
+            int sbLength = BitConverter.ToInt32(blPatchData.Skip(sbOffset + 12).Take(4).Reverse().ToArray(), 0);
+
+            // Extract the encrypted SB data
+            byte[] sb_crypt = blPatchData.Skip(sbOffset).Take(sbLength).ToArray();
+
+            // Decrypt the SB (it's encrypted the same way as a retail single CB or split CB_A)
+            byte[] sb_decrypt = Nand.decrypt_CB(sb_crypt);
+
+            // Blow away all the pairing data, LDV, auth hash, etc
+            // for a zero paired image and then re-encrypt everything
+            for(int i = 0x20; i<= 0x3F; i++)
+            {
+                sb_decrypt[i] = 0x0;
+            }
+
+            // Use the same nonce from the encrypted SB
+            // sb_key is just to make encrypt_CB happy,
+            // we don't need it for any later stages
+            byte[] sb_nonce = sb_crypt.Skip(0x10).Take(0x10).ToArray();
+            byte[] sb_key = { };
+
+            // Re-encrypt the SB and place it back in the patch data
+            sb_crypt = encrypt_CB(sb_decrypt, sb_nonce, ref sb_key);
+            Buffer.BlockCopy(sb_crypt, 0, blPatchData, sbOffset, sbLength);
+
+            // Re-add ECC data and copy it over to the flash data buffer
+            blPatchData = addecc_v2(blPatchData,true,0,blockType);
+            Buffer.BlockCopy(blPatchData, 0, flashData, 0, blPatchData.Length);
 
             // So we've updated the flashData, write it back to disk!
             File.WriteAllBytes(flashFilePath, flashData);
