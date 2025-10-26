@@ -2481,7 +2481,7 @@ namespace JRunner
                 variables.ctype.ID == 10 || variables.ctype.ID == 11 ||
                 variables.ctype.ID == 15 || variables.ctype.ID == 16)
             {
-                byte[] t;
+                byte[] cr_bin, cr_bin_ltuV1;
                 Console.WriteLine("Working...");
                 byte[] fcrt = nand.exctractFSfile("fcrt.bin");
                 if (fcrt != null)
@@ -2494,17 +2494,39 @@ namespace JRunner
                         Console.WriteLine("Saving fcrt_dec.bin");
                         File.WriteAllBytes(Path.Combine(tmpout, "fcrt_dec.bin"), fcrt_dec);
                     }
-                    t = responses(fcrt, Oper.StringToByteArray(nand._cpukey), nand.ki.dvdkey);
 
-                    if (t != null)
+                    // Generate the C-R.bin required for LTU2 firmware and PCBs
+                    cr_bin = responses(fcrt, Oper.StringToByteArray(nand._cpukey));
+
+                    if (cr_bin != null)
                     {
-
                         Console.WriteLine("Saving C-R.bin");
-                        File.WriteAllBytes(Path.Combine(tmpout, "C-R.bin"), t);
+                        File.WriteAllBytes(Path.Combine(tmpout, "C-R.bin"), cr_bin);
+                    }
+                    else
+                    {
+                        Console.WriteLine("Failed to create C-R.bin");
+                    }
+
+                    // The C-R.bin required for the LTU V1 PCBs and firmware is different
+                    // than what is required for LTU2. Generate the "old" one separately here.
+                    cr_bin_ltuV1 = responses(fcrt, Oper.StringToByteArray(nand._cpukey), true);
+
+                    if (cr_bin_ltuV1 != null)
+                    {
+                        Console.WriteLine("Saving C-R_ltuV1.bin");
+                        File.WriteAllBytes(Path.Combine(tmpout, "C-R_ltuV1.bin"), cr_bin_ltuV1);
+                    }
+                    else
+                    {
+                        Console.WriteLine("Failed to create C-R_ltuV1.bin");
+                    }
+
+                    if (cr_bin != null || cr_bin_ltuV1 != null)
+                    {
                         Console.WriteLine("Saving key.bin");
                         File.WriteAllBytes(Path.Combine(tmpout, "key.bin"), Oper.StringToByteArray(nand.ki.dvdkey));
                     }
-                    else Console.WriteLine("Failed to create C-R.bin");
                 }
                 else Console.WriteLine("Failed to find fcrt.bin");
             }
@@ -2512,7 +2534,7 @@ namespace JRunner
             Console.WriteLine("Done");
             Console.WriteLine("");
         }
-        public static byte[] responses(byte[] fcrt, byte[] cpukey, string dvdkey = "")
+        public static byte[] responses(byte[] fcrt, byte[] cpukey, bool returnOldLtuCrBin = false)
         {
             byte[] fcrt_dec;
             if (Nand.Nand.decrypt_fcrt(fcrt, cpukey, out fcrt_dec))
@@ -2529,6 +2551,17 @@ namespace JRunner
                     Buffer.BlockCopy(cr, 0, rfct, randomNumbers[counter] * cr.Length, cr.Length);
                     counter++;
                 }
+
+                // Old versions of J-Runner (v288 and below) produce a different C-R.bin that is
+                // required for LTU v1 firmware and PCBs. The code for generating the "old" C-R.bin
+                // is identical to the first half of this function. In addition, the xor structure
+                // and encryptFirmware functions are identical in the old J-Runner.
+                // As such, we can return early if the caller requested to generate the old style C-R.bin
+                if(returnOldLtuCrBin)
+                {
+                    return encryptFirmware(rfct, variables.xor, rfct.Length);
+                }
+
                 for (int i = 0; i < 0x1f6; i++)
                 {
                     if (Oper.allsame(Oper.returnportion(fcrt_dec, i * 0x20, 0x10), 0x00)) continue;
