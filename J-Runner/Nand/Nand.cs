@@ -2956,6 +2956,10 @@ namespace JRunner.Nand
             sb_crypt = encrypt_CB(sb_decrypt, sb_nonce, ref sb_key);
             Buffer.BlockCopy(sb_crypt, 0, nandPatchPages, sbOffset, sbLength);
 
+            // I don't know what this does but we're going to make it match DevGL
+            // because the patching engine in the SD looks here for things
+            nandPatchPages[0x66] = 0x0;
+
             // Re-add ECC data and copy it over to the flash data buffer
             nandPatchPages = addecc_v2(nandPatchPages,true,0,blockType);
             Buffer.BlockCopy(nandPatchPages, 0, flashData, 0, nandPatchPages.Length);
