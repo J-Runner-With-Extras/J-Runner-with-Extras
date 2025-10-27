@@ -13,6 +13,7 @@ namespace JRunner.Nand
     {
         public int CB_A;
         public int CB_B;
+        public int SC;
         public int CD;
         public int CE;
         public int CF_0;
@@ -232,7 +233,7 @@ namespace JRunner.Nand
 
         void unpack_base_image(byte[] image, bool bigblock)
         {
-            byte[] data, cb_dec = { }, cd_dec = { }, ce_dec = { };
+            byte[] data, cb_dec = { }, sc_dec = { }, cd_dec = { }, ce_dec = { };
             byte[] CB_A = null, CB_B = null; //SMC = null, CD = null, CE = null, Keyvault = null;
             bl.CB_A = 0; bl.CB_B = 0; bl.CD = 0; bl.CE = 0; bl.CF_0 = 0; bl.CG_0 = 0; bl.CF_1 = 0; bl.CG_1 = 0;
             uf.ldv_p0 = 0; uf.ldv_p1 = 0; uf.ldv_cb = 0; uf.pd_cb = ""; uf.pd_0 = ""; uf.pd_1 = "";
@@ -277,12 +278,18 @@ namespace JRunner.Nand
             {
                 int block = 0, block_size, id;
                 byte block_id;
+                bool isDevBl = false;
+                string blIdString = "";
                 int block_build;
                 byte[] block_build_b = new byte[2], block_size_b = new byte[4];
                 int block_offset_b = Convert.ToInt32(Oper.ByteArrayToString(block_offset), 16);
                 int semi = 0;
                 for (block = 0; block < 30; block++)
                 {
+                    // Dev BLs start with 0x53 (S)
+                    isDevBl = (image[block_offset_b] == 0x53);
+                    // Get the ID string of the BL (CB/CD/SB/SD/etc)
+                    blIdString = Encoding.ASCII.GetString(image.Skip(block_offset_b).Take(2).ToArray());
                     block_id = image[block_offset_b + 1];
                     Buffer.BlockCopy(image, block_offset_b + 2, block_build_b, 0, 2);
                     //block_build_b = returnportion(image, block_offset_b + 2, 2);
@@ -314,10 +321,10 @@ namespace JRunner.Nand
 
                         if (semi == 0)
                         {
-                            if (variables.extractfiles) Oper.savefile(data, "output\\CB_B.bin");
+                            if (variables.extractfiles) Oper.savefile(data, "output\\" + blIdString + "_B.bin");
                             if (string.IsNullOrEmpty(variables.cpukey)) cb_dec = Nand.decrypt_CB_cpukey(CB_B, Nand.decrypt_CB(CB_A), Oper.StringToByteArray("00000000000000000000000000000000")); // It just needs something, doesn't matter that its not valid
                             else cb_dec = Nand.decrypt_CB_cpukey(CB_B, Nand.decrypt_CB(CB_A), Oper.StringToByteArray(variables.cpukey));
-                            if (variables.extractfiles) Oper.savefile(cb_dec, "output\\CB_B_dec.bin");
+                            if (variables.extractfiles) Oper.savefile(cb_dec, "output\\" + blIdString + "_B_dec.bin");
 
                             // Encrypted CB_Bs introduce problems parsing this data
                             if (cb_dec[0xA0] == 0 && cb_dec[0xA7] == 0 && cb_dec[0xAF] == 0)
@@ -348,20 +355,43 @@ namespace JRunner.Nand
                             if (variables.debugMode) Console.WriteLine("-Pairing Data: " + uf.pd_cb);
                         }
                     }
+                    else if (id == 3)
+                    {
+                        bl.SC = block_build;
+                        if (variables.extractfiles) Oper.savefile(data, "output\\" + blIdString + ".bin");
+                        sc_dec = Nand.decrypt_SC(data);
+                        if (variables.extractfiles) Oper.savefile(sc_dec, "output\\" + blIdString + "_dec.bin");
+                    }
                     else if (id == 4)
                     {
                         bl.CD = block_build;
-                        if (variables.extractfiles) Oper.savefile(data, "output\\CD.bin");
-                        cd_dec = Nand.decrypt_CD(data, cb_dec);
-                        if (variables.extractfiles) Oper.savefile(cd_dec, "output\\CD_dec.bin");
+                        if (variables.extractfiles) Oper.savefile(data, "output\\" + blIdString + ".bin");
+
+                        // Encryption of the dev 4BL is different than retail 4BL,
+                        // as it's based on the SC key rather than the SB key
+                        if (isDevBl)
+                        {
+                            // In case someone tries to open an XDKbuild image that hasn't been
+                            // patched, only try to decrypt the SD if the SC was decrypted OK
+                            if(sc_dec.Length > 0)
+                            {
+                                cd_dec = Nand.decrypt_SD(data, sc_dec);
+                                if (variables.extractfiles) Oper.savefile(cd_dec, "output\\SD_dec.bin");
+                            }
+                        }
+                        else
+                        {
+                            cd_dec = Nand.decrypt_CD(data, cb_dec);
+                            if (variables.extractfiles) Oper.savefile(cd_dec, "output\\CD_dec.bin");
+                        }
                         //CD = data;
                     }
                     else if (id == 5)
                     {
                         bl.CE = block_build;
-                        if (variables.extractfiles) Oper.savefile(data, "output\\CE.bin");
+                        if (variables.extractfiles) Oper.savefile(data, "output\\" + blIdString + ".bin");
                         ce_dec = Nand.decrypt_CE(data, cd_dec);
-                        if (variables.extractfiles) Oper.savefile(data, "output\\CE_dec.bin");
+                        if (variables.extractfiles) Oper.savefile(data, "output\\" + blIdString + "_dec.bin");
                         //CE = data;
                     }
                     block_offset_b += block_size;
@@ -1562,6 +1592,22 @@ namespace JRunner.Nand
         {
             // CE is encrypted the exact same way the CD is
             return decrypt_CD(CE, CD);
+        }
+
+        public static byte[] decrypt_SC(byte[] SC)
+        {
+            // This is decrypted the same way as CD, but with a zero key
+            // as input. So we don't have to reinvent the wheel, pass
+            // a blank byte array in to decrypt_CD
+            byte[] ZERO_KEY_SC = new byte[0x20];
+
+            return decrypt_CD(SC, ZERO_KEY_SC);
+        }
+
+        public static byte[] decrypt_SD(byte[] SD, byte[] SC)
+        {
+            // SD is decrypted the same way as CD, but with SC as input
+            return decrypt_CD(SD, SC);
         }
 
         public static byte[] encrypt_CB_cpukey(byte[] image, byte[] CB_A_key, byte[] cpukey)
@@ -2765,22 +2811,59 @@ namespace JRunner.Nand
             Console.WriteLine("");
         }
 
-        public static void injectDevkitVfusesAndKhvPatches(string flashFilePath, string cpukey, string khvFilePath)
+        public static void injectDevkitVfusesAndKhvPatches(string flashFilePath, string cpukey, string patchFilePath)
         {
             // This is where the XDKbuild patches expect the virtual fuses and kernel patches to be
             int patchOffset = 0xE0000;
 
-            byte[] flashData = File.ReadAllBytes(flashFilePath);
-            byte[] khvData = File.ReadAllBytes(khvFilePath);
+            byte[] flashData = { };File.ReadAllBytes(flashFilePath);
+            byte[] patchData = { }; File.ReadAllBytes(patchFilePath);
+
+            try
+            {
+                flashData = File.ReadAllBytes(flashFilePath);
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine("Devkit image patch error: couldn't read input flash image");
+                Console.WriteLine(ex.ToString());
+                return;
+            }
+
+            // Ensure we're working with a 64mb image, with ECC
+            // which is 69206016 bytes long. No patching is necessary
+            // for 16mb/BB/non-ECC images
+            if (flashData.Length != 69206016)
+            {
+                Console.WriteLine("Devkit image patch error: Only 64mb images are supported.");
+                return;
+            }
+
+            try
+            {
+                patchData = File.ReadAllBytes(patchFilePath);
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine("Devkit image patch error: couldn't read input patch data");
+                Console.WriteLine(ex.ToString());
+                return;
+            }
+
+            byte[] khvPatchData = Classes.xebuild.returnKernelHvPatchSet(patchData);
 
             // We're going to assume the image has ECC because this is only
             // really needed for 64mb consoles (Xenon/Zephyr/Falcon).
             int blockType = 0;
             bool flashHasEcc = true;
 
+            // Logical page size is always 0x200
+            // and the physical page size (with spare data) is always 0x210
             int pagesz = 0x200;
             int pagesz_phys = 0x210;
 
+            // Calculate the physical offset into the NAND image where we
+            // need to write the vfuses and kernel patch data
             int patchPageNumber = patchOffset / pagesz;
             int patchOffsetPhys = patchPageNumber * pagesz_phys;
 
@@ -2799,16 +2882,18 @@ namespace JRunner.Nand
             //
             // Step 1: Create vfuse patch and add kernel/hv patches
             //
-            byte[] vfuseAndKernelPatchData = new byte[0x60 + khvData.Length];
+            byte[] vfuseAndKernelPatchData = new byte[0x60 + khvPatchData.Length];
             
             // bytes we use for making up the vfuses
+            // Fuseline 0 and 1 are always the same for a devkit
+            // 3/4 and 5/6 make up the CPU key
+            // CB LDV and CF/CG LDV can be left blank
             byte[] fuseline0 = { 0xC0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
             byte[] fuseline1_dev = { 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F };
             byte[] fuseline3_4 = Oper.StringToByteArray(cpukey.Substring(0, 16));
             byte[] fuseline5_6 = Oper.StringToByteArray(cpukey.Substring(16, 16));
 
-            // Build the fake fuseset. Only need to set 0, 1, and the CPU key.
-            // The others are left as zeros
+            // Build the fake fuseset
             Buffer.BlockCopy(fuseline0,     0, vfuseAndKernelPatchData, 0   , 0x8);
             Buffer.BlockCopy(fuseline1_dev, 0, vfuseAndKernelPatchData, 0x8 , 0x8);
             Buffer.BlockCopy(fuseline3_4,   0, vfuseAndKernelPatchData, 0x18, 0x8);
@@ -2816,8 +2901,8 @@ namespace JRunner.Nand
             Buffer.BlockCopy(fuseline5_6,   0, vfuseAndKernelPatchData, 0x28, 0x8);
             Buffer.BlockCopy(fuseline5_6,   0, vfuseAndKernelPatchData, 0x30, 0x8);
 
-            // Copy over the kernel patches
-            Buffer.BlockCopy(khvData, 0, vfuseAndKernelPatchData, 0x60, khvData.Length);
+            // Build the vfuse/kernel patch section
+            Buffer.BlockCopy(khvPatchData, 0, vfuseAndKernelPatchData, 0x60, khvPatchData.Length);
 
             // Get the physical pages we need to patch by finding out how many
             // logical pages are needed to store the patch data add 1 in case it's
@@ -2825,75 +2910,18 @@ namespace JRunner.Nand
             // populate the buffer with an extra page since it's not at the end of NAND
             byte[] nandPatchPages = flashData.Take(patchOffsetPhys + (((vfuseAndKernelPatchData.Length / pagesz) + 1) * pagesz_phys)).ToArray();
 
-            // remove the ECC, copy the vfuse + kernel patches, re-add ECC,
-            // then copy the data back to the NAND data buffer 
+            // remove the ECC so we can copy our patch data to the logical addresses
             nandPatchPages = unecc(nandPatchPages);
             
+            //
+            // Step 1: copy over our vfuse/kernel patch data to patchOffset
+            //
             Buffer.BlockCopy(vfuseAndKernelPatchData, 0, nandPatchPages, patchOffset, vfuseAndKernelPatchData.Length);
 
             //
-            // Step 2: Patch the XeLL startup reason and zero-pair the SB 
+            // Step 2: Patch the XeLL startup reason
             //
 
-            #region cb notes
-            // For the last trick we need to zero-pair the SB. Notes for later:
-            //
-            // Based on
-            // https://github.com/InvoxiPlayGames/xenon-bltool/blob/master/include/xenon-bootloader.h#L58
-            // https://github.com/GoobyCorp/Xbox-360-Crypto/blob/master/build_lib.py
-            //
-            // Bytes 0x0 through 0x1F are not encrypted at all
-            //
-            // - Eyecatcher: 0x00, 0x01
-            // - Build Number: 0x02, 0x03
-            // - QFE???: 0x04, 0x05
-            // - Flags: 0x06, 0x07
-            // - Entrypoint: 0x08-0XB
-            // - BL size: 0xC-0xF
-            // - Nonce: 0x10-0x1F
-            //
-            // Decrypted CB/CB_B/SB:
-            //
-            // Goodies (all zero on a zero paired devkit CB):
-            // - Pairing Data: 0x20-0x22
-            // - LDV: 0x23
-            // - CB auth hash: 0x30-0x3f
-            //
-            // Signature:
-            // - Signature Padding: 0x40 - 0x11F
-            // - Signature (random byte?): 0x120
-            // - Signature salt: 0x121 - 0x12A
-            // - Signature Hash: 0x12B - 0x13E
-            // - Signature End: 0x13F
-            // 
-            // Remaining:
-            // - Globals???: 0x140 - 0x267
-            // - devkit public key RSA 2048: 0x268 - 0x376
-            // - SC key 0x378 - 0x387
-            // - SC salt 0x388 - 0x391 (XBOX_ROM_3)
-            // - SD salt 0x392 - 0x39B (XBOX_ROM_4)
-            // - Hash (CB_A has CB_B hash, CB_B has CD hash): 0x39C - 0x3AF
-            // - Remaining variables: 0x3B0
-            // - LDV???: 0x3B1
-            // - Remaining Variables: 0x3B2 - 0x3BF
-            //
-            // CB entrypoint is after this
-            //
-            // Encryption of the SC and later stages are different compared
-            // to retail CB/CD encryption- SC uses a zero key and nonce
-            // and the SD depends on the SC key. e.g.
-            //
-            // sb_key = XeCryptHmacSha(XECRYPT_1BL_KEY, sb_nonce)
-            // sc_key = XeCryptHmacSha(ZERO_KEY, sc_nonce)
-            // sd_key = XeCryptHmacSha(sc_key, sd_nonce)
-            // sd_key = XeCryptHmacSha(sd_key, se_nonce)
-            // 
-            // So, we can decrypt and zeropair the SB without touching later stages
-            //
-            #endregion
-
-            // Step 2A: Patch the XeLL startup reason
-            //
             // SD patches look at bytes 0x4E and 0x4F to determine when
             // to jump to XeLL rather than booting the kernel. This is
             // normally patched in by XeBuild but we have to do it manually
@@ -2925,8 +2953,19 @@ namespace JRunner.Nand
             nandPatchPages[0x4F] = 0x12;
 
             //
-            // Step 2b: Zero pair the SB
+            // Step 3: Zero pair the SB
             //
+
+            // Encryption of the SC and later stages are different compared
+            // to retail CB/CD encryption- SC uses a zero key and nonce
+            // and the SD depends on the SC key. e.g.
+            //
+            // sb_key = XeCryptHmacSha(XECRYPT_1BL_KEY, sb_nonce)
+            // sc_key = XeCryptHmacSha(ZERO_KEY, sc_nonce)
+            // sd_key = XeCryptHmacSha(sc_key, sd_nonce)
+            // sd_key = XeCryptHmacSha(sd_key, se_nonce)
+            // 
+            // So, we can decrypt and zeropair the SB without touching later stages
 
             // Determine the offset and length of the SB
             int sbOffset = BitConverter.ToInt32(nandPatchPages.Skip(0x8).Take(4).Reverse().ToArray(), 0);
@@ -2955,6 +2994,10 @@ namespace JRunner.Nand
             sb_crypt = encrypt_CB(sb_decrypt, sb_nonce, ref sb_key);
             Buffer.BlockCopy(sb_crypt, 0, nandPatchPages, sbOffset, sbLength);
 
+            //
+            // Step 4: Change the patch slot addresses at the beginning of NAND
+            //
+
             // The SD patching engine looks at two DWORDs, at 0x64 and 0x70
             // to determine where to look for patches. To be able to find
             // patches at 0xE0000, 0x64 and 0x70 need to be:
@@ -2977,12 +3020,20 @@ namespace JRunner.Nand
             nandPatchPages = addecc_v2(nandPatchPages,true,0,blockType);
             Buffer.BlockCopy(nandPatchPages, 0, flashData, 0, nandPatchPages.Length);
 
-            // So we've updated the flashData, write it back to disk!
-            File.WriteAllBytes(flashFilePath, flashData);
+            try
+            {
+                // So we've updated the flashData, write it back to disk!
+                File.WriteAllBytes(flashFilePath, flashData);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Devkit image patch error: couldn't write modified flash image");
+                Console.WriteLine(ex.ToString());
+                return;
+            }
 
-            Console.WriteLine("Successfully injected Devkit Patch Data");
+            Console.WriteLine("Successfully converted Devkit image to DevGL");
             Console.WriteLine("");
-
         }
 
         private static byte[] CalculateCPUKeyECD(byte[] key)
