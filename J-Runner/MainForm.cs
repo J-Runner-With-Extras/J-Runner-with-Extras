@@ -3217,7 +3217,7 @@ namespace JRunner
 
         private void patch64MbDevkitNANDToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            string khvPatchPath;
+            string xeBuildPatchFile;
 
             if (String.IsNullOrWhiteSpace(variables.filename1))
             {
@@ -3232,13 +3232,12 @@ namespace JRunner
                 return;
             }
 
-            // TODO is there a better InitialDirectory to pick?
             OpenFileDialog ofd = new OpenFileDialog();
 
             ofd.FileName = "";
-            ofd.Filter = "xeBuild KHV patch (*.bin)|*.bin|All files (*.*)|*.*";
+            ofd.Filter = "xeBuild Jasper patch set (patches_devjasper.bin)|patches_devjasper.bin|All files (*.*)|*.*";
             ofd.Title = "Select KHV patch";
-            ofd.InitialDirectory = Path.Combine(variables.rootfolder, @"xeBuild");
+            ofd.InitialDirectory = Path.Combine(variables.rootfolder, @"xeBuild\17489\bin");
             ofd.RestoreDirectory = false;
 
             if (ofd.ShowDialog() != DialogResult.OK)
@@ -3247,9 +3246,9 @@ namespace JRunner
                 return;
             }
 
-            khvPatchPath = ofd.FileName;
+            xeBuildPatchFile = ofd.FileName;
 
-            Nand.Nand.injectDevkitVfusesAndKhvPatches(variables.filename1, variables.cpukey, khvPatchPath);
+            Nand.Nand.injectDevkitVfusesAndKhvPatches(variables.filename1, variables.cpukey, xeBuildPatchFile);
 
             nand_init();
         }
