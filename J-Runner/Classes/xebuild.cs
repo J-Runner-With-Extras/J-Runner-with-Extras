@@ -53,6 +53,103 @@ namespace JRunner.Classes
         private Nand.PrivateN _nand;
         private List<string> _patches;
 
+        // Methods for extracting the different sections of the input
+        // xeBuild patch data
+        //
+        // xeBuild patch files contain multiple sections, with a DWORD of
+        // 0xFFFFFFFF as the section terminator.
+        //
+        // 1st section is CB/CB_B/SB patches
+        //
+        // 2nd section is CD/SD patches
+        //
+        // 3rd section is the kernel patches, applied by the patching engine
+        // in the SD to the kernel. This is the SE in a devkit image, or the
+        // CE after CF/CG patching has taken place. XeBuild drops these as-is
+        // in to the NAND image 
+        //
+        // The terminating 0xFFFFFFFF is included in each patch section
+        //
+        public static int getLengthOfPatchSection(byte[] bytes, int offset)
+        {
+            // Stop at the last DWORD of the byte array, no point searching further
+            for (int i = offset; i < bytes.Length - 3; i++)
+            {
+                if (bytes[i] == 0xFF &&
+                    bytes[i + 1] == 0xFF &&
+                    bytes[i + 2] == 0xFF &&
+                    bytes[i + 3] == 0xFF)
+                {
+                    return i + 4 - offset;
+                }
+            }
+
+            return -1;
+        }
+
+        public static byte[] return2blPatchSet(byte[] xeBuildPatchData)
+        {
+            int sbPatchOffset = 0;
+            int sbPatchLength = getLengthOfPatchSection(xeBuildPatchData, sbPatchOffset);
+
+            if(sbPatchLength == -1)
+            {
+                return new byte[0];
+            }
+
+            return xeBuildPatchData.Take(sbPatchLength).ToArray();
+        }
+
+        public static byte[] return4blPatchSet(byte[] xeBuildPatchData)
+        {
+            int sbPatchOffset = 0;
+            int sbPatchLength = getLengthOfPatchSection(xeBuildPatchData, sbPatchOffset);
+
+            if (sbPatchLength == -1)
+            {
+                return new byte[0];
+            }
+
+            int sdPatchOffset = sbPatchOffset + sbPatchLength;
+            int sdPatchLength = getLengthOfPatchSection(xeBuildPatchData, sdPatchOffset);
+
+            if (sdPatchLength == -1)
+            {
+                return new byte[0];
+            }
+
+            return xeBuildPatchData.Skip(sdPatchOffset).Take(sdPatchLength).ToArray();
+        }
+
+        public static byte[] returnKernelHvPatchSet(byte[] xeBuildPatchData)
+        {
+            int sbPatchOffset = 0;
+            int sbPatchLength = getLengthOfPatchSection(xeBuildPatchData, sbPatchOffset);
+
+            if (sbPatchLength == -1)
+            {
+                return new byte[0];
+            }
+
+            int sdPatchOffset = sbPatchOffset + sbPatchLength;
+            int sdPatchLength = getLengthOfPatchSection(xeBuildPatchData, sdPatchOffset);
+
+            if (sdPatchLength == -1)
+            {
+                return new byte[0];
+            }
+
+            int khvPatchOffset = sdPatchOffset + sdPatchLength;
+            int khvPatchLength = getLengthOfPatchSection(xeBuildPatchData, khvPatchOffset);
+
+            if (khvPatchLength == -1)
+            {
+                return new byte[0];
+            }
+
+            return xeBuildPatchData.Skip(khvPatchOffset).Take(khvPatchLength).ToArray();
+        }
+
         public void loadvariables(string cpukey, variables.hacktypes ttype, string dash, consoles ctype, List<string> patches, Nand.PrivateN nand, bool altoptions, bool DLpatches, bool includeLaunch, bool audclamp, bool rjtag, bool cleansmc, bool cr4, bool smcp, bool rgh3, bool bigffs, bool zfuse, bool xdkbuild, bool xlusb, bool xlhdd, bool xlboth, bool usbdsec, bool coronakeyfix, bool fullDataClean)
         {
             this._cpukey = cpukey;
