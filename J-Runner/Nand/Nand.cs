@@ -3954,7 +3954,6 @@ namespace JRunner.Nand
             }
             val = ~val;
 
-            // TODO what are the implications of the X8? Why did i break this???
             // TODO what are the implications of the X8? Why did my code break this in the first place???
             byte[] temp = Oper.StringToByteArray(((val << 6) & 0xFFFFFFFF).ToString("X8"));
             Array.Reverse(temp);
