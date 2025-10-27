@@ -2625,7 +2625,7 @@ namespace JRunner.Nand
                                   0xC0000,    // XeLL-Only Image (Backup XeLL)
                                   0xE0000,    // Unknown, but listed in libxenon updxell function
                                   0xF0000,    // XeLL in the flashfs of XDKBuild and RGLoader images
-                                  0xF4000,    // XeLL in the flashfs of Devkit images
+                                  0xF4000,    // XeLL in the flashfs of 64mb Devkit images
                                   0xB80000 }; // XeLL in the flashfs of BB Jasper and BB Trinity XDKBuild images
 
             int blockType = 0;
@@ -2799,7 +2799,6 @@ namespace JRunner.Nand
             //
             // Step 1: Create vfuse patch and add kernel/hv patches
             //
-
             byte[] vfuseAndKernelPatchData = new byte[0x60 + khvData.Length];
             
             // bytes we use for making up the vfuses
@@ -2956,9 +2955,23 @@ namespace JRunner.Nand
             sb_crypt = encrypt_CB(sb_decrypt, sb_nonce, ref sb_key);
             Buffer.BlockCopy(sb_crypt, 0, nandPatchPages, sbOffset, sbLength);
 
-            // I don't know what this does but we're going to make it match DevGL
-            // because the patching engine in the SD looks here for things
-            nandPatchPages[0x66] = 0x0;
+            // The SD patching engine looks at two DWORDs, at 0x64 and 0x70
+            // to determine where to look for patches. To be able to find
+            // patches at 0xE0000, 0x64 and 0x70 need to be:
+            // 0x64 = 0x00 0x0D 0x00 0x00
+            // 0x70 = 0x00 0x01 0x00 0x00
+            //
+            // because 0xD0000 + 0x10000 = 0xE0000
+            //
+            nandPatchPages[0x64] = 0x00;
+            nandPatchPages[0x65] = 0x0D;
+            nandPatchPages[0x66] = 0x00;
+            nandPatchPages[0x67] = 0x00;
+
+            nandPatchPages[0x70] = 0x00;
+            nandPatchPages[0x71] = 0x01;
+            nandPatchPages[0x72] = 0x00;
+            nandPatchPages[0x73] = 0x00;
 
             // Re-add ECC data and copy it over to the flash data buffer
             nandPatchPages = addecc_v2(nandPatchPages,true,0,blockType);
@@ -3942,6 +3955,7 @@ namespace JRunner.Nand
             val = ~val;
 
             // TODO what are the implications of the X8? Why did i break this???
+            // TODO what are the implications of the X8? Why did my code break this in the first place???
             byte[] temp = Oper.StringToByteArray(((val << 6) & 0xFFFFFFFF).ToString("X8"));
             Array.Reverse(temp);
             for (int j = data.Length - 4; j != data.Length; j++) data[j] = temp[j - data.Length + 4];
