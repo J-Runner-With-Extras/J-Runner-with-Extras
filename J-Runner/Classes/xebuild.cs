@@ -396,7 +396,7 @@ namespace JRunner.Classes
             iniLines[iniSdEntryLine] = patchedIniString;
 
             // Write the BL to the dashboard folder
-            File.WriteAllBytes(Path.Combine(Path.GetDirectoryName(iniFilePath), sdFileName), patchedBlData);
+            File.WriteAllBytes(Path.Combine(Path.GetDirectoryName(iniFilePath), patchedSdFileName), patchedBlData);
 
             // Write the new ini file
             File.WriteAllLines(iniFilePath, iniLines);
@@ -1012,7 +1012,7 @@ namespace JRunner.Classes
                     }
 
                     // We also need to make sure the ini file exists, because we'll need to pre-patch the SD
-                    iniFilePath = variables.rootfolder + @"\xeBuild\" + _dash + "\\_devgl.ini";
+                    iniFilePath = variables.rootfolder + @"\xeBuild\" + _dash + "\\_devkit.ini";
                     if (!File.Exists(iniFilePath))
                     {
                         Console.WriteLine("Could not create 64mb DevGL image, _devgl.ini for dashboard " + _dash + " missing.");
