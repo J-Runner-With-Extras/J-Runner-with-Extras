@@ -1707,43 +1707,6 @@ namespace JRunner
             else return "";
         }
 
-        private long CRCbl(string filename)
-        {
-            crc32 crc = new crc32();
-            long hashData = 0;
-            if (File.Exists(filename))
-            {
-                byte[] fileb = File.ReadAllBytes(filename);
-                fileb = editbl(fileb);
-                hashData = crc.CRC(fileb);
-            }
-            return hashData;
-        }
-        private byte[] editbl(byte[] bl)
-        {
-            int length = Oper.ByteArrayToInt(Oper.returnportion(bl, 0xC, 4));
-            if (bl[0] == 0x43 && bl[1] == 0x42)
-            {
-                for (int i = 0x10; i < 0x40; i++) bl[i] = 0x0;
-            }
-            else if (bl[0] == 0x43 && bl[1] == 0x44)
-            {
-                for (int i = 0x10; i < 0x20; i++) bl[i] = 0x0;
-            }
-            else if (bl[0] == 0x43 && bl[1] == 0x45)
-            {
-                for (int i = 0x10; i < 0x20; i++) bl[i] = 0x0;
-            }
-            else if (bl[0] == 0x43 && bl[1] == 0x46)
-            {
-                for (int i = 0x20; i < 0x230; i++) bl[i] = 0x0;
-            }
-            else if (bl[0] == 0x43 && bl[1] == 0x47)
-            {
-                for (int i = 0x10; i < 0x20; i++) bl[i] = 0x0;
-            }
-            return Oper.returnportion(bl, 0, length);
-        }
         bool editblini(string file, string label, string cba, string cbb = "")
         {
             string bla;
@@ -1761,7 +1724,7 @@ namespace JRunner
                     Console.WriteLine("{0} not found. Insert it manually on the common folder", "cb_" + cba + ".bin");
                     return false;
                 }
-                bla = "cb_" + cba + ".bin," + CRCbl(Path.Combine(variables.rootfolder, "common", "cb_" + cba + ".bin")).ToString("x8");
+                bla = "cb_" + cba + ".bin," + Classes.xebuild.calculateBlCrc(Path.Combine(variables.rootfolder, "common", "cb_" + cba + ".bin")).ToString("x8");
                 blb = "none,00000000";
             }
             else
@@ -1784,8 +1747,8 @@ namespace JRunner
                     Console.WriteLine("{0} not found. Insert it manually on the common folder", "cbb_" + cba + ".bin");
                     return false;
                 }
-                bla = "cba_" + cba + ".bin," + CRCbl(Path.Combine(variables.rootfolder, "common", "cba_" + cba + ".bin")).ToString("x8");
-                blb = "cbb_" + cbb + ".bin," + CRCbl(Path.Combine(variables.rootfolder, "common", "cbb_" + cbb + ".bin")).ToString("x8");
+                bla = "cba_" + cba + ".bin," + Classes.xebuild.calculateBlCrc(Path.Combine(variables.rootfolder, "common", "cba_" + cba + ".bin")).ToString("x8");
+                blb = "cbb_" + cbb + ".bin," + Classes.xebuild.calculateBlCrc(Path.Combine(variables.rootfolder, "common", "cbb_" + cbb + ".bin")).ToString("x8");
             }
             Console.WriteLine("Editing File..");
             string[] lines = File.ReadAllLines(file);
