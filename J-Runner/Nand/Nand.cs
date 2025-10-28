@@ -4061,7 +4061,9 @@ namespace JRunner.Nand
             }
             val = ~val;
 
-            // TODO what are the implications of the X8? Why did my code break this in the first place???
+            // For some values of val, the below stmt would return less than a 4 byte array
+            // (32-bit number). To ensure 4 bytes is always returned, "X8" replaces "X"
+            // in the ToString method below
             byte[] temp = Oper.StringToByteArray(((val << 6) & 0xFFFFFFFF).ToString("X8"));
             Array.Reverse(temp);
             for (int j = data.Length - 4; j != data.Length; j++) data[j] = temp[j - data.Length + 4];
