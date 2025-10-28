@@ -3218,8 +3218,6 @@ namespace JRunner
 
         private void convert64mbDevkitToDevGLToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            string xeBuildPatchFile;
-
             if (String.IsNullOrWhiteSpace(variables.filename1))
             {
                 Console.WriteLine("Devkit image conversion error: Please select a valid NAND image!");
@@ -3247,9 +3245,7 @@ namespace JRunner
                 return;
             }
 
-            xeBuildPatchFile = ofd.FileName;
-
-            Nand.Nand.convertDevkitToDevGL(variables.filename1, variables.cpukey, xeBuildPatchFile, false);
+            Nand.Nand.convertDevkitToDevGL(variables.filename1, variables.cpukey, ofd.FileName, false);
         }
 
         private void sMCConfigViewerToolStripMenuItem1_Click(object sender, EventArgs e)
