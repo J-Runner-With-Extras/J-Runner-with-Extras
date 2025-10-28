@@ -153,7 +153,6 @@ namespace JRunner.Panels
                     textBoxpd_1.Text = nand.uf.pd_1;
 
 
-
                     if (textBox2BLb.Text == "15432") // It's not currently possible to properly parse the triple CB setup in RGH3
                     {
                         textBoxldv_cb.Text = textBoxpd_cb.Text = "";

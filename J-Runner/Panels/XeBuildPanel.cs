@@ -1334,6 +1334,10 @@ namespace JRunner.Panels
 
             string ini = (variables.launchpath + @"\" + variables.dashversion + @"\_" + variables.ttyp + ".ini");
 
+            // xeBuild does not officially support creating images for 64mb xenon, zephyr, or falcon
+            // in retail/glitch/glitch2/devGL modes. HOWEVER, it does support devkit images, so if the
+            // selected hack type is DevGL, we can create and patch a devkit image with pre and post
+            // xeBuild patching steps
             if( (variables.ctype.ID == 7 || variables.ctype.ID == 13 || variables.ctype.ID == 14) &&
                  variables.ttyp != variables.hacktypes.devgl )
             {

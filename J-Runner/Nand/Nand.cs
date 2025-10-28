@@ -11,6 +11,7 @@ namespace JRunner.Nand
 {
     public struct Bootloaders
     {
+        // BL Versions
         public int CB_A;
         public int CB_B;
         public int SC;
@@ -21,6 +22,7 @@ namespace JRunner.Nand
         public int CF_1;
         public int CG_1;
 
+        // BL Magic Strings (e.g. CB, SC, CD)
         public string _2BL_magic;
         public string _3BL_magic;
         public string _4BL_magic;
@@ -377,22 +379,22 @@ namespace JRunner.Nand
                         bl._4BL_magic = blIdString;
                         if (variables.extractfiles) Oper.savefile(data, "output\\" + blIdString + ".bin");
 
-                        // Encryption of the dev 4BL is different than retail 4BL,
-                        // as it's based on the SC key rather than the SB key
-                        if (isDevBl)
+                        // If there was a 3BL, the 4BL encryption is derived
+                        // from it rather than the 2BL
+                        if (bl.SC > 0)
                         {
                             // In case someone tries to open an XDKbuild image that hasn't been
                             // patched, only try to decrypt the SD if the SC was decrypted OK
                             if(sc_dec.Length > 0)
                             {
                                 cd_dec = Nand.decrypt_SD(data, sc_dec);
-                                if (variables.extractfiles) Oper.savefile(cd_dec, "output\\SD_dec.bin");
+                                if (variables.extractfiles) Oper.savefile(cd_dec, "output\\" + blIdString+ "_dec.bin");
                             }
                         }
                         else
                         {
                             cd_dec = Nand.decrypt_CD(data, cb_dec);
-                            if (variables.extractfiles) Oper.savefile(cd_dec, "output\\CD_dec.bin");
+                            if (variables.extractfiles) Oper.savefile(cd_dec, "output\\" + blIdString + "_dec.bin");
                         }
                         //CD = data;
                     }
@@ -3019,7 +3021,10 @@ namespace JRunner.Nand
 
             // Blow away all the pairing data, LDV, auth hash, etc
             // for a zero paired image and then re-encrypt everything
-            for(int i = 0x20; i<= 0x3F; i++)
+            // - Pairing Data: 0x20-0x22
+            // - LDV: 0x23
+            // - CB auth hash/per-box digest: 0x30-0x3f
+            for (int i = 0x20; i<= 0x3F; i++)
             {
                 sb_decrypt[i] = 0x0;
             }

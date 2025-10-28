@@ -249,11 +249,9 @@ namespace JRunner.Classes
                 Array.Resize(ref patchSectionBytes, (int)length);
                 s.Read(patchSectionBytes, 0, (int)length);
 
-                // If the patch address and length would make us run off the end of the buffer
-                // and the address + length isn't crazy (lets use 0xE0000, the address of the
-                // patch sets, as an arbitrary limit) we need to resize the bl to fit.
-                if(address + length > blData.Length &&
-                   address + length < 0xE0000 )
+                // If the patch address and length would make us run off 
+                // the end of the buffer we need to resize the buffer to fit.
+                if (address + length > blData.Length)
                 {
                     Array.Resize(ref blData, (int)(address + length));
                 }
