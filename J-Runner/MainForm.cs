@@ -3252,11 +3252,6 @@ namespace JRunner
             Nand.Nand.convertDevkitToDevGL(variables.filename1, variables.cpukey, xeBuildPatchFile, false);
         }
 
-        private void patch64MbDevkitNANDToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-
-        }
-
         private void sMCConfigViewerToolStripMenuItem1_Click(object sender, EventArgs e)
         {
             SMCConfigEditor smcedit = new SMCConfigEditor();
