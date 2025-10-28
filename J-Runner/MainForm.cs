@@ -3134,7 +3134,8 @@ namespace JRunner
             if (variables.ctype.ID == -1) variables.ctype = callConsoleSelect(ConsoleSelect.Selected.All);
             if (variables.ctype.ID == -1) return;
 
-            if (variables.ctype.ID == 7 || variables.ctype.ID == 13 || variables.ctype.ID == 14)
+            if( (variables.ctype.ID == 7 || variables.ctype.ID == 13 || variables.ctype.ID == 14) &&
+                 variables.ttyp != variables.hacktypes.devgl )
             {
                 if (MessageBox.Show("XeBuild does not support building 64MB images for Xenon, Zephyr, or Falcon\n\nContinuing will cause a 16MB image to be built\n\nDo you want to continue?", "Steep Hill Ahead", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.No)
                 {
@@ -3215,42 +3216,45 @@ namespace JRunner
             }
         }
 
-        private void patch64MbDevkitNANDToolStripMenuItem_Click(object sender, EventArgs e)
+        private void convert64mbDevkitToDevGLToolStripMenuItem_Click(object sender, EventArgs e)
         {
             string xeBuildPatchFile;
 
             if (String.IsNullOrWhiteSpace(variables.filename1))
             {
-                Console.WriteLine("Devkit 64mb patch error: Please select a valid NAND image!");
+                Console.WriteLine("Devkit image conversion error: Please select a valid NAND image!");
                 return;
             }
 
-            if( !Nand.Nand.VerifyKey(Oper.StringToByteArray(variables.cpukey)) ||
-                !nand.cpukeyverification(variables.cpukey) )
+            if (!Nand.Nand.VerifyKey(Oper.StringToByteArray(variables.cpukey)) ||
+                !nand.cpukeyverification(variables.cpukey))
             {
-                Console.WriteLine("Devkit 64mb patch error: Bad CPU Key!");
+                Console.WriteLine("Devkit image conversion error: Bad CPU Key!");
                 return;
             }
 
             OpenFileDialog ofd = new OpenFileDialog();
 
             ofd.FileName = "";
-            ofd.Filter = "xeBuild Jasper patch set (patches_devjasper.bin)|patches_devjasper.bin|All files (*.*)|*.*";
+            ofd.Filter = "xeBuild devkit patch set (patches_dev*.bin)|patches_dev*.bin|All files (*.*)|*.*";
             ofd.Title = "Select KHV patch";
             ofd.InitialDirectory = Path.Combine(variables.rootfolder, @"xeBuild\17489\bin");
             ofd.RestoreDirectory = false;
 
             if (ofd.ShowDialog() != DialogResult.OK)
             {
-                Console.WriteLine("Cancelled Devkit Image Patch");
+                Console.WriteLine("Cancelled Devkit image conversion");
                 return;
             }
 
             xeBuildPatchFile = ofd.FileName;
 
-            Nand.Nand.injectDevkitVfusesAndKhvPatches(variables.filename1, variables.cpukey, xeBuildPatchFile);
+            Nand.Nand.convertDevkitToDevGL(variables.filename1, variables.cpukey, xeBuildPatchFile, false);
+        }
 
-            nand_init();
+        private void patch64MbDevkitNANDToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+
         }
 
         private void sMCConfigViewerToolStripMenuItem1_Click(object sender, EventArgs e)
@@ -4268,19 +4272,6 @@ namespace JRunner
                     variables.debugMode = true;
                 }
             }
-            else if (e.KeyCode == Keys.F4 && e.Control && e.Alt)
-            {
-                if (!variables.devkitnotdevgl)
-                {
-                    variables.devkitnotdevgl = true;
-                    Console.WriteLine("Devkit instead of DevGL On");
-                }
-                else
-                {
-                    variables.devkitnotdevgl = false;
-                    Console.WriteLine("Devkit instead of DevGL Off");
-                }
-            }
             else if (e.Control && e.KeyCode == Keys.F3)
             {
                 if (!variables.extractfiles) { variables.extractfiles = true; Console.WriteLine("Extract Files On"); }
@@ -4324,6 +4315,16 @@ namespace JRunner
             }
             else if (e.KeyCode == Keys.F10)
             {
+                if (!variables.devkitnotdevgl)
+                {
+                    variables.devkitnotdevgl = true;
+                    Console.WriteLine("Devkit instead of DevGL On");
+                }
+                else
+                {
+                    variables.devkitnotdevgl = false;
+                    Console.WriteLine("Devkit instead of DevGL Off");
+                }
             }
             else if (e.KeyCode == Keys.F11)
             {
@@ -5281,8 +5282,8 @@ namespace JRunner
 
 
 
+
         #endregion
 
-        
     }
 }

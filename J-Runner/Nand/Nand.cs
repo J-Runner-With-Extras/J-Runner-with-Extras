@@ -20,6 +20,11 @@ namespace JRunner.Nand
         public int CG_0;
         public int CF_1;
         public int CG_1;
+
+        public string _2BL_magic;
+        public string _3BL_magic;
+        public string _4BL_magic;
+        public string _5BL_magic;
     }
     public struct SMCInfo
     {
@@ -236,6 +241,7 @@ namespace JRunner.Nand
             byte[] data, cb_dec = { }, sc_dec = { }, cd_dec = { }, ce_dec = { };
             byte[] CB_A = null, CB_B = null; //SMC = null, CD = null, CE = null, Keyvault = null;
             bl.CB_A = 0; bl.CB_B = 0; bl.CD = 0; bl.CE = 0; bl.CF_0 = 0; bl.CG_0 = 0; bl.CF_1 = 0; bl.CG_1 = 0;
+            bl._2BL_magic = "";bl._3BL_magic = "";bl._4BL_magic = "";bl._5BL_magic = "";
             uf.ldv_p0 = 0; uf.ldv_p1 = 0; uf.ldv_cb = 0; uf.pd_cb = ""; uf.pd_0 = ""; uf.pd_1 = "";
 
             if (Nand.rawecc(image)) Console.WriteLine("Image is raw");
@@ -306,6 +312,8 @@ namespace JRunner.Nand
                     if (block_offset_b + block_size <= image.Length) Buffer.BlockCopy(image, block_offset_b, data, 0, block_size);
                     if (id == 2)
                     {
+                        bl._2BL_magic = blIdString;
+
                         if (semi == 0)
                         {
                             bl.CB_A = block_build;
@@ -358,6 +366,7 @@ namespace JRunner.Nand
                     else if (id == 3)
                     {
                         bl.SC = block_build;
+                        bl._3BL_magic = blIdString;
                         if (variables.extractfiles) Oper.savefile(data, "output\\" + blIdString + ".bin");
                         sc_dec = Nand.decrypt_SC(data);
                         if (variables.extractfiles) Oper.savefile(sc_dec, "output\\" + blIdString + "_dec.bin");
@@ -365,6 +374,7 @@ namespace JRunner.Nand
                     else if (id == 4)
                     {
                         bl.CD = block_build;
+                        bl._4BL_magic = blIdString;
                         if (variables.extractfiles) Oper.savefile(data, "output\\" + blIdString + ".bin");
 
                         // Encryption of the dev 4BL is different than retail 4BL,
@@ -389,6 +399,7 @@ namespace JRunner.Nand
                     else if (id == 5)
                     {
                         bl.CE = block_build;
+                        bl._5BL_magic = blIdString;
                         if (variables.extractfiles) Oper.savefile(data, "output\\" + blIdString + ".bin");
                         ce_dec = Nand.decrypt_CE(data, cd_dec);
                         if (variables.extractfiles) Oper.savefile(data, "output\\" + blIdString + "_dec.bin");
@@ -2811,13 +2822,24 @@ namespace JRunner.Nand
             Console.WriteLine("");
         }
 
-        public static void injectDevkitVfusesAndKhvPatches(string flashFilePath, string cpukey, string patchFilePath)
+        /// <summary>
+        /// Converts an input devkit image to a DevGL image by doing the following:
+        /// 1 - Patch in virtual fuses and the kernel/hypervisor patch set
+        /// 2 - Set the XeLL startup reason bytes
+        /// 3 - Zero-pair the SB
+        /// 4 - Fix the patch slot addresses for the SD patching engine
+        /// </summary>
+        /// <param name="flashFilePath">Flash image to be patched, result will be written back to the same file</param>
+        /// <param name="cpukey">CPU key for the image, needed to decrypt the KV</param>
+        /// <param name="patchFilePath">Path to the xeBuild patch file to use to patch the devkit image</param>
+        /// <param name="sequenced">True if this is part of a xeBuild operation, false otherwise</param>
+        public static void convertDevkitToDevGL(string flashFilePath, string cpukey, string patchFilePath, bool sequenced)
         {
             // This is where the XDKbuild patches expect the virtual fuses and kernel patches to be
             int patchOffset = 0xE0000;
 
-            byte[] flashData = { };File.ReadAllBytes(flashFilePath);
-            byte[] patchData = { }; File.ReadAllBytes(patchFilePath);
+            byte[] flashData = { };
+            byte[] patchData = { };
 
             try
             {
@@ -2825,8 +2847,14 @@ namespace JRunner.Nand
             }
             catch(Exception ex)
             {
-                Console.WriteLine("Devkit image patch error: couldn't read input flash image");
-                Console.WriteLine(ex.ToString());
+                Console.WriteLine("Devkit image conversion error: couldn't read input flash image");
+                if (variables.debugMode) Console.WriteLine(ex.ToString());
+
+                if (sequenced)
+                {
+                    variables.xefinished = true;
+                    MainForm.mainForm.xPanel.xeExitActual(false);
+                }
                 return;
             }
 
@@ -2835,7 +2863,13 @@ namespace JRunner.Nand
             // for 16mb/BB/non-ECC images
             if (flashData.Length != 69206016)
             {
-                Console.WriteLine("Devkit image patch error: Only 64mb images are supported.");
+                Console.WriteLine("Devkit image conversion error: Only 64mb images are supported.");
+
+                if (sequenced)
+                {
+                    variables.xefinished = true;
+                    MainForm.mainForm.xPanel.xeExitActual(false);
+                }
                 return;
             }
 
@@ -2845,8 +2879,14 @@ namespace JRunner.Nand
             }
             catch(Exception ex)
             {
-                Console.WriteLine("Devkit image patch error: couldn't read input patch data");
-                Console.WriteLine(ex.ToString());
+                Console.WriteLine("Devkit image conversion error: couldn't read input patch data");
+                if (variables.debugMode) Console.WriteLine(ex.ToString());
+
+                if (sequenced)
+                {
+                    variables.xefinished = true;
+                    MainForm.mainForm.xPanel.xeExitActual(false);
+                }
                 return;
             }
 
@@ -3027,13 +3067,29 @@ namespace JRunner.Nand
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Devkit image patch error: couldn't write modified flash image");
-                Console.WriteLine(ex.ToString());
+                Console.WriteLine("Devkit image conversion error: couldn't write modified flash image");
+                if (variables.debugMode) Console.WriteLine(ex.ToString());
+
+                if (sequenced)
+                {
+                    variables.xefinished = true;
+                    MainForm.mainForm.xPanel.xeExitActual(false);
+                }
                 return;
             }
 
             Console.WriteLine("Successfully converted Devkit image to DevGL");
             Console.WriteLine("");
+
+            if(sequenced)
+            {
+                variables.xefinished = true;
+                MainForm.mainForm.xPanel.xeExitActual();
+            }
+            else
+            {
+                MainForm.mainForm.nand_init();
+            }
         }
 
         private static byte[] CalculateCPUKeyECD(byte[] key)

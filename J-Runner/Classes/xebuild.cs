@@ -671,6 +671,27 @@ namespace JRunner.Classes
             return result;
         }
 
+        private bool postBuildActionsAreRequired()
+        {
+            // So far, the following image types require post-build actions
+            // any others should be added here to prevent errors and file conflicts
+            //
+            // 1) XDKBuild when the hack type is NOT DevGL
+            // 2) Any type of RGH3 image
+            // 3) DevGL images for console types 3 (64mb Xenon), 13 (64mb Zephyr), and 14 (64mb Falcon)
+            //
+            if( (_xdkbuild && _ttype != variables.hacktypes.devgl) ||
+                _rgh3 ||
+                (_ttype == variables.hacktypes.devgl && (_ctype.ID == 7 || _ctype.ID == 13 || _ctype.ID == 14)) )
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
         public void build()
         {
             success = false;
@@ -678,17 +699,9 @@ namespace JRunner.Classes
             pProcess.StartInfo.FileName = variables.rootfolder + @"\xeBuild\xeBuild.exe";
             string arguments = "";
             string boardtype = _ctype.XeBuild;
+            string patchFileBaseName = "";
+            string patchFilePath = "";
 
-            if(variables.devkitnotdevgl && _ttype == variables.hacktypes.devgl)
-            {
-                Console.WriteLine("Using devkit image type for DevGL");
-                arguments = "-t " + variables.hacktypes.devkit;
-            }
-            else
-            {
-               arguments = "-t " + _ttype;
-            }
-                
             // Type overrides, check doSomeChecks() if changing
             if (_ttype == variables.hacktypes.glitch2 || _ttype == variables.hacktypes.glitch2m)
             {
@@ -720,6 +733,34 @@ namespace JRunner.Classes
                     boardtype = "jasper";
                     Console.WriteLine("Using Jasper type for Falcon");
                 }
+            }
+
+            if (_ttype == variables.hacktypes.devgl)
+            {
+                if (variables.devkitnotdevgl)
+                {
+                    Console.WriteLine("Using devkit image type instead of DevGL");
+                }
+                else if (_ctype.ID == 7 || _ctype.ID == 13 || _ctype.ID == 14)
+                {
+                    Console.WriteLine("Building 64mb DevGL image using XeBuild devkit mode");
+
+                    // To build a DevGL image for 64mb consoles successfully we need to
+                    // ensure the patch file exists so the post-build patch step can inject it
+                    patchFileBaseName = "patches_dev" + boardtype + ".bin";
+                    patchFilePath = variables.rootfolder + @"\xeBuild\" + _dash + "\\bin\\" + patchFileBaseName;
+                    if (!File.Exists(patchFilePath))
+                    {
+                        Console.WriteLine("Could not create 64mb DevGL image, " + patchFileBaseName + " for dashboard " + _dash + " missing.");
+                        return;
+                    }
+                }
+
+                arguments = "-t " + variables.hacktypes.devkit;
+            }
+            else
+            {
+                arguments = "-t " + _ttype;
             }
 
             if (_xdkbuild)
@@ -816,7 +857,7 @@ namespace JRunner.Classes
             pProcess.StartInfo.RedirectStandardInput = true;
             pProcess.StartInfo.RedirectStandardOutput = true;
             pProcess.StartInfo.CreateNoWindow = true;
-            if (!(_xdkbuild && _ttype != variables.hacktypes.devgl) && !_rgh3) pProcess.Exited += new EventHandler(xeExit);
+            if (!postBuildActionsAreRequired()) pProcess.Exited += new EventHandler(xeExit);
             //pProcess.OutputDataReceived += new System.Diagnostics.DataReceivedEventHandler(DataReceived);
             //pProcess.Exited += new EventHandler(xe_Exited);
             //pProcess.OutputDataReceived += new System.Diagnostics.DataReceivedEventHandler(process_OutputDataReceived);
@@ -834,7 +875,10 @@ namespace JRunner.Classes
                         Console.WriteLine(e.Data);
                         if (e.Data != null && e.Data.Contains("image built")) {
                             success = true;
-                            if (!(_xdkbuild && _ttype != variables.hacktypes.devgl) && !_rgh3) variables.xefinished = true;
+                            if (!postBuildActionsAreRequired())
+                            {
+                                variables.xefinished = true;
+                            }
                         }
                     }
                 };
@@ -850,13 +894,31 @@ namespace JRunner.Classes
 
                 if (success)
                 {
+                    // Any post-xeBuild actions are done here. Ensure the postBuildActionsAreRequired
+                    // function is updated if anything is added
+
                     if (_xdkbuild && _rgh3)
                     {
                         MainForm.mainForm.XDKbuild.create(boardtype, true);
                         MainForm.mainForm.rgh3Build.create(_ctype.Text, "00000000000000000000000000000000", true);
                     }
-                    else if (_xdkbuild && _ttype != variables.hacktypes.devgl) MainForm.mainForm.XDKbuild.create(boardtype);
-                    else if (_rgh3) MainForm.mainForm.rgh3Build.create(_ctype.Text, _cpukey, true);
+                    else if (_xdkbuild && _ttype != variables.hacktypes.devgl)
+                    {
+                        MainForm.mainForm.XDKbuild.create(boardtype);
+                    }
+                    else if (_rgh3)
+                    {
+                        MainForm.mainForm.rgh3Build.create(_ctype.Text, _cpukey, true);
+                    }
+                    else if (_ttype == variables.hacktypes.devgl && (_ctype.ID == 7 || _ctype.ID == 13 || _ctype.ID == 14))
+                    {
+                        // This is a 64mb DevGL image that we've got to patch... annoying af but that's xeBuild for us
+                        Nand.Nand.convertDevkitToDevGL(Path.Combine(variables.xefolder, variables.updflash),
+                                                        variables.cpukey,
+                                                        patchFilePath,
+                                                        true);
+                    }
+
                 }
             }
             catch (Exception objException)
