@@ -19,7 +19,6 @@ namespace JRunner.Panels
             InitializeComponent();
             lblfcrt.Visible = false;
             lblhashed.Visible = false;
-            label2bl.Visible = false;
             setNand(Nand);
         }
 
@@ -46,7 +45,6 @@ namespace JRunner.Panels
             textBox2BLb.Enabled = true;
             label2blb.Visible = true;
             label2bla.Visible = true;
-            label2bl.Visible = false;
 
             // KV Info
             btnConsoleId.Text = "View: Native";
@@ -74,14 +72,71 @@ namespace JRunner.Panels
             {
                 textBox2BLa.BeginInvoke(new Action(() => {
                     // Nand Info
-                    if (nand.bl.CB_A > 0) textBox2BLa.Text = nand.bl.CB_A.ToString();
-                    else textBox2BLa.Text = "";
-                    if (nand.bl.CB_B > 0) textBox2BLb.Text = nand.bl.CB_B.ToString();
-                    else textBox2BLb.Text = "";
-                    if (nand.bl.CD > 0) textBox4BL.Text = nand.bl.CD.ToString();
-                    else textBox4BL.Text = "";
-                    if (nand.bl.CE > 0) textBox5BL.Text = nand.bl.CE.ToString();
-                    else textBox5BL.Text = "";
+
+                    if (nand.bl.CB_A > 0)
+                    {
+                        textBox2BLa.Text = nand.bl.CB_A.ToString();
+                        label2bla.Text = nand.bl._2BL_magic;
+                    }
+                    else
+                    {
+                        label2bla.Text = "CB_A";
+                        textBox2BLa.Text = "";
+                    }
+
+                    if (nand.bl.CB_B > 0)
+                    {
+                        label2bla.Text = "CB_A";
+                        label2blb.Text = "CB_B";
+                        textBox2BLb.Text = nand.bl.CB_B.ToString();
+                        textBox2BLb.Enabled = true;
+                        label2blb.Visible = true;
+
+                        if (textBox2BLb.Text == "15432") textBoxCbType.Text = "RGH3";
+                        else textBoxCbType.Text = "Split";
+                    }
+                    else
+                    {
+                        if (nand.bl.SC > 0)
+                        {
+                            label2blb.Text = nand.bl._3BL_magic;
+                            textBox2BLb.Text = nand.bl.SC.ToString();
+                            label2blb.Visible = true;
+                            textBox2BLb.Enabled = true;
+                        }
+                        else
+                        {
+                            label2blb.Text = "CB_B";
+                            textBox2BLb.Text = "";
+                            label2blb.Visible = false;
+                            textBox2BLb.Enabled = false;
+                        }
+                            
+                        textBoxCbType.Text = "Single";
+                    }
+
+                    if (nand.bl.CD > 0)
+                    {
+                        label4bl.Text = nand.bl._4BL_magic;
+                        textBox4BL.Text = nand.bl.CD.ToString();
+                    }
+                    else
+                    {
+                        label4bl.Text = "CD";
+                        textBox4BL.Text = "";
+                    }
+
+                    if (nand.bl.CE > 0)
+                    {
+                        label5bl.Text = nand.bl._5BL_magic;
+                        textBox5BL.Text = nand.bl.CE.ToString();
+                    }
+                    else
+                    {
+                        label5bl.Text = "CE";
+                        textBox5BL.Text = "";
+                    }
+
                     if (nand.bl.CF_0 > 0) textBox6BL_p0.Text = nand.bl.CF_0.ToString();
                     else textBox6BL_p0.Text = "";
                     if (nand.bl.CF_1 > 0) textBox6BL_p1.Text = nand.bl.CF_1.ToString();
@@ -97,24 +152,6 @@ namespace JRunner.Panels
                     textBoxpd_0.Text = nand.uf.pd_0;
                     textBoxpd_1.Text = nand.uf.pd_1;
 
-                    if (nand.bl.CB_B != 0)
-                    {
-                        textBox2BLb.Text = nand.bl.CB_B.ToString();
-                        if (textBox2BLb.Text == "15432") textBoxCbType.Text = "RGH3";
-                        else textBoxCbType.Text = "Split";
-                        textBox2BLb.Enabled = true;
-                        label2blb.Visible = true;
-                        label2bla.Visible = true;
-                        label2bl.Visible = false;
-                    }
-                    else
-                    {
-                        textBox2BLb.Enabled = false;
-                        textBoxCbType.Text = "Single";
-                        label2blb.Visible = false;
-                        label2bla.Visible = false;
-                        label2bl.Visible = true;
-                    }
 
                     if (textBox2BLb.Text == "15432") // It's not currently possible to properly parse the triple CB setup in RGH3
                     {
@@ -247,7 +284,6 @@ namespace JRunner.Panels
         {
             lblfcrt.Visible = false;
             lblhashed.Visible = false;
-            label2bl.Visible = false;
         }
 
         private void NandInfo_DragDrop(object sender, DragEventArgs e)

@@ -110,6 +110,7 @@ namespace JRunner
             this.writeFusionToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem1 = new System.Windows.Forms.ToolStripSeparator();
             this.convertToRGH3ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.convert64mbDevkitToDevGLToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.checkSecdataToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.CustomXeBuildMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem5 = new System.Windows.Forms.ToolStripSeparator();
@@ -154,6 +155,7 @@ namespace JRunner
             this.toolStripMenuItem11 = new System.Windows.Forms.ToolStripSeparator();
             this.loadGlitch2XeLLToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.loadJTAGXeLLToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.injectXeLLToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem9 = new System.Windows.Forms.ToolStripSeparator();
             this.sMCConfigViewerToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             this.patchKVToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -168,7 +170,6 @@ namespace JRunner
             this.jRPBLToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.updateJRPToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.keyDatabaseToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.injectXeLLToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.groupBox8.SuspendLayout();
             this.getCpuKeyMenu.SuspendLayout();
             this.showWorkingFolderMenu.SuspendLayout();
@@ -844,6 +845,7 @@ namespace JRunner
             this.writeFusionToolStripMenuItem,
             this.toolStripMenuItem1,
             this.convertToRGH3ToolStripMenuItem,
+            this.convert64mbDevkitToDevGLToolStripMenuItem,
             this.checkSecdataToolStripMenuItem,
             this.CustomXeBuildMenuItem,
             this.toolStripMenuItem5,
@@ -889,6 +891,13 @@ namespace JRunner
             this.convertToRGH3ToolStripMenuItem.Size = new System.Drawing.Size(240, 22);
             this.convertToRGH3ToolStripMenuItem.Text = "Convert to RGH3";
             this.convertToRGH3ToolStripMenuItem.Click += new System.EventHandler(this.convertToRGH3ToolStripMenuItem_Click);
+            // 
+            // convert64mbDevkitToDevGLToolStripMenuItem
+            // 
+            this.convert64mbDevkitToDevGLToolStripMenuItem.Name = "convert64mbDevkitToDevGLToolStripMenuItem";
+            this.convert64mbDevkitToDevGLToolStripMenuItem.Size = new System.Drawing.Size(240, 22);
+            this.convert64mbDevkitToDevGLToolStripMenuItem.Text = "Convert 64mb Devkit to DevGL";
+            this.convert64mbDevkitToDevGLToolStripMenuItem.Click += new System.EventHandler(this.convert64mbDevkitToDevGLToolStripMenuItem_Click);
             // 
             // checkSecdataToolStripMenuItem
             // 
@@ -1255,6 +1264,13 @@ namespace JRunner
             this.loadJTAGXeLLToolStripMenuItem.Text = "Load JTAG XeLL...";
             this.loadJTAGXeLLToolStripMenuItem.Click += new System.EventHandler(this.loadJTAGXeLLToolStripMenuItem_Click);
             // 
+            // injectXeLLToolStripMenuItem
+            // 
+            this.injectXeLLToolStripMenuItem.Name = "injectXeLLToolStripMenuItem";
+            this.injectXeLLToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
+            this.injectXeLLToolStripMenuItem.Text = "Inject XeLL";
+            this.injectXeLLToolStripMenuItem.Click += new System.EventHandler(this.injectXeLLToolStripMenuItem_Click);
+            // 
             // toolStripMenuItem9
             // 
             this.toolStripMenuItem9.Name = "toolStripMenuItem9";
@@ -1365,13 +1381,6 @@ namespace JRunner
             this.keyDatabaseToolStripMenuItem.Size = new System.Drawing.Size(105, 20);
             this.keyDatabaseToolStripMenuItem.Text = "Key Database";
             this.keyDatabaseToolStripMenuItem.Click += new System.EventHandler(this.keyDatabaseToolStripMenuItem_Click);
-            // 
-            // injectXeLLToolStripMenuItem
-            // 
-            this.injectXeLLToolStripMenuItem.Name = "injectXeLLToolStripMenuItem";
-            this.injectXeLLToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
-            this.injectXeLLToolStripMenuItem.Text = "Inject XeLL";
-            this.injectXeLLToolStripMenuItem.Click += new System.EventHandler(this.injectXeLLToolStripMenuItem_Click);
             // 
             // MainForm
             // 
@@ -1562,5 +1571,6 @@ namespace JRunner
         private ToolStripMenuItem nANDAlignmentToolStripMenuItem;
         private ToolStripMenuItem gB16MBToolStripMenuItem;
         private ToolStripMenuItem injectXeLLToolStripMenuItem;
+        private ToolStripMenuItem convert64mbDevkitToDevGLToolStripMenuItem;
     }
 }

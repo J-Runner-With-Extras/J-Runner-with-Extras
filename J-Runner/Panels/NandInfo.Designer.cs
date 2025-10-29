@@ -65,7 +65,6 @@
             this.textBox6BL_p0 = new System.Windows.Forms.TextBox();
             this.textBox7BL_p0 = new System.Windows.Forms.TextBox();
             this.label7bl_p0 = new System.Windows.Forms.Label();
-            this.label2bl = new System.Windows.Forms.Label();
             this.tabPageKV = new System.Windows.Forms.TabPage();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
             this.label5 = new System.Windows.Forms.Label();
@@ -161,7 +160,6 @@
             this.groupBox1.Controls.Add(this.textBox6BL_p0);
             this.groupBox1.Controls.Add(this.textBox7BL_p0);
             this.groupBox1.Controls.Add(this.label7bl_p0);
-            this.groupBox1.Controls.Add(this.label2bl);
             this.groupBox1.Location = new System.Drawing.Point(4, 0);
             this.groupBox1.Name = "groupBox1";
             this.groupBox1.Size = new System.Drawing.Size(325, 269);
@@ -397,12 +395,12 @@
             // 
             // label2bla
             // 
-            this.label2bla.AutoSize = true;
-            this.label2bla.Location = new System.Drawing.Point(55, 50);
+            this.label2bla.Location = new System.Drawing.Point(55, 47);
             this.label2bla.Name = "label2bla";
-            this.label2bla.Size = new System.Drawing.Size(34, 13);
+            this.label2bla.Size = new System.Drawing.Size(34, 20);
             this.label2bla.TabIndex = 42;
             this.label2bla.Text = "CB_A";
+            this.label2bla.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             // 
             // textBox4BL
             // 
@@ -417,12 +415,12 @@
             // 
             // label5bl
             // 
-            this.label5bl.AutoSize = true;
-            this.label5bl.Location = new System.Drawing.Point(68, 146);
+            this.label5bl.Location = new System.Drawing.Point(58, 142);
             this.label5bl.Name = "label5bl";
-            this.label5bl.Size = new System.Drawing.Size(21, 13);
+            this.label5bl.Size = new System.Drawing.Size(31, 20);
             this.label5bl.TabIndex = 38;
             this.label5bl.Text = "CE";
+            this.label5bl.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             // 
             // label6bl_p0
             // 
@@ -435,21 +433,21 @@
             // 
             // label4bl
             // 
-            this.label4bl.AutoSize = true;
-            this.label4bl.Location = new System.Drawing.Point(67, 114);
+            this.label4bl.Location = new System.Drawing.Point(58, 110);
             this.label4bl.Name = "label4bl";
-            this.label4bl.Size = new System.Drawing.Size(22, 13);
+            this.label4bl.Size = new System.Drawing.Size(31, 20);
             this.label4bl.TabIndex = 37;
             this.label4bl.Text = "CD";
+            this.label4bl.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             // 
             // label2blb
             // 
-            this.label2blb.AutoSize = true;
-            this.label2blb.Location = new System.Drawing.Point(55, 82);
+            this.label2blb.Location = new System.Drawing.Point(55, 78);
             this.label2blb.Name = "label2blb";
-            this.label2blb.Size = new System.Drawing.Size(34, 13);
+            this.label2blb.Size = new System.Drawing.Size(34, 20);
             this.label2blb.TabIndex = 41;
             this.label2blb.Text = "CB_B";
+            this.label2blb.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             // 
             // textBox2BLb
             // 
@@ -514,15 +512,6 @@
             this.label7bl_p0.Size = new System.Drawing.Size(83, 13);
             this.label7bl_p0.TabIndex = 40;
             this.label7bl_p0.Text = "CG Patch Slot 0";
-            // 
-            // label2bl
-            // 
-            this.label2bl.AutoSize = true;
-            this.label2bl.Location = new System.Drawing.Point(68, 50);
-            this.label2bl.Name = "label2bl";
-            this.label2bl.Size = new System.Drawing.Size(21, 13);
-            this.label2bl.TabIndex = 29;
-            this.label2bl.Text = "CB";
             // 
             // tabPageKV
             // 
@@ -841,7 +830,6 @@
         private System.Windows.Forms.TextBox textBox6BL_p0;
         private System.Windows.Forms.TextBox textBox7BL_p0;
         private System.Windows.Forms.Label label7bl_p0;
-        private System.Windows.Forms.Label label2bl;
         private System.Windows.Forms.TabPage tabPageKV;
         private System.Windows.Forms.GroupBox groupBox2;
         private System.Windows.Forms.Label lblfcrt;
