@@ -896,7 +896,7 @@ namespace JRunner
             // 
             this.zeroPairSbToolStripMenuItem.Name = "zeroPairSbToolStripMenuItem";
             this.zeroPairSbToolStripMenuItem.Size = new System.Drawing.Size(240, 22);
-            this.zeroPairSbToolStripMenuItem.Text = "Zero-pair SB";
+            this.zeroPairSbToolStripMenuItem.Text = "Zero pair SB";
             this.zeroPairSbToolStripMenuItem.Click += new System.EventHandler(this.zeroPairSbToolStripMenuItem_Click);
             // 
             // checkSecdataToolStripMenuItem
