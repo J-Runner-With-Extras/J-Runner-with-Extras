@@ -455,15 +455,6 @@ namespace JRunner.Classes
             byte[] xellStartupReason = { 0x00, 0x12 };
             File.WriteAllBytes(Path.Combine(Path.GetDirectoryName(iniFilePath), "xell_reason.bin"), xellStartupReason);
 
-            // XeBuild doesn't set the offsets at 0x64 and 0x70 correctly, so
-            // we need to manually patch those for the SD patches to properly
-            // find the vfuses and kernel + hypervisor patches
-            byte[] patchAddress64 = { 0x00, 0x0D, 0x00, 0x00 };
-            byte[] patchAddress70 = { 0x00, 0x01, 0x00, 0x00 };
-
-            File.WriteAllBytes(Path.Combine(Path.GetDirectoryName(iniFilePath), "patch_64.bin"), patchAddress64);
-            File.WriteAllBytes(Path.Combine(Path.GetDirectoryName(iniFilePath), "patch_70.bin"), patchAddress70);
-
             return true;
         }
 
@@ -472,13 +463,9 @@ namespace JRunner.Classes
             // Delete all the patches we created in the pre-build step
             string khv_path = Path.Combine(Path.GetDirectoryName(iniFilePath), "vfuses_khv.bin");
             string xell_reason_path = Path.Combine(Path.GetDirectoryName(iniFilePath), "xell_reason.bin");
-            string patch64_path = Path.Combine(Path.GetDirectoryName(iniFilePath), "patch_64.bin");
-            string patch70_path = Path.Combine(Path.GetDirectoryName(iniFilePath), "patch_70.bin");
 
             if(File.Exists(khv_path)) File.Delete(khv_path);
             if(File.Exists(xell_reason_path)) File.Delete(xell_reason_path);
-            if(File.Exists(patch64_path)) File.Delete(patch64_path);
-            if(File.Exists(patch70_path)) File.Delete(patch70_path);
 
             // When building a 64mb DevGL NAND, we need to manually zero-pair the SB as the last step
             Nand.Nand.zeroPairDevkitSb(Path.Combine(variables.xefolder, variables.updflash), true);
