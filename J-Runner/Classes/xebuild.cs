@@ -1020,6 +1020,7 @@ namespace JRunner.Classes
             string patchFileBaseName = "";
             string patchFilePath = "";
             string iniFilePath = "";
+            string iniFileBackupPath = "";
             string[] iniFileContentsBackup = { };
 
             // Type overrides, check doSomeChecks() if changing
@@ -1078,6 +1079,8 @@ namespace JRunner.Classes
 
                     // We also need to make sure the ini file exists, because we'll need to pre-patch the SD
                     iniFilePath = variables.rootfolder + @"\xeBuild\" + _dash + "\\_devkit.ini";
+                    iniFileBackupPath = iniFilePath + ".bak";
+
                     if (!File.Exists(iniFilePath))
                     {
                         Console.WriteLine("Could not create 64mb DevGL image, _devgl.ini for dashboard " + _dash + " missing.");
@@ -1086,6 +1089,7 @@ namespace JRunner.Classes
 
                     // Make a backup of the ini file contents before we patch the ini and run XeBuild
                     iniFileContentsBackup = File.ReadAllLines(iniFilePath);
+                    File.WriteAllLines(iniFileBackupPath, iniFileContentsBackup);
 
                     if (!devgl64PreBuildActions(boardtype,iniFilePath,patchFilePath, _cpukey))
                     {
@@ -1262,11 +1266,11 @@ namespace JRunner.Classes
                         // Now that XeBuild is done, we can restore the contents of the ini file
                         File.WriteAllLines(iniFilePath, iniFileContentsBackup);
 
-                        // This is a 64mb DevGL image that we've got to patch... annoying af but that's xeBuild for us
-                        Nand.Nand.convertDevkitToDevGL(Path.Combine(variables.xefolder, variables.updflash),
-                                                       _cpukey,
-                                                       patchFilePath,
-                                                       true);
+                        // Delete the backup, since we were successful in building the NAND image
+                        if(File.Exists(iniFileBackupPath)) File.Delete(iniFileBackupPath);
+
+                        // This is a 64mb DevGL image so we've got to manually zeropair the SB
+                        Nand.Nand.zeroPairDevkitSb(Path.Combine(variables.xefolder, variables.updflash), true);
                     }
 
                 }
