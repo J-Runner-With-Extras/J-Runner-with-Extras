@@ -1112,8 +1112,6 @@ namespace JRunner.Classes
                         // If we failed to patch the SD and/or update the ini,
                         // restore the ini contents from the backup and then bail
                         File.WriteAllLines(iniFilePath, iniFileContentsBackup);
-
-                        // Delete the secondary backup file
                         if (File.Exists(iniFileBackupPath)) File.Delete(iniFileBackupPath);
 
                         variables.xefinished = true;
@@ -1262,6 +1260,17 @@ namespace JRunner.Classes
                     pProcess.CancelOutputRead();
                 }
 
+                // Do any mandatory post build actions here
+                if (_ttype == variables.hacktypes.devgl && (_ctype.ID == 7 || _ctype.ID == 13 || _ctype.ID == 14))
+                {
+                    // Now that XeBuild is done, we can restore the contents of the
+                    // ini file and delete the backup. We have to do this regardless
+                    // of whether the build succeeded or failed
+                    File.WriteAllLines(iniFilePath, iniFileContentsBackup);
+                    if (File.Exists(iniFileBackupPath)) File.Delete(iniFileBackupPath);
+                }
+
+                // Any post-build actions on success here
                 if (success)
                 {
                     // Any post-xeBuild actions are done here. Ensure the postBuildActionsAreRequired
@@ -1282,15 +1291,8 @@ namespace JRunner.Classes
                     }
                     else if (_ttype == variables.hacktypes.devgl && (_ctype.ID == 7 || _ctype.ID == 13 || _ctype.ID == 14))
                     {
-                        // Now that XeBuild is done, we can restore the contents of the ini file
-                        File.WriteAllLines(iniFilePath, iniFileContentsBackup);
-
-                        // Delete the backup, since we were successful in building the NAND image
-                        if(File.Exists(iniFileBackupPath)) File.Delete(iniFileBackupPath);
-
                         devgl64PostBuildActions(iniFilePath);
                     }
-
                 }
             }
             catch (Exception objException)
