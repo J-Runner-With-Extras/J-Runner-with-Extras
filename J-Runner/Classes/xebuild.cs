@@ -1096,6 +1096,9 @@ namespace JRunner.Classes
                         // restore the ini contents from the backup and then bail
                         File.WriteAllLines(iniFilePath, iniFileContentsBackup);
 
+                        // Delete the secondary backup file
+                        if (File.Exists(iniFileBackupPath)) File.Delete(iniFileBackupPath);
+
                         variables.xefinished = true;
                         MainForm.mainForm.xPanel.xeExitActual(false);
                         return;
