@@ -2825,23 +2825,13 @@ namespace JRunner.Nand
         }
 
         /// <summary>
-        /// Converts an input devkit image to a DevGL image by doing the following:
-        /// 1 - Patch in virtual fuses and the kernel/hypervisor patch set
-        /// 2 - Set the XeLL startup reason bytes
-        /// 3 - Zero-pair the SB
-        /// 4 - Fix the patch slot addresses for the SD patching engine
+        /// Zero-pairs the SB of a devkit image, the final step in generating a 64mb DevGL image
         /// </summary>
         /// <param name="flashFilePath">Flash image to be patched, result will be written back to the same file</param>
-        /// <param name="cpukey">CPU key for the image, needed to decrypt the KV</param>
-        /// <param name="patchFilePath">Path to the xeBuild patch file to use to patch the devkit image</param>
         /// <param name="sequenced">True if this is part of a xeBuild operation, false otherwise</param>
-        public static void convertDevkitToDevGL(string flashFilePath, string cpukey, string patchFilePath, bool sequenced)
+        public static void zeroPairDevkitSb(string flashFilePath, bool sequenced)
         {
-            // This is where the XDKbuild patches expect the virtual fuses and kernel patches to be
-            int patchOffset = 0xE0000;
-
             byte[] flashData = { };
-            byte[] patchData = { };
 
             try
             {
@@ -2892,8 +2882,6 @@ namespace JRunner.Nand
                 return;
             }
 
-            byte[] khvPatchData = Classes.xebuild.returnKernelHvPatchSet(patchData);
-
             // We're going to assume the image has ECC because this is only
             // really needed for 64mb consoles (Xenon/Zephyr/Falcon).
             int blockType = 0;
@@ -2921,82 +2909,14 @@ namespace JRunner.Nand
                 blockType = identifylayout(sparedata);
             }
 
-            //
-            // Step 1: Create vfuse patch and add kernel/hv patches
-            //
-            byte[] vfuseAndKernelPatchData = new byte[0x60 + khvPatchData.Length];
-            
-            // bytes we use for making up the vfuses
-            // Fuseline 0 and 1 are always the same for a devkit
-            // 3/4 and 5/6 make up the CPU key
-            // CB LDV and CF/CG LDV can be left blank
-            byte[] fuseline0 = { 0xC0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
-            byte[] fuseline1_dev = { 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F };
-            byte[] fuseline3_4 = Oper.StringToByteArray(cpukey.Substring(0, 16));
-            byte[] fuseline5_6 = Oper.StringToByteArray(cpukey.Substring(16, 16));
-
-            // Build the fake fuseset
-            Buffer.BlockCopy(fuseline0,     0, vfuseAndKernelPatchData, 0   , 0x8);
-            Buffer.BlockCopy(fuseline1_dev, 0, vfuseAndKernelPatchData, 0x8 , 0x8);
-            Buffer.BlockCopy(fuseline3_4,   0, vfuseAndKernelPatchData, 0x18, 0x8);
-            Buffer.BlockCopy(fuseline3_4,   0, vfuseAndKernelPatchData, 0x20, 0x8);
-            Buffer.BlockCopy(fuseline5_6,   0, vfuseAndKernelPatchData, 0x28, 0x8);
-            Buffer.BlockCopy(fuseline5_6,   0, vfuseAndKernelPatchData, 0x30, 0x8);
-
-            // Build the vfuse/kernel patch section
-            Buffer.BlockCopy(khvPatchData, 0, vfuseAndKernelPatchData, 0x60, khvPatchData.Length);
-
             // Get the physical pages we need to patch by finding out how many
             // logical pages are needed to store the patch data add 1 in case it's
             // not an even multiple of the page size, doesn't really matter if we
             // populate the buffer with an extra page since it's not at the end of NAND
-            byte[] nandPatchPages = flashData.Take(patchOffsetPhys + (((vfuseAndKernelPatchData.Length / pagesz) + 1) * pagesz_phys)).ToArray();
+            byte[] nandPatchPages = flashData.Take(patchOffsetPhys).ToArray();
 
             // remove the ECC so we can copy our patch data to the logical addresses
             nandPatchPages = unecc(nandPatchPages);
-            
-            //
-            // Step 1: copy over our vfuse/kernel patch data to patchOffset
-            //
-            Buffer.BlockCopy(vfuseAndKernelPatchData, 0, nandPatchPages, patchOffset, vfuseAndKernelPatchData.Length);
-
-            //
-            // Step 2: Patch the XeLL startup reason
-            //
-
-            // SD patches look at bytes 0x4E and 0x4F to determine when
-            // to jump to XeLL rather than booting the kernel. This is
-            // normally patched in by XeBuild but we have to do it manually
-            // for a devkit image. This is always located in the first page,
-            // so we can set it at the same time as zeropairing the SB
-            //
-            // Powerup cause values:
-            //
-            // POWER           = 0x11
-            // EJECT           = 0x12
-            // UNDOCUMENTED_15 = 0x15
-            // UNDOCUMENTED_16 = 0x16
-            // REMOPOWER       = 0x20
-            // UNDOCUMENTED_21 = 0x21
-            // REMOX           = 0x22
-            // WINBUTTON       = 0x24
-            // UNDOCUMENTED_30 = 0x30
-            // UNDOCUMENTED_31 = 0x31
-            // KIOSK           = 0x41
-            // WIRELESSX       = 0x55
-            // WIREDXF1        = 0x56
-            // WIREDXF2        = 0x57
-            // WIREDXB2        = 0x58
-            // WIREDXB1        = 0x59
-            // WIREDXB3        = 0x5A
-
-            // Set the powerup causes to 0x0 (ignore) and 0x12 (eject)
-            nandPatchPages[0x4E] = 0x0;
-            nandPatchPages[0x4F] = 0x12;
-
-            //
-            // Step 3: Zero pair the SB
-            //
 
             // Encryption of the SC and later stages are different compared
             // to retail CB/CD encryption- SC uses a zero key and nonce
@@ -3038,28 +2958,6 @@ namespace JRunner.Nand
             // Re-encrypt the SB and place it back in the patch data
             sb_crypt = encrypt_CB(sb_decrypt, sb_nonce, ref sb_key);
             Buffer.BlockCopy(sb_crypt, 0, nandPatchPages, sbOffset, sbLength);
-
-            //
-            // Step 4: Change the patch slot addresses at the beginning of NAND
-            //
-
-            // The SD patching engine looks at two DWORDs, at 0x64 and 0x70
-            // to determine where to look for patches. To be able to find
-            // patches at 0xE0000, 0x64 and 0x70 need to be:
-            // 0x64 = 0x00 0x0D 0x00 0x00
-            // 0x70 = 0x00 0x01 0x00 0x00
-            //
-            // because 0xD0000 + 0x10000 = 0xE0000
-            //
-            nandPatchPages[0x64] = 0x00;
-            nandPatchPages[0x65] = 0x0D;
-            nandPatchPages[0x66] = 0x00;
-            nandPatchPages[0x67] = 0x00;
-
-            nandPatchPages[0x70] = 0x00;
-            nandPatchPages[0x71] = 0x01;
-            nandPatchPages[0x72] = 0x00;
-            nandPatchPages[0x73] = 0x00;
 
             // Re-add ECC data and copy it over to the flash data buffer
             nandPatchPages = addecc_v2(nandPatchPages,true,0,blockType);
