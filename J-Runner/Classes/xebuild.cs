@@ -467,6 +467,23 @@ namespace JRunner.Classes
             return true;
         }
 
+        public static void devgl64PostBuildActions(string iniFilePath)
+        {
+            // Delete all the patches we created in the pre-build step
+            string khv_path = Path.Combine(Path.GetDirectoryName(iniFilePath), "vfuses_khv.bin");
+            string xell_reason_path = Path.Combine(Path.GetDirectoryName(iniFilePath), "xell_reason.bin");
+            string patch64_path = Path.Combine(Path.GetDirectoryName(iniFilePath), "patch_64.bin");
+            string patch70_path = Path.Combine(Path.GetDirectoryName(iniFilePath), "patch_70.bin");
+
+            if(File.Exists(khv_path)) File.Delete(khv_path);
+            if(File.Exists(xell_reason_path)) File.Delete(xell_reason_path);
+            if(File.Exists(patch64_path)) File.Delete(patch64_path);
+            if(File.Exists(patch70_path)) File.Delete(patch70_path);
+
+            // When building a 64mb DevGL NAND, we need to manually zero-pair the SB as the last step
+            Nand.Nand.zeroPairDevkitSb(Path.Combine(variables.xefolder, variables.updflash), true);
+        }
+
         public void loadvariables(string cpukey, variables.hacktypes ttype, string dash, consoles ctype, List<string> patches, Nand.PrivateN nand, bool altoptions, bool DLpatches, bool includeLaunch, bool audclamp, bool rjtag, bool cleansmc, bool cr4, bool smcp, bool rgh3, bool bigffs, bool zfuse, bool xdkbuild, bool xlusb, bool xlhdd, bool xlboth, bool usbdsec, bool coronakeyfix, bool fullDataClean)
         {
             this._cpukey = cpukey;
@@ -1108,7 +1125,7 @@ namespace JRunner.Classes
                 }
                 else
                 {
-                    arguments = "-t " + _ttype;
+                    arguments = "-t " + variables.hacktypes.devgl;
                 }
             }
             else
@@ -1271,8 +1288,7 @@ namespace JRunner.Classes
                         // Delete the backup, since we were successful in building the NAND image
                         if(File.Exists(iniFileBackupPath)) File.Delete(iniFileBackupPath);
 
-                        // This is a 64mb DevGL image so we've got to manually zeropair the SB
-                        Nand.Nand.zeroPairDevkitSb(Path.Combine(variables.xefolder, variables.updflash), true);
+                        devgl64PostBuildActions(iniFilePath);
                     }
 
                 }
