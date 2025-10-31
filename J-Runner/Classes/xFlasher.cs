@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Media;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
 
@@ -34,14 +35,10 @@ namespace JRunner
         public static extern int emmcGetBlocks();
 
 
-        public string svfPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), @"SVF\TimingSvfTemp.svf");
-        public string svfRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), @"SVF");
-
         public bool ready = false;
         public bool inUse = false;
         public bool waiting = false;
         private string flashconf = "";
-        private string jtagdevice = "";
         public int selType = 0;
 
         private static int initCount = 0;
@@ -398,7 +395,7 @@ namespace JRunner
                             inUse = true;
                             blocksThread.Start();
 
-                             result = spi(1, size, variables.filename);
+                            result = spi(1, size, variables.filename);
                         }
                         else
                         {
@@ -411,7 +408,7 @@ namespace JRunner
                             blocksThread.Start();
 
                             result = emmc_read(variables.filename, 0, 98304);
-                          
+
                         }
 
                         inUseTimer.Enabled = false;
@@ -787,15 +784,15 @@ namespace JRunner
                     if (flashconf != "C0462002")
                     {
                         Thread blocksThread = new Thread(() =>
-                                           {
-                                               if (mode == 1 || mode == 2) getBlocks(0, 80);
-                                               else
-                                               {
-                                                   int len = size * 64;
-                                                   if (length > 0) len = length;
-                                                   getBlocks(startblock, len);
-                                               }
-                                           });
+                        {
+                            if (mode == 1 || mode == 2) getBlocks(0, 80);
+                            else
+                            {
+                                int len = size * 64;
+                                if (length > 0) len = length;
+                                getBlocks(startblock, len);
+                            }
+                        });
                         inUse = true;
                         blocksThread.Start();
                     }
@@ -953,21 +950,21 @@ namespace JRunner
         }
 
         // SVF Flashing
-        public void flashSvf(string filename)
+        public void flashSvf(string filename, string speed = "1M")
         {
             if (inUse || waiting) return;
 
-            if (Process.GetProcessesByName("jtag").Length > 0)
+            if (Process.GetProcessesByName("xsvftool").Length > 0)
             {
-                Console.WriteLine("xFlasher: SVF software is already running!");
+                Console.WriteLine("xFlasher: xsvftool is already running!");
                 return;
             }
 
-            Thread urJtagThread = new Thread(() =>
+            Thread xsvfToolThread = new Thread(() =>
             {
                 try
                 {
-
+                    bool xsvf = false;
                     if (!ready)
                     {
                         waiting = true;
@@ -984,32 +981,33 @@ namespace JRunner
                         Console.WriteLine("xFlasher: File Not Found: {0}", filename);
                         return;
                     }
-                    if (Path.GetExtension(filename) != ".svf")
+                    if (Path.GetExtension(filename) != ".svf" && Path.GetExtension(filename) != ".xsvf")
                     {
                         Console.WriteLine("xFlasher: Wrong File Type: {0}", filename);
                         return;
                     }
-
+                    if (Path.GetExtension(filename) == ".xsvf") xsvf = true;
                     try
                     {
-                        Directory.CreateDirectory(svfRoot);
-                        if (File.Exists(svfPath))
+                        if (File.Exists(MainForm.tempTimingPath))
                         {
-                            File.Delete(svfPath);
+                            File.Delete(MainForm.tempTimingPath);
                         }
-                        File.Copy(filename, svfPath);
+                        File.Copy(filename, MainForm.tempTimingPath);
                     }
                     catch
                     {
                         Console.WriteLine("xFlasher: Could not open temporary file for flashing");
-                        Console.WriteLine("xFlasher: {0} is locked by another process", svfPath);
+                        Console.WriteLine("xFlasher: {0} is locked by another process", MainForm.tempTimingPath);
                         return;
                     }
 
-                    Console.WriteLine("xFlasher: Flashing {0} via JTAG", Path.GetFileName(filename));
+                    Console.WriteLine("xFlasher: Flashing {0} via xsvftool", Path.GetFileName(filename));
+                    Console.WriteLine("xFlasher: Setting flash speed to {0}", speed);
 
                     Process psi = new Process();
-                    psi.StartInfo.FileName = @"common/xflasher/jtag.exe";
+                    psi.StartInfo.FileName = @"common/xsvftool/xsvftool.exe";
+                    psi.StartInfo.Arguments = "-l";
                     psi.StartInfo.CreateNoWindow = true;
                     psi.StartInfo.UseShellExecute = false;
                     psi.StartInfo.RedirectStandardOutput = true;
@@ -1019,67 +1017,54 @@ namespace JRunner
                     inUse = true;
                     psi.Start();
 
-                    StreamWriter wr = psi.StandardInput;
                     StreamReader rr = psi.StandardOutput;
-
-                    wr.WriteLine("cable ft2232");
-                    wr.WriteLine("detect");
-                    wr.WriteLine("svf " + svfPath + " progress");
-                    wr.WriteLine("quit");
-                    wr.Flush();
-                    wr.Close();
-
-                    string str = "";
-                    str = "--";
-                    str += rr.ReadToEnd().Replace("\n", "\r\n");
-
-                    if (str.Length >= 4)
-                    {
-                        str = str.Remove(str.Length - 4, 4);
-                    }
-
-                    string strLower = str.ToLower();
+                    string str = rr.ReadToEnd().Replace("\n", "\r\n");
+                    rr.Close();
                     inUse = false;
-
-                    if (strLower.Contains("99%"))
+                    Match dev = Regex.Match(str, @"Device\s+\d+\s+-\s+(.+)");
+                    if (dev.Groups.Count >= 2 && dev.Groups[1].Value != "")
                     {
-                        int start = str.IndexOf("Part(0):") + 8;
-                        int end = str.IndexOf("Stepping:") - start;
+                        Console.WriteLine($"xFlasher: {dev} detected");
+                        psi = new Process();
+                        psi.StartInfo.FileName = @"common/xsvftool/xsvftool.exe";
+                        psi.StartInfo.Arguments = "-j 0 -p -f " + speed + (xsvf ? " -x" : " -s") + " \"" + MainForm.tempTimingPath + "\"";
+                        psi.StartInfo.CreateNoWindow = true;
+                        psi.StartInfo.UseShellExecute = false;
+                        psi.StartInfo.RedirectStandardOutput = true;
+                        psi.StartInfo.RedirectStandardInput = true;
+                        psi.StartInfo.RedirectStandardError = true;
 
-                        if (start <= 0 || end <= 0)
+                        inUse = true;
+
+                        // Count process time
+                        Stopwatch watch = new Stopwatch();
+                        watch.Start();
+                        psi.Start();
+                        psi.WaitForExit();
+                        watch.Stop();
+
+                        inUse = false;
+
+                        if (psi.ExitCode == 0)
                         {
-                            Console.WriteLine("xFlasher: Failed to detect CPLD type");
+                            if (variables.playSuccess)
+                            {
+                                SoundPlayer success = new SoundPlayer(Properties.Resources.chime);
+                                success.Play();
+                            }
+                            Console.WriteLine("xFlasher: Flash success!");
                         }
-                        else
+                        else Console.WriteLine("xFlasher: Flash failed!");
+
+                        Console.WriteLine($"Time: {watch.Elapsed.TotalSeconds:F2}s");
+                        Console.WriteLine();
+
+                        if (File.Exists(MainForm.tempTimingPath))
                         {
-                            jtagdevice = str.Substring(start, end).Trim().Replace("\r\n", "");
-                            Console.WriteLine("xFlasher: {0} Detected", jtagdevice);
-                        }
-
-                        Console.WriteLine("xFlasher: SVF Flash Successful!");
-                        Console.WriteLine("");
-
-                        if (variables.playSuccess)
-                        {
-                            SoundPlayer success = new SoundPlayer(Properties.Resources.chime);
-                            success.Play();
+                            File.Delete(MainForm.tempTimingPath);
                         }
                     }
-                    else if (strLower.Contains("chain without any parts") == true)
-                    {
-                        Console.WriteLine("xFlasher: Could not connect to CPLD");
-                        Console.WriteLine("");
-                    }
-                    else
-                    {
-                        Console.WriteLine("xFlasher: SVF Flash Failed");
-                        Console.WriteLine("");
-                    }
-
-                    if (File.Exists(svfPath))
-                    {
-                        File.Delete(svfPath);
-                    }
+                    else Console.WriteLine("xFlasher: Could not detect device");
                 }
                 catch (Exception ex)
                 {
@@ -1090,7 +1075,7 @@ namespace JRunner
                     Console.WriteLine("");
                 }
             });
-            urJtagThread.Start();
+            xsvfToolThread.Start();
         }
     }
 }
