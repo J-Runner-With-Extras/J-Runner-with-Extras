@@ -3183,36 +3183,15 @@ namespace JRunner
             }
         }
 
-        private void convert64mbDevkitToDevGLToolStripMenuItem_Click(object sender, EventArgs e)
+        private void zeroPairSbToolStripMenuItem_Click(object sender, EventArgs e)
         {
             if (String.IsNullOrWhiteSpace(variables.filename1))
             {
-                Console.WriteLine("Devkit image conversion error: Please select a valid NAND image!");
+                Console.WriteLine("Zeropair SB error: Please select a valid NAND image!");
                 return;
             }
 
-            if (!Nand.Nand.VerifyKey(Oper.StringToByteArray(variables.cpukey)) ||
-                !nand.cpukeyverification(variables.cpukey))
-            {
-                Console.WriteLine("Devkit image conversion error: Bad CPU Key!");
-                return;
-            }
-
-            OpenFileDialog ofd = new OpenFileDialog();
-
-            ofd.FileName = "";
-            ofd.Filter = "xeBuild devkit patch set (patches_dev*.bin)|patches_dev*.bin|All files (*.*)|*.*";
-            ofd.Title = "Select KHV patch";
-            ofd.InitialDirectory = Path.Combine(variables.rootfolder, @"xeBuild\17489\bin");
-            ofd.RestoreDirectory = false;
-
-            if (ofd.ShowDialog() != DialogResult.OK)
-            {
-                Console.WriteLine("Cancelled Devkit image conversion");
-                return;
-            }
-
-            Nand.Nand.convertDevkitToDevGL(variables.filename1, variables.cpukey, ofd.FileName, false);
+            Nand.Nand.zeroPairDevkitSb(variables.filename1, false);
         }
 
         private void sMCConfigViewerToolStripMenuItem1_Click(object sender, EventArgs e)

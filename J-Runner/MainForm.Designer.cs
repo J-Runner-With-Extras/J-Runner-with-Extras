@@ -110,7 +110,7 @@ namespace JRunner
             this.writeFusionToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem1 = new System.Windows.Forms.ToolStripSeparator();
             this.convertToRGH3ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.convert64mbDevkitToDevGLToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.zeroPairSbToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.checkSecdataToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.CustomXeBuildMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem5 = new System.Windows.Forms.ToolStripSeparator();
@@ -845,7 +845,7 @@ namespace JRunner
             this.writeFusionToolStripMenuItem,
             this.toolStripMenuItem1,
             this.convertToRGH3ToolStripMenuItem,
-            this.convert64mbDevkitToDevGLToolStripMenuItem,
+            this.zeroPairSbToolStripMenuItem,
             this.checkSecdataToolStripMenuItem,
             this.CustomXeBuildMenuItem,
             this.toolStripMenuItem5,
@@ -892,12 +892,12 @@ namespace JRunner
             this.convertToRGH3ToolStripMenuItem.Text = "Convert to RGH3";
             this.convertToRGH3ToolStripMenuItem.Click += new System.EventHandler(this.convertToRGH3ToolStripMenuItem_Click);
             // 
-            // convert64mbDevkitToDevGLToolStripMenuItem
+            // zeroPairSbToolStripMenuItem
             // 
-            this.convert64mbDevkitToDevGLToolStripMenuItem.Name = "convert64mbDevkitToDevGLToolStripMenuItem";
-            this.convert64mbDevkitToDevGLToolStripMenuItem.Size = new System.Drawing.Size(240, 22);
-            this.convert64mbDevkitToDevGLToolStripMenuItem.Text = "Convert 64mb Devkit to DevGL";
-            this.convert64mbDevkitToDevGLToolStripMenuItem.Click += new System.EventHandler(this.convert64mbDevkitToDevGLToolStripMenuItem_Click);
+            this.zeroPairSbToolStripMenuItem.Name = "zeroPairSbToolStripMenuItem";
+            this.zeroPairSbToolStripMenuItem.Size = new System.Drawing.Size(240, 22);
+            this.zeroPairSbToolStripMenuItem.Text = "Zero pair SB";
+            this.zeroPairSbToolStripMenuItem.Click += new System.EventHandler(this.zeroPairSbToolStripMenuItem_Click);
             // 
             // checkSecdataToolStripMenuItem
             // 
@@ -1571,6 +1571,6 @@ namespace JRunner
         private ToolStripMenuItem nANDAlignmentToolStripMenuItem;
         private ToolStripMenuItem gB16MBToolStripMenuItem;
         private ToolStripMenuItem injectXeLLToolStripMenuItem;
-        private ToolStripMenuItem convert64mbDevkitToDevGLToolStripMenuItem;
+        private ToolStripMenuItem zeroPairSbToolStripMenuItem;
     }
 }

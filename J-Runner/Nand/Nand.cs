@@ -2825,31 +2825,30 @@ namespace JRunner.Nand
         }
 
         /// <summary>
-        /// Converts an input devkit image to a DevGL image by doing the following:
-        /// 1 - Patch in virtual fuses and the kernel/hypervisor patch set
-        /// 2 - Set the XeLL startup reason bytes
-        /// 3 - Zero-pair the SB
-        /// 4 - Fix the patch slot addresses for the SD patching engine
+        /// Zero-pairs the SB of a devkit image, the final step in generating a 64mb DevGL image
         /// </summary>
         /// <param name="flashFilePath">Flash image to be patched, result will be written back to the same file</param>
-        /// <param name="cpukey">CPU key for the image, needed to decrypt the KV</param>
-        /// <param name="patchFilePath">Path to the xeBuild patch file to use to patch the devkit image</param>
         /// <param name="sequenced">True if this is part of a xeBuild operation, false otherwise</param>
-        public static void convertDevkitToDevGL(string flashFilePath, string cpukey, string patchFilePath, bool sequenced)
+        public static void zeroPairDevkitSb(string flashFilePath, bool sequenced)
         {
-            // This is where the XDKbuild patches expect the virtual fuses and kernel patches to be
-            int patchOffset = 0xE0000;
-
             byte[] flashData = { };
-            byte[] patchData = { };
 
+            // Logical page size is always 0x200
+            // and the physical page size (for ECC images) is always 0x210
+            int pagesz = 0x200;
+            int pagesz_phys = 0x210;
+
+            int blockType = 0;
+            bool flashHasEcc = false;
+
+            // Read in the flash image
             try
             {
                 flashData = File.ReadAllBytes(flashFilePath);
             }
             catch(Exception ex)
             {
-                Console.WriteLine("Devkit image conversion error: couldn't read input flash image");
+                Console.WriteLine("Zero pair SB error: couldn't read input flash image");
                 if (variables.debugMode) Console.WriteLine(ex.ToString());
 
                 if (sequenced)
@@ -2860,13 +2859,20 @@ namespace JRunner.Nand
                 return;
             }
 
-            // Ensure we're working with a 64mb image, with ECC
-            // which is 69206016 bytes long. No patching is necessary
-            // for 16mb/BB/non-ECC images
-            if (flashData.Length != 69206016)
+            // Determine whether this image has ECC
+            if (flashData.Length == 17301504 || flashData.Length == 69206016)
             {
-                Console.WriteLine("Devkit image conversion error: Only 64mb images are supported.");
-
+                flashHasEcc = true;
+            }
+            else if (flashData.Length == 50331648)
+            {
+                // Flash data doesn't have ECC, pagesz_phys = pagesz
+                flashHasEcc = false;
+                pagesz_phys = pagesz;
+            }
+            else
+            {
+                Console.WriteLine("Zero pair SB error: Invalid flash image size");
                 if (sequenced)
                 {
                     variables.xefinished = true;
@@ -2874,40 +2880,6 @@ namespace JRunner.Nand
                 }
                 return;
             }
-
-            try
-            {
-                patchData = File.ReadAllBytes(patchFilePath);
-            }
-            catch(Exception ex)
-            {
-                Console.WriteLine("Devkit image conversion error: couldn't read input patch data");
-                if (variables.debugMode) Console.WriteLine(ex.ToString());
-
-                if (sequenced)
-                {
-                    variables.xefinished = true;
-                    MainForm.mainForm.xPanel.xeExitActual(false);
-                }
-                return;
-            }
-
-            byte[] khvPatchData = Classes.xebuild.returnKernelHvPatchSet(patchData);
-
-            // We're going to assume the image has ECC because this is only
-            // really needed for 64mb consoles (Xenon/Zephyr/Falcon).
-            int blockType = 0;
-            bool flashHasEcc = true;
-
-            // Logical page size is always 0x200
-            // and the physical page size (with spare data) is always 0x210
-            int pagesz = 0x200;
-            int pagesz_phys = 0x210;
-
-            // Calculate the physical offset into the NAND image where we
-            // need to write the vfuses and kernel patch data
-            int patchPageNumber = patchOffset / pagesz;
-            int patchOffsetPhys = patchPageNumber * pagesz_phys;
 
             // If the flash has ECC data, determine the block type so ECC data can be recalculated
             if (flashHasEcc)
@@ -2921,83 +2893,6 @@ namespace JRunner.Nand
                 blockType = identifylayout(sparedata);
             }
 
-            //
-            // Step 1: Create vfuse patch and add kernel/hv patches
-            //
-            byte[] vfuseAndKernelPatchData = new byte[0x60 + khvPatchData.Length];
-            
-            // bytes we use for making up the vfuses
-            // Fuseline 0 and 1 are always the same for a devkit
-            // 3/4 and 5/6 make up the CPU key
-            // CB LDV and CF/CG LDV can be left blank
-            byte[] fuseline0 = { 0xC0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
-            byte[] fuseline1_dev = { 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F };
-            byte[] fuseline3_4 = Oper.StringToByteArray(cpukey.Substring(0, 16));
-            byte[] fuseline5_6 = Oper.StringToByteArray(cpukey.Substring(16, 16));
-
-            // Build the fake fuseset
-            Buffer.BlockCopy(fuseline0,     0, vfuseAndKernelPatchData, 0   , 0x8);
-            Buffer.BlockCopy(fuseline1_dev, 0, vfuseAndKernelPatchData, 0x8 , 0x8);
-            Buffer.BlockCopy(fuseline3_4,   0, vfuseAndKernelPatchData, 0x18, 0x8);
-            Buffer.BlockCopy(fuseline3_4,   0, vfuseAndKernelPatchData, 0x20, 0x8);
-            Buffer.BlockCopy(fuseline5_6,   0, vfuseAndKernelPatchData, 0x28, 0x8);
-            Buffer.BlockCopy(fuseline5_6,   0, vfuseAndKernelPatchData, 0x30, 0x8);
-
-            // Build the vfuse/kernel patch section
-            Buffer.BlockCopy(khvPatchData, 0, vfuseAndKernelPatchData, 0x60, khvPatchData.Length);
-
-            // Get the physical pages we need to patch by finding out how many
-            // logical pages are needed to store the patch data add 1 in case it's
-            // not an even multiple of the page size, doesn't really matter if we
-            // populate the buffer with an extra page since it's not at the end of NAND
-            byte[] nandPatchPages = flashData.Take(patchOffsetPhys + (((vfuseAndKernelPatchData.Length / pagesz) + 1) * pagesz_phys)).ToArray();
-
-            // remove the ECC so we can copy our patch data to the logical addresses
-            nandPatchPages = unecc(nandPatchPages);
-            
-            //
-            // Step 1: copy over our vfuse/kernel patch data to patchOffset
-            //
-            Buffer.BlockCopy(vfuseAndKernelPatchData, 0, nandPatchPages, patchOffset, vfuseAndKernelPatchData.Length);
-
-            //
-            // Step 2: Patch the XeLL startup reason
-            //
-
-            // SD patches look at bytes 0x4E and 0x4F to determine when
-            // to jump to XeLL rather than booting the kernel. This is
-            // normally patched in by XeBuild but we have to do it manually
-            // for a devkit image. This is always located in the first page,
-            // so we can set it at the same time as zeropairing the SB
-            //
-            // Powerup cause values:
-            //
-            // POWER           = 0x11
-            // EJECT           = 0x12
-            // UNDOCUMENTED_15 = 0x15
-            // UNDOCUMENTED_16 = 0x16
-            // REMOPOWER       = 0x20
-            // UNDOCUMENTED_21 = 0x21
-            // REMOX           = 0x22
-            // WINBUTTON       = 0x24
-            // UNDOCUMENTED_30 = 0x30
-            // UNDOCUMENTED_31 = 0x31
-            // KIOSK           = 0x41
-            // WIRELESSX       = 0x55
-            // WIREDXF1        = 0x56
-            // WIREDXF2        = 0x57
-            // WIREDXB2        = 0x58
-            // WIREDXB1        = 0x59
-            // WIREDXB3        = 0x5A
-
-            // Set the powerup causes to 0x0 (ignore) and 0x12 (eject)
-            nandPatchPages[0x4E] = 0x0;
-            nandPatchPages[0x4F] = 0x12;
-
-            //
-            // Step 3: Zero pair the SB
-            //
-
             // Encryption of the SC and later stages are different compared
             // to retail CB/CD encryption- SC uses a zero key and nonce
             // and the SD depends on the SC key. e.g.
@@ -3007,14 +2902,51 @@ namespace JRunner.Nand
             // sd_key = XeCryptHmacSha(sc_key, sd_nonce)
             // sd_key = XeCryptHmacSha(sd_key, se_nonce)
             // 
-            // So, we can decrypt and zeropair the SB without touching later stages
+            // So, we can decrypt and zeropair the SB without touching
+            // later stages. Isn't that convenient!
 
-            // Determine the offset and length of the SB
-            int sbOffset = BitConverter.ToInt32(nandPatchPages.Skip(0x8).Take(4).Reverse().ToArray(), 0);
-            int sbLength = BitConverter.ToInt32(nandPatchPages.Skip(sbOffset + 12).Take(4).Reverse().ToArray(), 0);
+            // Determine the logical SB offset by looking at 0x8 in NAND
+            // Then calculate the physical offset and offset in page
+            int logicalSbOffset = BitConverter.ToInt32(flashData.Skip(0x8).Take(4).Reverse().ToArray(), 0);
+            int sbOffsetInPage = logicalSbOffset % pagesz;
+
+            // Calculate the offset of the first page containing the SB
+            int physicalSbPageOffset = (logicalSbOffset / pagesz) * pagesz_phys;
+
+            // The size of the SB is stored in its header, which is 0xC in to the SB binary
+            int sbSize = BitConverter.ToInt32(flashData.Skip(physicalSbPageOffset + 0xC).Take(4).Reverse().ToArray(), 0);
+
+            // Get the length of data to read from NAND, which is the (SB size / page size) + 1
+            // in case the SB doesn't start on a page boundary or the size of the SB isn't an 
+            // exact multiple of the page size.
+            int patchDataLength = ((sbSize / pagesz) + 1) * pagesz_phys;
+
+            // Get the pages of the SB that we need to patch
+            byte[] nandPatchPages = flashData.Skip(physicalSbPageOffset).Take(patchDataLength).ToArray();
+
+            if (flashHasEcc)
+            {
+                // remove the ECC so we can copy our patch data to the logical addresses
+                nandPatchPages = unecc(nandPatchPages);
+            }
 
             // Extract the encrypted SB data
-            byte[] sb_crypt = nandPatchPages.Skip(sbOffset).Take(sbLength).ToArray();
+            byte[] sb_crypt = nandPatchPages.Skip(sbOffsetInPage).Take(sbSize).ToArray();
+
+            // Check that we actually read an SB by checking the magic bytes
+            // at 0x0 and 0x1, they should be 0x53 (S) and 0x42 (B).
+            // This function does not support zeropairing CB or CF/CG
+            if(sb_crypt[0] != 0x53 || sb_crypt[1] != 0x42)
+            {
+                Console.WriteLine("Zero pair SB error: BL at offset " + logicalSbOffset.ToString("X") + " is not an SB.");
+
+                if (sequenced)
+                {
+                    variables.xefinished = true;
+                    MainForm.mainForm.xPanel.xeExitActual(false);
+                }
+                return;
+            }
 
             // Decrypt the SB (it's encrypted the same way as a retail single CB or split CB_A)
             byte[] sb_decrypt = Nand.decrypt_CB(sb_crypt);
@@ -3037,33 +2969,11 @@ namespace JRunner.Nand
 
             // Re-encrypt the SB and place it back in the patch data
             sb_crypt = encrypt_CB(sb_decrypt, sb_nonce, ref sb_key);
-            Buffer.BlockCopy(sb_crypt, 0, nandPatchPages, sbOffset, sbLength);
-
-            //
-            // Step 4: Change the patch slot addresses at the beginning of NAND
-            //
-
-            // The SD patching engine looks at two DWORDs, at 0x64 and 0x70
-            // to determine where to look for patches. To be able to find
-            // patches at 0xE0000, 0x64 and 0x70 need to be:
-            // 0x64 = 0x00 0x0D 0x00 0x00
-            // 0x70 = 0x00 0x01 0x00 0x00
-            //
-            // because 0xD0000 + 0x10000 = 0xE0000
-            //
-            nandPatchPages[0x64] = 0x00;
-            nandPatchPages[0x65] = 0x0D;
-            nandPatchPages[0x66] = 0x00;
-            nandPatchPages[0x67] = 0x00;
-
-            nandPatchPages[0x70] = 0x00;
-            nandPatchPages[0x71] = 0x01;
-            nandPatchPages[0x72] = 0x00;
-            nandPatchPages[0x73] = 0x00;
+            Buffer.BlockCopy(sb_crypt, 0, nandPatchPages, sbOffsetInPage, sbSize);
 
             // Re-add ECC data and copy it over to the flash data buffer
-            nandPatchPages = addecc_v2(nandPatchPages,true,0,blockType);
-            Buffer.BlockCopy(nandPatchPages, 0, flashData, 0, nandPatchPages.Length);
+            nandPatchPages = addecc_v2(nandPatchPages, true, physicalSbPageOffset, blockType);
+            Buffer.BlockCopy(nandPatchPages, 0, flashData, physicalSbPageOffset, nandPatchPages.Length);
 
             try
             {
@@ -3072,7 +2982,7 @@ namespace JRunner.Nand
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Devkit image conversion error: couldn't write modified flash image");
+                Console.WriteLine("Zero pair SB error: couldn't write modified flash image");
                 if (variables.debugMode) Console.WriteLine(ex.ToString());
 
                 if (sequenced)
@@ -3083,7 +2993,7 @@ namespace JRunner.Nand
                 return;
             }
 
-            Console.WriteLine("Successfully converted Devkit image to DevGL");
+            Console.WriteLine("Successfully zero paired SB");
             Console.WriteLine("");
 
             if(sequenced)
@@ -4065,11 +3975,7 @@ namespace JRunner.Nand
                 val >>= 1;
             }
             val = ~val;
-
-            // For some values of val, the below stmt would return less than a 4 byte array
-            // (32-bit number). To ensure 4 bytes is always returned, "X8" replaces "X"
-            // in the ToString method below
-            byte[] temp = Oper.StringToByteArray(((val << 6) & 0xFFFFFFFF).ToString("X8"));
+            byte[] temp = Oper.StringToByteArray(((val << 6) & 0xFFFFFFFF).ToString("X"));
             Array.Reverse(temp);
             for (int j = data.Length - 4; j != data.Length; j++) data[j] = temp[j - data.Length + 4];
             return data;
