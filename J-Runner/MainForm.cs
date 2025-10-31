@@ -70,6 +70,7 @@ namespace JRunner
         Regex objAlphaPattern = new Regex("[a-fA-F0-9]{32}$");
         private bool allowVisible = false;
         public Splash splash;
+        public static string tempTimingPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), @"TempTiming.jr");
 
         #endregion
 
@@ -176,7 +177,7 @@ namespace JRunner
 
             try
             {
-                if (File.Exists(xflasher.svfPath)) File.Delete(xflasher.svfPath);
+                if (File.Exists(tempTimingPath)) File.Delete(tempTimingPath);
             }
             catch { }
         }
