@@ -170,6 +170,7 @@ namespace JRunner
             this.jRPBLToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.updateJRPToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.keyDatabaseToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.mB64MBToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.groupBox8.SuspendLayout();
             this.getCpuKeyMenu.SuspendLayout();
             this.showWorkingFolderMenu.SuspendLayout();
@@ -1226,7 +1227,8 @@ namespace JRunner
             // nANDAlignmentToolStripMenuItem
             // 
             this.nANDAlignmentToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.gB16MBToolStripMenuItem});
+            this.gB16MBToolStripMenuItem,
+            this.mB64MBToolStripMenuItem});
             this.nANDAlignmentToolStripMenuItem.Name = "nANDAlignmentToolStripMenuItem";
             this.nANDAlignmentToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
             this.nANDAlignmentToolStripMenuItem.Text = "NAND Alignment";
@@ -1234,7 +1236,7 @@ namespace JRunner
             // gB16MBToolStripMenuItem
             // 
             this.gB16MBToolStripMenuItem.Name = "gB16MBToolStripMenuItem";
-            this.gB16MBToolStripMenuItem.Size = new System.Drawing.Size(144, 22);
+            this.gB16MBToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.gB16MBToolStripMenuItem.Text = "4GB -> 16MB";
             this.gB16MBToolStripMenuItem.Click += new System.EventHandler(this.gB16MBToolStripMenuItem_Click);
             // 
@@ -1381,6 +1383,13 @@ namespace JRunner
             this.keyDatabaseToolStripMenuItem.Size = new System.Drawing.Size(105, 20);
             this.keyDatabaseToolStripMenuItem.Text = "Key Database";
             this.keyDatabaseToolStripMenuItem.Click += new System.EventHandler(this.keyDatabaseToolStripMenuItem_Click);
+            // 
+            // mB64MBToolStripMenuItem
+            // 
+            this.mB64MBToolStripMenuItem.Name = "mB64MBToolStripMenuItem";
+            this.mB64MBToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.mB64MBToolStripMenuItem.Text = "16MB -> 64MB";
+            this.mB64MBToolStripMenuItem.Click += new System.EventHandler(this.mB64MBToolStripMenuItem_Click);
             // 
             // MainForm
             // 
@@ -1572,5 +1581,6 @@ namespace JRunner
         private ToolStripMenuItem gB16MBToolStripMenuItem;
         private ToolStripMenuItem injectXeLLToolStripMenuItem;
         private ToolStripMenuItem zeroPairSbToolStripMenuItem;
+        private ToolStripMenuItem mB64MBToolStripMenuItem;
     }
 }

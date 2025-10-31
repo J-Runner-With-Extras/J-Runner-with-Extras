@@ -3007,6 +3007,67 @@ namespace JRunner.Nand
             }
         }
 
+        public static string extend16mbTo64mb(string flashFilePath)
+        {
+            string flashFileResultPath = flashFilePath + "_aligned.bin";
+
+            byte[] flashData = File.ReadAllBytes(flashFilePath);
+            
+            int blockType = 0;
+
+            if (flashData.Length != 17301504)
+            {
+                Console.WriteLine("Error: input NAND image is not 16mb with ECC");
+                return flashFilePath;
+            }
+
+            Console.WriteLine("Aligning 16mb NAND image to 64mb...");
+
+            // Determine what kind of ECC is in this image... should only
+            // ever be 0 or 1, 2 would be unexpected
+            byte[] sparedata = flashData.Skip(0x4400).Take(0x10).ToArray();
+
+            // Block Types
+            // 0 = Small block NAND (XSB)
+            // 1 = Small block NAND on BB controller (PSB/KSB)
+            // 2 = Big block NAND on BB controller (PSB/KSB)
+            blockType = identifylayout(sparedata);
+
+            // extend the buffer to 69206016 bytes (64mb w/ ECC)
+            Array.Resize(ref flashData, 69206016);
+
+            // Step 2: fill it with 48mb worth of zero pages w/ valid ECC data
+            // we don't reeeeeeeallly need a bunch of buffers for this but 
+            // addeccv2 doesn't have a "start at this offset" option (yet)
+            byte[] blankPages = new byte[0x18000 * 0x200];
+            blankPages = addecc_v2(blankPages, true, 17301504, blockType);
+            Buffer.BlockCopy(blankPages,0,flashData, 17301504, blankPages.Length);
+
+            // Copy the SMC config to the new location
+            // 64mb: 0x03dfc000 (0x3FEBE00 physical), len 0x400 (two logical pages)
+            // 16mb: 0x00f7c000 (0xFF7E00 physical), len 0x400 (two logical pages)
+            // logical page size: 0x200
+            // physical page size: 0x210
+
+            // Get the old SMC config bytes and re-add ECC data for the new loc
+            byte[] smcConfigBytes = flashData.Skip(0xFF7E00).Take(0x420).ToArray();
+            smcConfigBytes = unecc(smcConfigBytes);
+            smcConfigBytes = addecc_v2(smcConfigBytes, true, 0x3FEBE00, blockType);
+            //smcConfigBytes *should* be 0x420 now
+            Buffer.BlockCopy(smcConfigBytes,0,flashData,0x3FEBE00, smcConfigBytes.Length);
+
+            //zero out the old location
+            byte[] blankSmcConfigPages = new byte[0x400];
+            blankSmcConfigPages = addecc_v2(blankSmcConfigPages, true, 0xFF7E00, blockType);
+            Buffer.BlockCopy(blankSmcConfigPages, 0, flashData, 0xFF7E00, blankSmcConfigPages.Length);
+
+            File.WriteAllBytes(flashFileResultPath, flashData);
+
+            Console.WriteLine("Done. Image written to " + flashFileResultPath);
+
+            return flashFileResultPath;
+        }
+
         private static byte[] CalculateCPUKeyECD(byte[] key)
         {
             byte[] ecd = new byte[0x10];

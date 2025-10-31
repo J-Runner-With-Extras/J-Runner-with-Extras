@@ -3075,6 +3075,13 @@ namespace JRunner
 
 
         }
+
+        private void mB64MBToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            variables.filename1 = Nand.Nand.extend16mbTo64mb(variables.filename1);
+            xPanel_updateSource(variables.filename1);
+        }
+
         private void extractFilesToolStripMenuItem_Click(object sender, EventArgs e)
         {
             extractFilesFromNand();
@@ -5219,8 +5226,7 @@ namespace JRunner
 
 
 
-        #endregion
 
-        
+        #endregion
     }
 }
