@@ -1003,7 +1003,7 @@ namespace JRunner.Classes
             //
             if( (_xdkbuild && _ttype != variables.hacktypes.devgl) ||
                 _rgh3 ||
-                (_ttype == variables.hacktypes.devgl && (_ctype.ID == 7 || _ctype.ID == 13 || _ctype.ID == 14)) )
+                isDevglFor64MbConsoles() )
             {
                 return true;
             }
@@ -1013,6 +1013,26 @@ namespace JRunner.Classes
             }
         }
 
+        private bool isDevglFor64MbConsoles()
+        {
+            // If we've selected the following options, we're building
+            // a 64mb DevGL image with the XeBuild devkit option
+            //
+            // 1) User selected DevGL
+            // 2) User did NOT enable "devkit instead of devgl" mode
+            // 3) The console is a 64mb xenon, zephyr, or falcon
+            //
+            if( _ttype == variables.hacktypes.devgl &&
+                 false == variables.devkitnotdevgl &&
+                 (_ctype.ID == 7 || _ctype.ID == 13 || _ctype.ID == 14) )
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
         public void build()
         {
             success = false;
@@ -1061,12 +1081,7 @@ namespace JRunner.Classes
 
             if (_ttype == variables.hacktypes.devgl)
             {
-                if (variables.devkitnotdevgl)
-                {
-                    Console.WriteLine("Using devkit image type instead of DevGL");
-                    arguments = "-t " + variables.hacktypes.devkit;
-                }
-                else if (_ctype.ID == 7 || _ctype.ID == 13 || _ctype.ID == 14)
+                if (isDevglFor64MbConsoles())
                 {
                     Console.WriteLine("Building 64mb DevGL image using XeBuild devkit mode");
 
@@ -1106,6 +1121,11 @@ namespace JRunner.Classes
                         return;
                     }
 
+                    arguments = "-t " + variables.hacktypes.devkit;
+                }
+                else if (variables.devkitnotdevgl)
+                {
+                    Console.WriteLine("Using devkit image type instead of DevGL");
                     arguments = "-t " + variables.hacktypes.devkit;
                 }
                 else
@@ -1247,8 +1267,10 @@ namespace JRunner.Classes
                     pProcess.CancelOutputRead();
                 }
 
+                //
                 // Do any mandatory post build actions here
-                if (_ttype == variables.hacktypes.devgl && (_ctype.ID == 7 || _ctype.ID == 13 || _ctype.ID == 14))
+                //
+                if (isDevglFor64MbConsoles())
                 {
                     // Now that XeBuild is done, we can restore the contents of the
                     // ini file and delete the backup. We have to do this regardless
@@ -1257,12 +1279,14 @@ namespace JRunner.Classes
                     if (File.Exists(iniFileBackupPath)) File.Delete(iniFileBackupPath);
                 }
 
+                //
                 // Any post-build actions on success here
+                //
+                // Ensure the postBuildActionsAreRequired
+                // function is updated if anything is added
+                //
                 if (success)
                 {
-                    // Any post-xeBuild actions are done here. Ensure the postBuildActionsAreRequired
-                    // function is updated if anything is added
-
                     if (_xdkbuild && _rgh3)
                     {
                         MainForm.mainForm.XDKbuild.create(boardtype, true);
@@ -1276,7 +1300,7 @@ namespace JRunner.Classes
                     {
                         MainForm.mainForm.rgh3Build.create(_ctype.Text, _cpukey, true);
                     }
-                    else if (_ttype == variables.hacktypes.devgl && (_ctype.ID == 7 || _ctype.ID == 13 || _ctype.ID == 14))
+                    else if (isDevglFor64MbConsoles())
                     {
                         devgl64PostBuildActions(iniFilePath);
                     }
