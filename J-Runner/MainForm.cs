@@ -3082,6 +3082,11 @@ namespace JRunner
             variables.filename1 = Nand.Nand.extend16mbTo64mb(variables.filename1);
             xPanel_updateSource(variables.filename1);
         }
+        private void addressCalculatorToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            AddressCalculator formAC = new AddressCalculator();
+            formAC.Show();
+        }
 
         private void extractFilesToolStripMenuItem_Click(object sender, EventArgs e)
         {

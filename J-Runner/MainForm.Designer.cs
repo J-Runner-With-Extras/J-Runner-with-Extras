@@ -151,6 +151,8 @@ namespace JRunner
             this.createSafeDualImageToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.nANDAlignmentToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.gB16MBToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.mB64MBToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.addressCalculatorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.decryptKeyvaultToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem11 = new System.Windows.Forms.ToolStripSeparator();
             this.loadGlitch2XeLLToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -170,7 +172,6 @@ namespace JRunner
             this.jRPBLToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.updateJRPToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.keyDatabaseToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.mB64MBToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.groupBox8.SuspendLayout();
             this.getCpuKeyMenu.SuspendLayout();
             this.showWorkingFolderMenu.SuspendLayout();
@@ -1228,7 +1229,8 @@ namespace JRunner
             // 
             this.nANDAlignmentToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.gB16MBToolStripMenuItem,
-            this.mB64MBToolStripMenuItem});
+            this.mB64MBToolStripMenuItem,
+            this.addressCalculatorToolStripMenuItem});
             this.nANDAlignmentToolStripMenuItem.Name = "nANDAlignmentToolStripMenuItem";
             this.nANDAlignmentToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
             this.nANDAlignmentToolStripMenuItem.Text = "NAND Alignment";
@@ -1239,6 +1241,20 @@ namespace JRunner
             this.gB16MBToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.gB16MBToolStripMenuItem.Text = "4GB -> 16MB";
             this.gB16MBToolStripMenuItem.Click += new System.EventHandler(this.gB16MBToolStripMenuItem_Click);
+            // 
+            // mB64MBToolStripMenuItem
+            // 
+            this.mB64MBToolStripMenuItem.Name = "mB64MBToolStripMenuItem";
+            this.mB64MBToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.mB64MBToolStripMenuItem.Text = "16MB -> 64MB";
+            this.mB64MBToolStripMenuItem.Click += new System.EventHandler(this.mB64MBToolStripMenuItem_Click);
+            // 
+            // addressCalculatorToolStripMenuItem
+            // 
+            this.addressCalculatorToolStripMenuItem.Name = "addressCalculatorToolStripMenuItem";
+            this.addressCalculatorToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.addressCalculatorToolStripMenuItem.Text = "Address Calculator";
+            this.addressCalculatorToolStripMenuItem.Click += new System.EventHandler(this.addressCalculatorToolStripMenuItem_Click);
             // 
             // decryptKeyvaultToolStripMenuItem
             // 
@@ -1383,13 +1399,6 @@ namespace JRunner
             this.keyDatabaseToolStripMenuItem.Size = new System.Drawing.Size(105, 20);
             this.keyDatabaseToolStripMenuItem.Text = "Key Database";
             this.keyDatabaseToolStripMenuItem.Click += new System.EventHandler(this.keyDatabaseToolStripMenuItem_Click);
-            // 
-            // mB64MBToolStripMenuItem
-            // 
-            this.mB64MBToolStripMenuItem.Name = "mB64MBToolStripMenuItem";
-            this.mB64MBToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.mB64MBToolStripMenuItem.Text = "16MB -> 64MB";
-            this.mB64MBToolStripMenuItem.Click += new System.EventHandler(this.mB64MBToolStripMenuItem_Click);
             // 
             // MainForm
             // 
@@ -1582,5 +1591,6 @@ namespace JRunner
         private ToolStripMenuItem injectXeLLToolStripMenuItem;
         private ToolStripMenuItem zeroPairSbToolStripMenuItem;
         private ToolStripMenuItem mB64MBToolStripMenuItem;
+        private ToolStripMenuItem addressCalculatorToolStripMenuItem;
     }
 }
