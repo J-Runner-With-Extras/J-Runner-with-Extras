@@ -239,7 +239,22 @@ namespace JRunner.Nand
             }
         }
 
-        private enum _2blType { SingleCB, SplitCBB_CBX, RGH3CBB };
+        private void unpack_cbb_data(byte[] cb_dec)
+        {
+            // Encrypted CB_Bs introduce problems parsing this data
+            if (cb_dec[0xA0] == 0 && cb_dec[0xA7] == 0 && cb_dec[0xAF] == 0)
+            {
+                if (cb_dec[0x02] == 0x3C && cb_dec[0x03] == 0x48) uf.ldv_cb = 0;
+                else if (cb_dec[0x3B1] <= 16) uf.ldv_cb = cb_dec[0x3B1];
+
+                if (variables.debugMode) Console.WriteLine("LDV CB: {0}", uf.ldv_cb.ToString());
+
+                byte[] temppd = (Oper.returnportion(cb_dec, 0x20, 3));
+                Array.Reverse(temppd);
+                uf.pd_cb = "0x" + Oper.ByteArrayToString(temppd);
+                if (variables.debugMode) Console.WriteLine("-Pairing Data: " + uf.pd_cb);
+            }
+        }
 
         void unpack_base_image(byte[] image, bool bigblock)
         {
@@ -364,18 +379,7 @@ namespace JRunner.Nand
                                 if (variables.extractfiles) Oper.savefile(cb_dec, "output\\" + blIdString + "_B_dec.bin");
 
                                 // Encrypted CB_Bs introduce problems parsing this data
-                                if (cb_dec[0xA0] == 0 && cb_dec[0xA7] == 0 && cb_dec[0xAF] == 0)
-                                {
-                                    if (cb_dec[0x02] == 0x3C && cb_dec[0x03] == 0x48) uf.ldv_cb = 0;
-                                    else if (cb_dec[0x3B1] <= 16) uf.ldv_cb = cb_dec[0x3B1];
-
-                                    if (variables.debugMode) Console.WriteLine("LDV CB: {0}", uf.ldv_cb.ToString());
-
-                                    byte[] temppd = (Oper.returnportion(cb_dec, 0x20, 3));
-                                    Array.Reverse(temppd);
-                                    uf.pd_cb = "0x" + Oper.ByteArrayToString(temppd);
-                                    if (variables.debugMode) Console.WriteLine("-Pairing Data: " + uf.pd_cb);
-                                }
+                                unpack_cbb_data(cb_dec);
                             }
                         }
                         else
@@ -386,19 +390,7 @@ namespace JRunner.Nand
                             cb_dec = data;
 
                             if (variables.extractfiles) Oper.savefile(cb_dec, "output\\" + blIdString + "_B_dec.bin");
-                            // Encrypted CB_Bs introduce problems parsing this data
-                            if (cb_dec[0xA0] == 0 && cb_dec[0xA7] == 0 && cb_dec[0xAF] == 0)
-                            {
-                                if (cb_dec[0x02] == 0x3C && cb_dec[0x03] == 0x48) uf.ldv_cb = 0;
-                                else if (cb_dec[0x3B1] <= 16) uf.ldv_cb = cb_dec[0x3B1];
-
-                                if (variables.debugMode) Console.WriteLine("LDV CB: {0}", uf.ldv_cb.ToString());
-
-                                byte[] temppd = (Oper.returnportion(cb_dec, 0x20, 3));
-                                Array.Reverse(temppd);
-                                uf.pd_cb = "0x" + Oper.ByteArrayToString(temppd);
-                                if (variables.debugMode) Console.WriteLine("-Pairing Data: " + uf.pd_cb);
-                            }
+                            unpack_cbb_data(cb_dec);
                         }
 
                         _2bl_idx++;
