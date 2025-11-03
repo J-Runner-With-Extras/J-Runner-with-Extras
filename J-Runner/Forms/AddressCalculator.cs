@@ -30,7 +30,7 @@ namespace JRunner.Forms
             }
             catch
             {
-                txtLogicalAddress.Text = "Invalid Input Address";
+                clearOutputTextBoxesOnInputError();
                 return;
             }
 
@@ -54,7 +54,7 @@ namespace JRunner.Forms
             }
             catch
             {
-                txtLogicalAddress.Text = "Invalid Input Address";
+                clearOutputTextBoxesOnInputError();
                 return;
             }
 
@@ -62,10 +62,18 @@ namespace JRunner.Forms
             int offsetInPage = inputAddr % pagesz_phys;
             int addressLogical = (pageNumber * pagesz) + offsetInPage;
 
-            txtLogicalAddress.Text = "0x" + inputAddr.ToString("x");
-            txtPhysicalAddress.Text = "0x" + addressLogical.ToString("x");
+            txtLogicalAddress.Text = "0x" + addressLogical.ToString("x");
+            txtPhysicalAddress.Text = "0x" + inputAddr.ToString("x");
             txtPageNumber.Text = pageNumber.ToString();
             txtOffsetInPage.Text = "0x" + offsetInPage.ToString("x");
+        }
+
+        private void clearOutputTextBoxesOnInputError()
+        {
+            txtLogicalAddress.Text = "Invalid Input Address";
+            txtPhysicalAddress.Text = "";
+            txtPageNumber.Text = "";
+            txtOffsetInPage.Text = "";
         }
 
         private void resultTextBox_DoubleClick(object sender, EventArgs e)
