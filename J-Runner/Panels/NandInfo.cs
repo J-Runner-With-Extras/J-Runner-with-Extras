@@ -92,7 +92,7 @@ namespace JRunner.Panels
                         textBox2BLb.Enabled = true;
                         label2blb.Visible = true;
 
-                        if (textBox2BLb.Text == "15432") textBoxCbType.Text = "RGH3";
+                        if (nand.bl.CB_X > 0) textBoxCbType.Text = "RGH3";
                         else textBoxCbType.Text = "Split";
                     }
                     else

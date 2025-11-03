@@ -2120,10 +2120,10 @@ namespace JRunner
                 Thread.Sleep(100); // Fixes a weird issue that might occur in some situations
 
                 // RGH3
-                if (nand.bl.CB_B == 15432) xPanel.setRgh3Checked(true);
+                if (nand.bl.CB_X > 0) xPanel.setRgh3Checked(true);
 
                 // Winbond
-                if ((nand.bl.CB_A == 13121 && nand.bl.CB_B == 13182) || (nand.bl.CB_A == 13182 && nand.bl.CB_B == 15432))
+                if (nand.bl.CB_B == 13182)
                 {
                     xPanel.setWBChecked(true);
                 }

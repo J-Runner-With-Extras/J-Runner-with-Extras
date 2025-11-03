@@ -14,6 +14,7 @@ namespace JRunner.Nand
         // BL Versions
         public int CB_A;
         public int CB_B;
+        public int CB_X;
         public int SC;
         public int CD;
         public int CE;
@@ -238,11 +239,13 @@ namespace JRunner.Nand
             }
         }
 
+        private enum _2blType { SingleCB, SplitCBB_CBX, RGH3CBB };
+
         void unpack_base_image(byte[] image, bool bigblock)
         {
             byte[] data, cb_dec = { }, sc_dec = { }, cd_dec = { }, ce_dec = { };
-            byte[] CB_A = null, CB_B = null; //SMC = null, CD = null, CE = null, Keyvault = null;
-            bl.CB_A = 0; bl.CB_B = 0; bl.CD = 0; bl.CE = 0; bl.CF_0 = 0; bl.CG_0 = 0; bl.CF_1 = 0; bl.CG_1 = 0;
+            byte[] CB_A = null, CB_B = null, CB_X = null; //SMC = null, CD = null, CE = null, Keyvault = null;
+            bl.CB_A = 0; bl.CB_B = 0; bl.CB_X = 0;  bl.CD = 0; bl.CE = 0; bl.CF_0 = 0; bl.CG_0 = 0; bl.CF_1 = 0; bl.CG_1 = 0;
             bl._2BL_magic = "";bl._3BL_magic = "";bl._4BL_magic = "";bl._5BL_magic = "";
             uf.ldv_p0 = 0; uf.ldv_p1 = 0; uf.ldv_cb = 0; uf.pd_cb = ""; uf.pd_0 = ""; uf.pd_1 = "";
 
@@ -291,7 +294,9 @@ namespace JRunner.Nand
                 int block_build;
                 byte[] block_build_b = new byte[2], block_size_b = new byte[4];
                 int block_offset_b = Convert.ToInt32(Oper.ByteArrayToString(block_offset), 16);
-                int semi = 0;
+
+                int _2bl_idx = 0;
+                
                 for (block = 0; block < 30; block++)
                 {
                     // Dev BLs start with 0x53 (S)
@@ -316,26 +321,71 @@ namespace JRunner.Nand
                     {
                         bl._2BL_magic = blIdString;
 
-                        if (semi == 0)
+                        if (_2bl_idx == 0)
                         {
+                            // First time through this function we've got a single CB or a CB_A
                             bl.CB_A = block_build;
                             CB_A = data;
-                            semi = 1;
+
+                            cb_dec = Nand.decrypt_CB(CB_A);
+                            if (variables.extractfiles) Oper.savefile(data, "output\\CB_A.bin");
+                            if (variables.extractfiles) Oper.savefile(cb_dec, "output\\CB_A_dec.bin");
+
+                            if (cb_dec[0x3B1] <= 16) uf.ldv_cb = cb_dec[0x3B1];
+
+                            if (variables.debugMode) Console.WriteLine("LDV CB: {0}", uf.ldv_cb.ToString());
+                            byte[] temppd = (Oper.returnportion(cb_dec, 0x20, 3));
+                            Array.Reverse(temppd);
+                            uf.pd_cb = "0x" + Oper.ByteArrayToString(temppd);
+                            if (variables.debugMode) Console.WriteLine("-Pairing Data: " + uf.pd_cb);
                         }
-                        else if (semi == 1)
+                        else if (_2bl_idx == 1)
                         {
+                            // Second time through this function we've got a CB_B or an RGH3 CB_X
+                            if (15432 == block_build)
+                            {
+                                // This is an RGH3 CB_X, we've got to do things a *bit* differently
+                                bl.CB_X = block_build;
+                                CB_X = data;
+
+                                if (variables.extractfiles) Oper.savefile(data, "output\\CB_X.bin");
+                                if (string.IsNullOrEmpty(variables.cpukey)) cb_dec = Nand.decrypt_CB_cpukey(CB_X, Nand.decrypt_CB(CB_A), Oper.StringToByteArray("00000000000000000000000000000000")); // It just needs something, doesn't matter that its not valid
+                                else cb_dec = Nand.decrypt_CB_cpukey(CB_X, Nand.decrypt_CB(CB_A), Oper.StringToByteArray(variables.cpukey));
+                                if (variables.extractfiles) Oper.savefile(cb_dec, "output\\CB_X_dec.bin");
+                            }
+                            else
+                            {
+                                bl.CB_B = block_build;
+                                CB_B = data;
+
+                                if (variables.extractfiles) Oper.savefile(data, "output\\" + blIdString + "_B.bin");
+                                if (string.IsNullOrEmpty(variables.cpukey)) cb_dec = Nand.decrypt_CB_cpukey(CB_B, Nand.decrypt_CB(CB_A), Oper.StringToByteArray("00000000000000000000000000000000")); // It just needs something, doesn't matter that its not valid
+                                else cb_dec = Nand.decrypt_CB_cpukey(CB_B, Nand.decrypt_CB(CB_A), Oper.StringToByteArray(variables.cpukey));
+                                if (variables.extractfiles) Oper.savefile(cb_dec, "output\\" + blIdString + "_B_dec.bin");
+
+                                // Encrypted CB_Bs introduce problems parsing this data
+                                if (cb_dec[0xA0] == 0 && cb_dec[0xA7] == 0 && cb_dec[0xAF] == 0)
+                                {
+                                    if (cb_dec[0x02] == 0x3C && cb_dec[0x03] == 0x48) uf.ldv_cb = 0;
+                                    else if (cb_dec[0x3B1] <= 16) uf.ldv_cb = cb_dec[0x3B1];
+
+                                    if (variables.debugMode) Console.WriteLine("LDV CB: {0}", uf.ldv_cb.ToString());
+
+                                    byte[] temppd = (Oper.returnportion(cb_dec, 0x20, 3));
+                                    Array.Reverse(temppd);
+                                    uf.pd_cb = "0x" + Oper.ByteArrayToString(temppd);
+                                    if (variables.debugMode) Console.WriteLine("-Pairing Data: " + uf.pd_cb);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // Third time through, we've got an RGH3 CB_B which is in plaintext
                             bl.CB_B = block_build;
                             CB_B = data;
-                            semi = 0;
-                        }
+                            cb_dec = data;
 
-                        if (semi == 0)
-                        {
-                            if (variables.extractfiles) Oper.savefile(data, "output\\" + blIdString + "_B.bin");
-                            if (string.IsNullOrEmpty(variables.cpukey)) cb_dec = Nand.decrypt_CB_cpukey(CB_B, Nand.decrypt_CB(CB_A), Oper.StringToByteArray("00000000000000000000000000000000")); // It just needs something, doesn't matter that its not valid
-                            else cb_dec = Nand.decrypt_CB_cpukey(CB_B, Nand.decrypt_CB(CB_A), Oper.StringToByteArray(variables.cpukey));
                             if (variables.extractfiles) Oper.savefile(cb_dec, "output\\" + blIdString + "_B_dec.bin");
-
                             // Encrypted CB_Bs introduce problems parsing this data
                             if (cb_dec[0xA0] == 0 && cb_dec[0xA7] == 0 && cb_dec[0xAF] == 0)
                             {
@@ -350,20 +400,8 @@ namespace JRunner.Nand
                                 if (variables.debugMode) Console.WriteLine("-Pairing Data: " + uf.pd_cb);
                             }
                         }
-                        else
-                        {
-                            cb_dec = Nand.decrypt_CB(CB_A);
-                            if (variables.extractfiles) Oper.savefile(data, "output\\CB_A.bin");
-                            if (variables.extractfiles) Oper.savefile(cb_dec, "output\\CB_A_dec.bin");
 
-                            if (cb_dec[0x3B1] <= 16) uf.ldv_cb = cb_dec[0x3B1];
-
-                            if (variables.debugMode) Console.WriteLine("LDV CB: {0}", uf.ldv_cb.ToString());
-                            byte[] temppd = (Oper.returnportion(cb_dec, 0x20, 3));
-                            Array.Reverse(temppd);
-                            uf.pd_cb = "0x" + Oper.ByteArrayToString(temppd);
-                            if (variables.debugMode) Console.WriteLine("-Pairing Data: " + uf.pd_cb);
-                        }
+                        _2bl_idx++;
                     }
                     else if (id == 3)
                     {
