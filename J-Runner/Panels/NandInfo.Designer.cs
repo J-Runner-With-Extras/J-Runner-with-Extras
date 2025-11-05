@@ -89,6 +89,8 @@
             this.labeldvdkey = new System.Windows.Forms.Label();
             this.tabPageBadBlocks = new System.Windows.Forms.TabPage();
             this.txtBadBlocks = new System.Windows.Forms.TextBox();
+            this.labelCBX = new System.Windows.Forms.Label();
+            this.textBoxCBX = new System.Windows.Forms.TextBox();
             this.tabControl1.SuspendLayout();
             this.tabPageNand.SuspendLayout();
             this.groupBox1.SuspendLayout();
@@ -126,6 +128,8 @@
             // 
             this.groupBox1.AllowDrop = true;
             this.groupBox1.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(240)))), ((int)(((byte)(240)))), ((int)(((byte)(240)))));
+            this.groupBox1.Controls.Add(this.labelCBX);
+            this.groupBox1.Controls.Add(this.textBoxCBX);
             this.groupBox1.Controls.Add(this.textBoxSmcVer);
             this.groupBox1.Controls.Add(this.label4);
             this.groupBox1.Controls.Add(this.textBoxCbType);
@@ -774,6 +778,28 @@
             this.txtBadBlocks.Text = "No Nand Loaded";
             this.txtBadBlocks.DoubleClick += new System.EventHandler(this.txtBadBlocks_DoubleClick);
             // 
+            // labelCBX
+            // 
+            this.labelCBX.AutoSize = true;
+            this.labelCBX.Location = new System.Drawing.Point(214, 114);
+            this.labelCBX.Name = "labelCBX";
+            this.labelCBX.Size = new System.Drawing.Size(34, 13);
+            this.labelCBX.TabIndex = 73;
+            this.labelCBX.Text = "CB_X";
+            this.labelCBX.Visible = false;
+            // 
+            // textBoxCBX
+            // 
+            this.textBoxCBX.Location = new System.Drawing.Point(254, 111);
+            this.textBoxCBX.Name = "textBoxCBX";
+            this.textBoxCBX.ReadOnly = true;
+            this.textBoxCBX.Size = new System.Drawing.Size(62, 20);
+            this.textBoxCBX.TabIndex = 72;
+            this.textBoxCBX.TabStop = false;
+            this.textBoxCBX.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
+            this.textBoxCBX.Visible = false;
+            this.textBoxCBX.DoubleClick += new System.EventHandler(this.textBoxCBX_DoubleClick);
+            // 
             // NandInfo
             // 
             this.AllowDrop = true;
@@ -861,5 +887,7 @@
         private System.Windows.Forms.TextBox textBoxSmcVer;
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.Label label5;
+        private System.Windows.Forms.Label labelCBX;
+        private System.Windows.Forms.TextBox textBoxCBX;
     }
 }
