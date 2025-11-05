@@ -503,8 +503,21 @@ namespace JRunner.Panels
             }
             else
             {
-                if (board.Contains("Winchester") || board.Contains("Corona") || board.Contains("Trinity") || board.Contains("None")) rbtnGlitch2m.Enabled = true;
-                else rbtnGlitch2m.Enabled = rbtnGlitch2m.Checked = false;
+                if
+                (
+                    board.Contains("Winchester") ||
+                    board.Contains("Corona") ||
+                    board.Contains("Trinity") ||
+                    board.Contains("None") ||
+                    (variables.allowGlitch2mPhat && ( board.Contains("Jasper") || board.Contains("Falcon") || board.Contains("Zephyr") || board.Contains("Xenon")))
+                )
+                {
+                    rbtnGlitch2m.Enabled = true;
+                }
+                else
+                {
+                    rbtnGlitch2m.Enabled = rbtnGlitch2m.Checked = false;
+                }
             }
         }
 

@@ -900,7 +900,7 @@ namespace JRunner.Classes
 
             // Type overrides, check doSomeChecks() if changing
             string boardtype = _ctype.Ini;
-            if (_ttype == variables.hacktypes.glitch2 || _ttype == variables.hacktypes.glitch2m)
+            if (_ttype == variables.hacktypes.glitch2 || (_ttype == variables.hacktypes.glitch2m && false == variables.allowGlitch2mPhat))
             {
                 if (boardtype == "xenon")
                 {
@@ -911,7 +911,7 @@ namespace JRunner.Classes
                     boardtype = "falcon";
                 }
             }
-            else if (_ttype == variables.hacktypes.devgl)
+            else if (_ttype == variables.hacktypes.devgl || (_ttype == variables.hacktypes.glitch2m && true == variables.allowGlitch2mPhat))
             {
                 if (boardtype == "xenon")
                 {
@@ -1047,7 +1047,7 @@ namespace JRunner.Classes
             string[] iniFileContentsBackup = { };
 
             // Type overrides, check doSomeChecks() if changing
-            if (_ttype == variables.hacktypes.glitch2 || _ttype == variables.hacktypes.glitch2m)
+            if (_ttype == variables.hacktypes.glitch2 || (_ttype == variables.hacktypes.glitch2m && false == variables.allowGlitch2mPhat))
             {
                 if (boardtype == "xenon")
                 {
@@ -1060,7 +1060,7 @@ namespace JRunner.Classes
                     Console.WriteLine("Using Falcon type for Zephyr");
                 }
             }
-            else if (_ttype == variables.hacktypes.devgl)
+            else if (_ttype == variables.hacktypes.devgl || (_ttype == variables.hacktypes.glitch2m && true == variables.allowGlitch2mPhat))
             {
                 if (boardtype == "xenon")
                 {
@@ -1296,6 +1296,10 @@ namespace JRunner.Classes
                     {
                         MainForm.mainForm.XDKbuild.create(boardtype);
                     }
+                    else if (_ttype == variables.hacktypes.glitch2m && _rgh3)
+                    {
+                        MainForm.mainForm.rgh3Build.create(_ctype.Text, "00000000000000000000000000000000", true);
+                    }    
                     else if (_rgh3)
                     {
                         MainForm.mainForm.rgh3Build.create(_ctype.Text, _cpukey, true);

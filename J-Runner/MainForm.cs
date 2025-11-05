@@ -4278,6 +4278,16 @@ namespace JRunner
             }
             else if (e.KeyCode == Keys.F11)
             {
+                if(!variables.allowGlitch2mPhat)
+                {
+                    variables.allowGlitch2mPhat = true;
+                    Console.WriteLine("Glitch2m for phat enabled");
+                }
+                else
+                {
+                    variables.allowGlitch2mPhat = false;
+                    Console.WriteLine("Glitch2m for phat disabled");
+                }
             }
             else if (e.KeyCode == Keys.F12)
             {
