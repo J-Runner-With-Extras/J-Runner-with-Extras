@@ -900,7 +900,7 @@ namespace JRunner.Classes
 
             // Type overrides, check doSomeChecks() if changing
             string boardtype = _ctype.Ini;
-            if (_ttype == variables.hacktypes.glitch2 || (_ttype == variables.hacktypes.glitch2m && false == variables.allowGlitch2mPhat))
+            if (_ttype == variables.hacktypes.glitch2 || _ttype == variables.hacktypes.glitch2m || _ttype == variables.hacktypes.devgl)
             {
                 if (boardtype == "xenon")
                 {
@@ -909,21 +909,6 @@ namespace JRunner.Classes
                 else if (boardtype == "zephyr")
                 {
                     boardtype = "falcon";
-                }
-            }
-            else if (_ttype == variables.hacktypes.devgl || (_ttype == variables.hacktypes.glitch2m && true == variables.allowGlitch2mPhat))
-            {
-                if (boardtype == "xenon")
-                {
-                    boardtype = "jasper";
-                }
-                else if (boardtype == "zephyr")
-                {
-                    boardtype = "jasper";
-                }
-                else if (boardtype == "falcon")
-                {
-                    boardtype = "jasper";
                 }
             }
 
@@ -1003,7 +988,8 @@ namespace JRunner.Classes
             //
             if( (_xdkbuild && _ttype != variables.hacktypes.devgl) ||
                 _rgh3 ||
-                isDevglFor64MbConsoles() )
+                isDevglFor64MbConsoles() ||
+                isAffectedByXeBuildFalconImageBug() )
             {
                 return true;
             }
@@ -1033,6 +1019,23 @@ namespace JRunner.Classes
                 return false;
             }
         }
+
+        private bool isAffectedByXeBuildFalconImageBug()
+        {
+            // If we've selected the following options, we're building a falcon image
+            // that is affected by a bug in XeBuild that doesn't set the patch slot
+            // size correctly and need to patch the resulting image.
+            if ( (_ttype == variables.hacktypes.glitch2m || _ttype == variables.hacktypes.devgl) &&
+                 ( _ctype.ID == 2 || _ctype.ID == 3 || _ctype.ID == 8 ) )
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
         public void build()
         {
             success = false;
@@ -1047,7 +1050,7 @@ namespace JRunner.Classes
             string[] iniFileContentsBackup = { };
 
             // Type overrides, check doSomeChecks() if changing
-            if (_ttype == variables.hacktypes.glitch2 || (_ttype == variables.hacktypes.glitch2m && false == variables.allowGlitch2mPhat))
+            if (_ttype == variables.hacktypes.glitch2 || _ttype == variables.hacktypes.glitch2m || _ttype == variables.hacktypes.devgl)
             {
                 if (boardtype == "xenon")
                 {
@@ -1058,24 +1061,6 @@ namespace JRunner.Classes
                 {
                     boardtype = "falcon";
                     Console.WriteLine("Using Falcon type for Zephyr");
-                }
-            }
-            else if (_ttype == variables.hacktypes.devgl || (_ttype == variables.hacktypes.glitch2m && true == variables.allowGlitch2mPhat))
-            {
-                if (boardtype == "xenon")
-                {
-                    boardtype = "jasper";
-                    Console.WriteLine("Using Jasper type for Xenon");
-                }
-                else if (boardtype == "zephyr")
-                {
-                    boardtype = "jasper";
-                    Console.WriteLine("Using Jasper type for Zephyr");
-                }
-                else if (boardtype == "falcon")
-                {
-                    boardtype = "jasper";
-                    Console.WriteLine("Using Jasper type for Falcon");
                 }
             }
 
@@ -1285,8 +1270,16 @@ namespace JRunner.Classes
                 // Ensure the postBuildActionsAreRequired
                 // function is updated if anything is added
                 //
-                if (success)
+                if (success && postBuildActionsAreRequired())
                 {
+                    // For DevGL and Glitch2m, there is a bug in XeBuild that breaks falcon board types.
+                    // To fix the image, we need to set the DWORD at 0x70 in NAND (the patch slot address)
+                    // otherwise the CB/CD/CE patches won't be able to find the vfuses
+                    if(isAffectedByXeBuildFalconImageBug())
+                    {
+                        Nand.Nand.fixPatchSlotSizeForFalconImage(Path.Combine(variables.xefolder, variables.updflash));
+                    }
+
                     if (_xdkbuild && _rgh3)
                     {
                         MainForm.mainForm.XDKbuild.create(boardtype, true);
@@ -1307,6 +1300,11 @@ namespace JRunner.Classes
                     else if (isDevglFor64MbConsoles())
                     {
                         devgl64PostBuildActions(iniFilePath);
+                    }
+                    else
+                    {
+                        variables.xefinished = true;
+                        MainForm.mainForm.xPanel.xeExitActual();
                     }
                 }
             }

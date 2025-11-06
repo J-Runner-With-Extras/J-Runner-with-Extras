@@ -2883,6 +2883,108 @@ namespace JRunner.Nand
         }
 
         /// <summary>
+        /// Fixes the patch slot size in NAND for Falcon DevGL and Glitch2m images. XeBuild has an apparent
+        /// bug where for Falcon board type only, the patch slot size is set to 0x00000000, rather than the
+        /// expected 0x00010000. This causes bootloader panics in the CB/CD. XDKBuild and dev images don't
+        /// use patch slots so the bug didn't really appear before now.
+        /// </summary>
+        /// <param name="flashFilePath">Flash image to be patched, result will be written back to the same file</param>
+        public static void fixPatchSlotSizeForFalconImage(string flashFilePath)
+        {
+            byte[] flashData = { };
+
+            // Logical page size is always 0x200
+            // and the physical page size (for ECC images) is always 0x210
+            int pagesz = 0x200;
+            int pagesz_phys = 0x210;
+
+            int blockType = 0;
+            bool flashHasEcc = false;
+
+            // Read in the flash image
+            try
+            {
+                flashData = File.ReadAllBytes(flashFilePath);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Glitch2m/DevGL Falcon patch error: couldn't read input flash image");
+                if (variables.debugMode) Console.WriteLine(ex.ToString());
+                return;
+            }
+
+            // Determine whether this image has ECC
+            if (flashData.Length == 17301504 || flashData.Length == 69206016)
+            {
+                flashHasEcc = true;
+            }
+            else if (flashData.Length == 50331648)
+            {
+                // Flash data doesn't have ECC, pagesz_phys = pagesz
+                flashHasEcc = false;
+                pagesz_phys = pagesz;
+            }
+            else
+            {
+                Console.WriteLine("Glitch2m/DevGL Falcon patch error: invalid image size");
+                return;
+            }
+
+            // If the flash has ECC data, determine the block type so ECC data can be recalculated
+            if (flashHasEcc)
+            {
+                byte[] sparedata = flashData.Skip(0x4400).Take(0x10).ToArray();
+
+                // Block Types
+                // 0 = Small block NAND (XSB)
+                // 1 = Small block NAND on BB controller (PSB/KSB)
+                // 2 = Big block NAND on BB controller (PSB/KSB)
+                blockType = identifylayout(sparedata);
+            }
+
+            
+            // The patch slot size that we need to fix for Falcon images is always
+            // in the first NAND page, so we can just take the first page of bytes
+            byte[] nandPatchPages = flashData.Take(pagesz_phys).ToArray();
+
+            if (flashHasEcc)
+            {
+                // remove the ECC so we can copy our patch data to the logical addresses
+                nandPatchPages = unecc(nandPatchPages);
+            }
+
+            // Set the patch slot size to 0x00010000, which is the same for all other
+            // image types and glitch2m/DevGL on other board types
+            nandPatchPages[0x70] = 0x00;
+            nandPatchPages[0x71] = 0x01;
+            nandPatchPages[0x72] = 0x00;
+            nandPatchPages[0x73] = 0x00;
+
+            // Re-add ECC data and copy it over to the flash data buffer
+            if (flashHasEcc)
+            {
+                nandPatchPages = addecc_v2(nandPatchPages, true, 0, blockType);
+            }
+            Buffer.BlockCopy(nandPatchPages, 0, flashData, 0, nandPatchPages.Length);
+
+            try
+            {
+                // So we've updated the flashData, write it back to disk!
+                File.WriteAllBytes(flashFilePath, flashData);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Glitch2m/DevGL Falcon patch error: couldn't write output flash image");
+                if (variables.debugMode) Console.WriteLine(ex.ToString());
+                return;
+            }
+
+            Console.WriteLine("Successfully patched Falcon image at 0x70");
+            Console.WriteLine("");
+        }
+
+
+        /// <summary>
         /// Zero-pairs the SB of a devkit image, the final step in generating a 64mb DevGL image
         /// </summary>
         /// <param name="flashFilePath">Flash image to be patched, result will be written back to the same file</param>

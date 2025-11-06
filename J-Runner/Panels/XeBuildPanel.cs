@@ -497,28 +497,7 @@ namespace JRunner.Panels
         private void checkGlitch2m(string board)
         {
             if (board == null) board = "None";
-            if (variables.dashversion.Equals("17489") && File.Exists(variables.rootfolder + @"\xeBuild\17489\!XDKbuild Only!.txt"))
-            {
-                rbtnGlitch2m.Enabled = true;
-            }
-            else
-            {
-                if
-                (
-                    board.Contains("Winchester") ||
-                    board.Contains("Corona") ||
-                    board.Contains("Trinity") ||
-                    board.Contains("None") ||
-                    (variables.allowGlitch2mPhat && ( board.Contains("Jasper") || board.Contains("Falcon") || board.Contains("Zephyr") || board.Contains("Xenon")))
-                )
-                {
-                    rbtnGlitch2m.Enabled = true;
-                }
-                else
-                {
-                    rbtnGlitch2m.Enabled = rbtnGlitch2m.Checked = false;
-                }
-            }
+            rbtnGlitch2m.Enabled = true;
         }
 
         private void checkDevGL()
