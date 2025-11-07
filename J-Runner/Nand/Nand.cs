@@ -3132,7 +3132,10 @@ namespace JRunner.Nand
             Buffer.BlockCopy(sb_crypt, 0, nandPatchPages, sbOffsetInPage, sbSize);
 
             // Re-add ECC data and copy it over to the flash data buffer
-            nandPatchPages = addecc_v2(nandPatchPages, true, physicalSbPageOffset, blockType);
+            if(flashHasEcc)
+            {
+                nandPatchPages = addecc_v2(nandPatchPages, true, physicalSbPageOffset, blockType);
+            }
             Buffer.BlockCopy(nandPatchPages, 0, flashData, physicalSbPageOffset, nandPatchPages.Length);
 
             try
