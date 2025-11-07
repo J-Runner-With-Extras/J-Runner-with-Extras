@@ -26,9 +26,17 @@ namespace JRunner.Panels
         {
             // Nand Info
             textBox2BLa.Text = "";
+            label2bla.Text = "CB_A";
+
             textBox2BLb.Text = "";
+            label2blb.Text = "CB_B";
+
             textBox4BL.Text = "";
+            label4bl.Text = "CD";
+
             textBox5BL.Text = "";
+            label5bl.Text = "CE";
+
             textBox6BL_p0.Text = "";
             textBox6BL_p1.Text = "";
             textBox7BL_p0.Text = "";
@@ -45,6 +53,10 @@ namespace JRunner.Panels
             textBox2BLb.Enabled = true;
             label2blb.Visible = true;
             label2bla.Visible = true;
+
+            textBoxCBX.Text = "";
+            textBoxCBX.Visible = false;
+            labelCBX.Visible = false;
 
             // KV Info
             btnConsoleId.Text = "View: Native";
@@ -91,9 +103,7 @@ namespace JRunner.Panels
                         textBox2BLb.Text = nand.bl.CB_B.ToString();
                         textBox2BLb.Enabled = true;
                         label2blb.Visible = true;
-
-                        if (textBox2BLb.Text == "15432") textBoxCbType.Text = "RGH3";
-                        else textBoxCbType.Text = "Split";
+                        textBoxCbType.Text = "Split";
                     }
                     else
                     {
@@ -113,6 +123,29 @@ namespace JRunner.Panels
                         }
                             
                         textBoxCbType.Text = "Single";
+                    }
+
+                    if (nand.bl.CB_X > 0)
+                    {
+                        // RGH 1.3 uses a *funny* number for the CB_X build
+                        if(nand.bl.CB_X == 42069)
+                        {
+                            textBoxCbType.Text = "RGH 1.3";
+                        }
+                        else
+                        {
+                            textBoxCbType.Text = "RGH3";
+                        } 
+
+                        textBoxCBX.Text = nand.bl.CB_X.ToString();
+                        labelCBX.Visible = true;
+                        textBoxCBX.Visible = true;
+                    }
+                    else
+                    {
+                        textBoxCBX.Text = "";
+                        labelCBX.Visible = false;
+                        textBoxCBX.Visible = false;
                     }
 
                     if (nand.bl.CD > 0)
@@ -151,20 +184,10 @@ namespace JRunner.Panels
                     else textBoxldv_1.Text = "";
                     textBoxpd_0.Text = nand.uf.pd_0;
                     textBoxpd_1.Text = nand.uf.pd_1;
-
-
-                    if (textBox2BLb.Text == "15432") // It's not currently possible to properly parse the triple CB setup in RGH3
-                    {
-                        textBoxldv_cb.Text = textBoxpd_cb.Text = "";
-                    }
-                    else
-                    {
-                        if (nand.bl.CB_A > 0 || nand.bl.CB_B > 0) textBoxldv_cb.Text = nand.uf.ldv_cb.ToString();
-                        else textBoxldv_cb.Text = "";
-
-                        if (nand.uf.pd_cb == "0x000000") textBoxpd_cb.Text = "";
-                        else textBoxpd_cb.Text = nand.uf.pd_cb;
-                    }
+                    if (nand.bl.CB_A > 0 || nand.bl.CB_B > 0) textBoxldv_cb.Text = nand.uf.ldv_cb.ToString();
+                    else textBoxldv_cb.Text = "";
+                    if (nand.uf.pd_cb == "0x000000") textBoxpd_cb.Text = "";
+                    else textBoxpd_cb.Text = nand.uf.pd_cb;
 
                     string name = Nand.Nand.getConsoleName(nand, variables.flashconfig);
                     textBoxConsole.Text = name;
@@ -438,6 +461,11 @@ namespace JRunner.Panels
         private void txtBadBlocks_DoubleClick(object sender, EventArgs e)
         {
             MainForm.mainForm.copyToClipboard(txtBadBlocks.Text);
+        }
+
+        private void textBoxCBX_DoubleClick(object sender, EventArgs e)
+        {
+            MainForm.mainForm.copyToClipboard(textBoxCBX.Text);
         }
 
         #endregion

@@ -2120,10 +2120,10 @@ namespace JRunner
                 Thread.Sleep(100); // Fixes a weird issue that might occur in some situations
 
                 // RGH3
-                if (nand.bl.CB_B == 15432) xPanel.setRgh3Checked(true);
+                if (nand.bl.CB_X > 0) xPanel.setRgh3Checked(true);
 
                 // Winbond
-                if ((nand.bl.CB_A == 13121 && nand.bl.CB_B == 13182) || (nand.bl.CB_A == 13182 && nand.bl.CB_B == 15432))
+                if (nand.bl.CB_B == 13182)
                 {
                     xPanel.setWBChecked(true);
                 }
@@ -3076,6 +3076,18 @@ namespace JRunner
 
 
         }
+
+        private void mB64MBToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            variables.filename1 = Nand.Nand.extend16mbTo64mb(variables.filename1);
+            xPanel_updateSource(variables.filename1);
+        }
+        private void addressCalculatorToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            AddressCalculator formAC = new AddressCalculator();
+            formAC.Show();
+        }
+
         private void extractFilesToolStripMenuItem_Click(object sender, EventArgs e)
         {
             extractFilesFromNand();
@@ -5220,8 +5232,7 @@ namespace JRunner
 
 
 
-        #endregion
 
-        
+        #endregion
     }
 }

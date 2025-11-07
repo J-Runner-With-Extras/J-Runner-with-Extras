@@ -14,6 +14,7 @@ namespace JRunner.Nand
         // BL Versions
         public int CB_A;
         public int CB_B;
+        public int CB_X;
         public int SC;
         public int CD;
         public int CE;
@@ -238,11 +239,28 @@ namespace JRunner.Nand
             }
         }
 
+        private void unpack_cbb_data(byte[] cb_dec)
+        {
+            // Encrypted CB_Bs introduce problems parsing this data
+            if (cb_dec[0xA0] == 0 && cb_dec[0xA7] == 0 && cb_dec[0xAF] == 0)
+            {
+                if (cb_dec[0x02] == 0x3C && cb_dec[0x03] == 0x48) uf.ldv_cb = 0;
+                else if (cb_dec[0x3B1] <= 16) uf.ldv_cb = cb_dec[0x3B1];
+
+                if (variables.debugMode) Console.WriteLine("LDV CB: {0}", uf.ldv_cb.ToString());
+
+                byte[] temppd = (Oper.returnportion(cb_dec, 0x20, 3));
+                Array.Reverse(temppd);
+                uf.pd_cb = "0x" + Oper.ByteArrayToString(temppd);
+                if (variables.debugMode) Console.WriteLine("-Pairing Data: " + uf.pd_cb);
+            }
+        }
+
         void unpack_base_image(byte[] image, bool bigblock)
         {
             byte[] data, cb_dec = { }, sc_dec = { }, cd_dec = { }, ce_dec = { };
-            byte[] CB_A = null, CB_B = null; //SMC = null, CD = null, CE = null, Keyvault = null;
-            bl.CB_A = 0; bl.CB_B = 0; bl.CD = 0; bl.CE = 0; bl.CF_0 = 0; bl.CG_0 = 0; bl.CF_1 = 0; bl.CG_1 = 0;
+            byte[] CB_A = null, CB_B = null, CB_X = null, SC = null, CD = null, CE = null;
+            bl.CB_A = 0; bl.CB_B = 0; bl.CB_X = 0;  bl.CD = 0; bl.CE = 0; bl.CF_0 = 0; bl.CG_0 = 0; bl.CF_1 = 0; bl.CG_1 = 0;
             bl._2BL_magic = "";bl._3BL_magic = "";bl._4BL_magic = "";bl._5BL_magic = "";
             uf.ldv_p0 = 0; uf.ldv_p1 = 0; uf.ldv_cb = 0; uf.pd_cb = ""; uf.pd_0 = ""; uf.pd_1 = "";
 
@@ -291,7 +309,9 @@ namespace JRunner.Nand
                 int block_build;
                 byte[] block_build_b = new byte[2], block_size_b = new byte[4];
                 int block_offset_b = Convert.ToInt32(Oper.ByteArrayToString(block_offset), 16);
-                int semi = 0;
+
+                int _2bl_idx = 0;
+
                 for (block = 0; block < 30; block++)
                 {
                     // Dev BLs start with 0x53 (S)
@@ -316,99 +336,137 @@ namespace JRunner.Nand
                     {
                         bl._2BL_magic = blIdString;
 
-                        if (semi == 0)
+                        if (_2bl_idx == 0)
                         {
+                            // First time through this function we've got a single CB or a CB_A
                             bl.CB_A = block_build;
                             CB_A = data;
-                            semi = 1;
                         }
-                        else if (semi == 1)
+                        else if (_2bl_idx == 1)
                         {
                             bl.CB_B = block_build;
                             CB_B = data;
-                            semi = 0;
                         }
-
-                        if (semi == 0)
+                        else if(_2bl_idx == 2)
                         {
-                            if (variables.extractfiles) Oper.savefile(data, "output\\" + blIdString + "_B.bin");
-                            if (string.IsNullOrEmpty(variables.cpukey)) cb_dec = Nand.decrypt_CB_cpukey(CB_B, Nand.decrypt_CB(CB_A), Oper.StringToByteArray("00000000000000000000000000000000")); // It just needs something, doesn't matter that its not valid
-                            else cb_dec = Nand.decrypt_CB_cpukey(CB_B, Nand.decrypt_CB(CB_A), Oper.StringToByteArray(variables.cpukey));
-                            if (variables.extractfiles) Oper.savefile(cb_dec, "output\\" + blIdString + "_B_dec.bin");
+                            // If we're seeing this function three times, that means the
+                            // previous CB_B was actually an RGH3 CB_X or RGH 1.3 CB_Y
+                            // Anything more is a bug... if we ever get in to a scenario
+                            // where there are 4 or more CB stages then you'll need to
+                            // update JRunner and pray for whoever created CB_4
+                            bl.CB_X = bl.CB_B;
+                            CB_X = CB_B;
 
-                            // Encrypted CB_Bs introduce problems parsing this data
-                            if (cb_dec[0xA0] == 0 && cb_dec[0xA7] == 0 && cb_dec[0xAF] == 0)
-                            {
-                                if (cb_dec[0x02] == 0x3C && cb_dec[0x03] == 0x48) uf.ldv_cb = 0;
-                                else if (cb_dec[0x3B1] <= 16) uf.ldv_cb = cb_dec[0x3B1];
-
-                                if (variables.debugMode) Console.WriteLine("LDV CB: {0}", uf.ldv_cb.ToString());
-
-                                byte[] temppd = (Oper.returnportion(cb_dec, 0x20, 3));
-                                Array.Reverse(temppd);
-                                uf.pd_cb = "0x" + Oper.ByteArrayToString(temppd);
-                                if (variables.debugMode) Console.WriteLine("-Pairing Data: " + uf.pd_cb);
-                            }
+                            bl.CB_B = block_build;
+                            CB_B = data;
                         }
-                        else
-                        {
-                            cb_dec = Nand.decrypt_CB(CB_A);
-                            if (variables.extractfiles) Oper.savefile(data, "output\\CB_A.bin");
-                            if (variables.extractfiles) Oper.savefile(cb_dec, "output\\CB_A_dec.bin");
 
-                            if (cb_dec[0x3B1] <= 16) uf.ldv_cb = cb_dec[0x3B1];
-
-                            if (variables.debugMode) Console.WriteLine("LDV CB: {0}", uf.ldv_cb.ToString());
-                            byte[] temppd = (Oper.returnportion(cb_dec, 0x20, 3));
-                            Array.Reverse(temppd);
-                            uf.pd_cb = "0x" + Oper.ByteArrayToString(temppd);
-                            if (variables.debugMode) Console.WriteLine("-Pairing Data: " + uf.pd_cb);
-                        }
+                        _2bl_idx++;
                     }
                     else if (id == 3)
                     {
-                        bl.SC = block_build;
                         bl._3BL_magic = blIdString;
-                        if (variables.extractfiles) Oper.savefile(data, "output\\" + blIdString + ".bin");
-                        sc_dec = Nand.decrypt_SC(data);
-                        if (variables.extractfiles) Oper.savefile(sc_dec, "output\\" + blIdString + "_dec.bin");
+                        bl.SC = block_build;
+                        SC = data;
                     }
                     else if (id == 4)
                     {
-                        bl.CD = block_build;
                         bl._4BL_magic = blIdString;
-                        if (variables.extractfiles) Oper.savefile(data, "output\\" + blIdString + ".bin");
-
-                        // If there was a 3BL, the 4BL encryption is derived
-                        // from it rather than the 2BL
-                        if (bl.SC > 0)
-                        {
-                            // In case someone tries to open an XDKbuild image that hasn't been
-                            // patched, only try to decrypt the SD if the SC was decrypted OK
-                            if(sc_dec.Length > 0)
-                            {
-                                cd_dec = Nand.decrypt_SD(data, sc_dec);
-                                if (variables.extractfiles) Oper.savefile(cd_dec, "output\\" + blIdString+ "_dec.bin");
-                            }
-                        }
-                        else
-                        {
-                            cd_dec = Nand.decrypt_CD(data, cb_dec);
-                            if (variables.extractfiles) Oper.savefile(cd_dec, "output\\" + blIdString + "_dec.bin");
-                        }
-                        //CD = data;
+                        bl.CD = block_build;
+                        CD = data;
                     }
                     else if (id == 5)
                     {
                         bl.CE = block_build;
                         bl._5BL_magic = blIdString;
-                        if (variables.extractfiles) Oper.savefile(data, "output\\" + blIdString + ".bin");
-                        ce_dec = Nand.decrypt_CE(data, cd_dec);
-                        if (variables.extractfiles) Oper.savefile(data, "output\\" + blIdString + "_dec.bin");
-                        //CE = data;
+                        CE = data;
                     }
                     block_offset_b += block_size;
                     if (id == 5) break;
+                }
+
+                // We're done scanning the first few blocks. Now we can figure out the CB_A/CB_X/CB_B situation
+                if (bl.CB_A > 0)
+                {
+                    cb_dec = Nand.decrypt_CB(CB_A);
+                    if (variables.extractfiles) Oper.savefile(CB_A, "output\\" + bl._2BL_magic + "_A.bin");
+                    if (variables.extractfiles) Oper.savefile(cb_dec, "output\\" + bl._2BL_magic + "_A_dec.bin");
+
+                    if (cb_dec[0x3B1] <= 16) uf.ldv_cb = cb_dec[0x3B1];
+
+                    if (variables.debugMode) Console.WriteLine("LDV CB: {0}", uf.ldv_cb.ToString());
+                    byte[] temppd = (Oper.returnportion(cb_dec, 0x20, 3));
+                    Array.Reverse(temppd);
+                    uf.pd_cb = "0x" + Oper.ByteArrayToString(temppd);
+                    if (variables.debugMode) Console.WriteLine("-Pairing Data: " + uf.pd_cb);
+                }
+
+                if (bl.CB_X > 0)
+                {
+                    if (variables.extractfiles) Oper.savefile(CB_X, "output\\CB_X.bin");
+                    if (string.IsNullOrEmpty(variables.cpukey)) cb_dec = Nand.decrypt_CB_cpukey(CB_X, Nand.decrypt_CB(CB_A), Oper.StringToByteArray("00000000000000000000000000000000")); // It just needs something, doesn't matter that its not valid
+                    else cb_dec = Nand.decrypt_CB_cpukey(CB_X, Nand.decrypt_CB(CB_A), Oper.StringToByteArray(variables.cpukey));
+                    if (variables.extractfiles) Oper.savefile(cb_dec, "output\\CB_X_dec.bin");
+                }
+
+                if (bl.CB_B > 0)
+                {
+                    // If we've got a CB_X (RGH3 or RGH 1.3), then the CB_B is
+                    // stored in plaintext. No need to decrypt it first
+                    if (bl.CB_X > 0)
+                    {
+                        cb_dec = CB_B;
+                        if (variables.extractfiles) Oper.savefile(cb_dec, "output\\" + bl._2BL_magic + "_B_dec.bin");
+                        unpack_cbb_data(cb_dec);
+                    }
+                    else
+                    {
+                        if (variables.extractfiles) Oper.savefile(CB_B, "output\\" + bl._2BL_magic + "_B.bin");
+                        if (string.IsNullOrEmpty(variables.cpukey)) cb_dec = Nand.decrypt_CB_cpukey(CB_B, Nand.decrypt_CB(CB_A), Oper.StringToByteArray("00000000000000000000000000000000")); // It just needs something, doesn't matter that its not valid
+                        else cb_dec = Nand.decrypt_CB_cpukey(CB_B, Nand.decrypt_CB(CB_A), Oper.StringToByteArray(variables.cpukey));
+                        if (variables.extractfiles) Oper.savefile(cb_dec, "output\\" + bl._2BL_magic + "_B_dec.bin");
+
+                        // Encrypted CB_Bs introduce problems parsing this data
+                        unpack_cbb_data(cb_dec);
+                    }
+                }
+
+                if (bl.SC > 0)
+                {
+                    if (variables.extractfiles) Oper.savefile(SC, "output\\" + bl._3BL_magic + ".bin");
+                    sc_dec = Nand.decrypt_SC(SC);
+                    if (variables.extractfiles) Oper.savefile(sc_dec, "output\\" + bl._3BL_magic + "_dec.bin");
+                }
+
+                if (bl.CD > 0)
+                {
+
+                    if (variables.extractfiles) Oper.savefile(CD, "output\\" + bl._4BL_magic + ".bin");
+
+                    // If there was a 3BL, the 4BL encryption is derived
+                    // from it rather than the 2BL
+                    if (bl.SC > 0)
+                    {
+                        // In case someone tries to open an XDKbuild image that hasn't been
+                        // patched, only try to decrypt the SD if the SC was decrypted OK
+                        if (sc_dec.Length > 0)
+                        {
+                            cd_dec = Nand.decrypt_SD(CD, sc_dec);
+                            if (variables.extractfiles) Oper.savefile(cd_dec, "output\\" + bl._4BL_magic + "_dec.bin");
+                        }
+                    }
+                    else
+                    {
+                        cd_dec = Nand.decrypt_CD(CD, cb_dec);
+                        if (variables.extractfiles) Oper.savefile(cd_dec, "output\\" + bl._4BL_magic + "_dec.bin");
+                    }
+                }
+
+                if (bl.CE > 0)
+                {
+                    if (variables.extractfiles) Oper.savefile(CE, "output\\" + blIdString + ".bin");
+                    ce_dec = Nand.decrypt_CE(CE, cd_dec);
+                    if (variables.extractfiles) Oper.savefile(ce_dec, "output\\" + blIdString + "_dec.bin");
                 }
             }
             catch (Exception ex) { if (variables.debugMode) Console.WriteLine(ex.ToString()); }
@@ -2972,7 +3030,10 @@ namespace JRunner.Nand
             Buffer.BlockCopy(sb_crypt, 0, nandPatchPages, sbOffsetInPage, sbSize);
 
             // Re-add ECC data and copy it over to the flash data buffer
-            nandPatchPages = addecc_v2(nandPatchPages, true, physicalSbPageOffset, blockType);
+            if(flashHasEcc)
+            {
+                nandPatchPages = addecc_v2(nandPatchPages, true, physicalSbPageOffset, blockType);
+            }
             Buffer.BlockCopy(nandPatchPages, 0, flashData, physicalSbPageOffset, nandPatchPages.Length);
 
             try
@@ -3005,6 +3066,67 @@ namespace JRunner.Nand
             {
                 MainForm.mainForm.nand_init();
             }
+        }
+
+        public static string extend16mbTo64mb(string flashFilePath)
+        {
+            string flashFileResultPath = flashFilePath + "_aligned.bin";
+
+            byte[] flashData = File.ReadAllBytes(flashFilePath);
+            
+            int blockType = 0;
+
+            if (flashData.Length != 17301504)
+            {
+                Console.WriteLine("Error: input NAND image is not 16mb with ECC");
+                return flashFilePath;
+            }
+
+            Console.WriteLine("Aligning 16mb NAND image to 64mb...");
+
+            // Determine what kind of ECC is in this image... should only
+            // ever be 0 or 1, 2 would be unexpected
+            byte[] sparedata = flashData.Skip(0x4400).Take(0x10).ToArray();
+
+            // Block Types
+            // 0 = Small block NAND (XSB)
+            // 1 = Small block NAND on BB controller (PSB/KSB)
+            // 2 = Big block NAND on BB controller (PSB/KSB)
+            blockType = identifylayout(sparedata);
+
+            // extend the buffer to 69206016 bytes (64mb w/ ECC)
+            Array.Resize(ref flashData, 69206016);
+
+            // Step 2: fill it with 48mb worth of zero pages w/ valid ECC data
+            // we don't reeeeeeeallly need a bunch of buffers for this but 
+            // addeccv2 doesn't have a "start at this offset" option (yet)
+            byte[] blankPages = new byte[0x18000 * 0x200];
+            blankPages = addecc_v2(blankPages, true, 17301504, blockType);
+            Buffer.BlockCopy(blankPages,0,flashData, 17301504, blankPages.Length);
+
+            // Copy the SMC config to the new location
+            // 64mb: 0x03dfc000 (0x3FEBE00 physical), len 0x400 (two logical pages)
+            // 16mb: 0x00f7c000 (0xFF7E00 physical), len 0x400 (two logical pages)
+            // logical page size: 0x200
+            // physical page size: 0x210
+
+            // Get the old SMC config bytes and re-add ECC data for the new loc
+            byte[] smcConfigBytes = flashData.Skip(0xFF7E00).Take(0x420).ToArray();
+            smcConfigBytes = unecc(smcConfigBytes);
+            smcConfigBytes = addecc_v2(smcConfigBytes, true, 0x3FEBE00, blockType);
+            //smcConfigBytes *should* be 0x420 now
+            Buffer.BlockCopy(smcConfigBytes,0,flashData,0x3FEBE00, smcConfigBytes.Length);
+
+            //zero out the old location
+            byte[] blankSmcConfigPages = new byte[0x400];
+            blankSmcConfigPages = addecc_v2(blankSmcConfigPages, true, 0xFF7E00, blockType);
+            Buffer.BlockCopy(blankSmcConfigPages, 0, flashData, 0xFF7E00, blankSmcConfigPages.Length);
+
+            File.WriteAllBytes(flashFileResultPath, flashData);
+
+            Console.WriteLine("Done. Image written to " + flashFileResultPath);
+
+            return flashFileResultPath;
         }
 
         private static byte[] CalculateCPUKeyECD(byte[] key)
