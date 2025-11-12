@@ -497,15 +497,7 @@ namespace JRunner.Panels
         private void checkGlitch2m(string board)
         {
             if (board == null) board = "None";
-            if (variables.dashversion.Equals("17489") && File.Exists(variables.rootfolder + @"\xeBuild\17489\!XDKbuild Only!.txt"))
-            {
-                rbtnGlitch2m.Enabled = true;
-            }
-            else
-            {
-                if (board.Contains("Winchester") || board.Contains("Corona") || board.Contains("Trinity") || board.Contains("None")) rbtnGlitch2m.Enabled = true;
-                else rbtnGlitch2m.Enabled = rbtnGlitch2m.Checked = false;
-            }
+            rbtnGlitch2m.Enabled = true;
         }
 
         private void checkDevGL()
@@ -1334,7 +1326,12 @@ namespace JRunner.Panels
 
             string ini = (variables.launchpath + @"\" + variables.dashversion + @"\_" + variables.ttyp + ".ini");
 
-            if (variables.ctype.ID == 7 || variables.ctype.ID == 13 || variables.ctype.ID == 14)
+            // xeBuild does not officially support creating images for 64mb xenon, zephyr, or falcon
+            // in retail/glitch/glitch2/devGL modes. HOWEVER, it does support devkit images, so if the
+            // selected hack type is DevGL, we can create and patch a devkit image with pre and post
+            // xeBuild patching steps
+            if( (variables.ctype.ID == 7 || variables.ctype.ID == 13 || variables.ctype.ID == 14) &&
+                 variables.ttyp != variables.hacktypes.devgl )
             {
                 if (MessageBox.Show("XeBuild does not support building 64MB images for Xenon, Zephyr, or Falcon\n\nContinuing will cause a 16MB image to be built\n\nDo you want to continue?", "Steep Hill Ahead", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.No)
                 {

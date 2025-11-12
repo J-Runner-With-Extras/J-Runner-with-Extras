@@ -1704,43 +1704,6 @@ namespace JRunner
             else return "";
         }
 
-        private long CRCbl(string filename)
-        {
-            crc32 crc = new crc32();
-            long hashData = 0;
-            if (File.Exists(filename))
-            {
-                byte[] fileb = File.ReadAllBytes(filename);
-                fileb = editbl(fileb);
-                hashData = crc.CRC(fileb);
-            }
-            return hashData;
-        }
-        private byte[] editbl(byte[] bl)
-        {
-            int length = Oper.ByteArrayToInt(Oper.returnportion(bl, 0xC, 4));
-            if (bl[0] == 0x43 && bl[1] == 0x42)
-            {
-                for (int i = 0x10; i < 0x40; i++) bl[i] = 0x0;
-            }
-            else if (bl[0] == 0x43 && bl[1] == 0x44)
-            {
-                for (int i = 0x10; i < 0x20; i++) bl[i] = 0x0;
-            }
-            else if (bl[0] == 0x43 && bl[1] == 0x45)
-            {
-                for (int i = 0x10; i < 0x20; i++) bl[i] = 0x0;
-            }
-            else if (bl[0] == 0x43 && bl[1] == 0x46)
-            {
-                for (int i = 0x20; i < 0x230; i++) bl[i] = 0x0;
-            }
-            else if (bl[0] == 0x43 && bl[1] == 0x47)
-            {
-                for (int i = 0x10; i < 0x20; i++) bl[i] = 0x0;
-            }
-            return Oper.returnportion(bl, 0, length);
-        }
         bool editblini(string file, string label, string cba, string cbb = "")
         {
             string bla;
@@ -1758,7 +1721,7 @@ namespace JRunner
                     Console.WriteLine("{0} not found. Insert it manually on the common folder", "cb_" + cba + ".bin");
                     return false;
                 }
-                bla = "cb_" + cba + ".bin," + CRCbl(Path.Combine(variables.rootfolder, "common", "cb_" + cba + ".bin")).ToString("x8");
+                bla = "cb_" + cba + ".bin," + Classes.xebuild.calculateBlCrc(Path.Combine(variables.rootfolder, "common", "cb_" + cba + ".bin")).ToString("x8");
                 blb = "none,00000000";
             }
             else
@@ -1781,8 +1744,8 @@ namespace JRunner
                     Console.WriteLine("{0} not found. Insert it manually on the common folder", "cbb_" + cba + ".bin");
                     return false;
                 }
-                bla = "cba_" + cba + ".bin," + CRCbl(Path.Combine(variables.rootfolder, "common", "cba_" + cba + ".bin")).ToString("x8");
-                blb = "cbb_" + cbb + ".bin," + CRCbl(Path.Combine(variables.rootfolder, "common", "cbb_" + cbb + ".bin")).ToString("x8");
+                bla = "cba_" + cba + ".bin," + Classes.xebuild.calculateBlCrc(Path.Combine(variables.rootfolder, "common", "cba_" + cba + ".bin")).ToString("x8");
+                blb = "cbb_" + cbb + ".bin," + Classes.xebuild.calculateBlCrc(Path.Combine(variables.rootfolder, "common", "cbb_" + cbb + ".bin")).ToString("x8");
             }
             Console.WriteLine("Editing File..");
             string[] lines = File.ReadAllLines(file);
@@ -2153,10 +2116,10 @@ namespace JRunner
                 Thread.Sleep(100); // Fixes a weird issue that might occur in some situations
 
                 // RGH3
-                if (nand.bl.CB_B == 15432) xPanel.setRgh3Checked(true);
+                if (nand.bl.CB_X > 0) xPanel.setRgh3Checked(true);
 
                 // Winbond
-                if ((nand.bl.CB_A == 13121 && nand.bl.CB_B == 13182) || (nand.bl.CB_A == 13182 && nand.bl.CB_B == 15432))
+                if (nand.bl.CB_B == 13182)
                 {
                     xPanel.setWBChecked(true);
                 }
@@ -3109,6 +3072,18 @@ namespace JRunner
 
 
         }
+
+        private void mB64MBToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            variables.filename1 = Nand.Nand.extend16mbTo64mb(variables.filename1);
+            xPanel_updateSource(variables.filename1);
+        }
+        private void addressCalculatorToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            AddressCalculator formAC = new AddressCalculator();
+            formAC.Show();
+        }
+
         private void extractFilesToolStripMenuItem_Click(object sender, EventArgs e)
         {
             extractFilesFromNand();
@@ -3131,7 +3106,12 @@ namespace JRunner
             if (variables.ctype.ID == -1) variables.ctype = callConsoleSelect(ConsoleSelect.Selected.All);
             if (variables.ctype.ID == -1) return;
 
-            if (variables.ctype.ID == 7 || variables.ctype.ID == 13 || variables.ctype.ID == 14)
+            // xeBuild does not officially support creating images for 64mb xenon, zephyr, or falcon
+            // in retail/glitch/glitch2/devGL modes. HOWEVER, it does support devkit images, so if the
+            // selected hack type is DevGL, we can create and patch a devkit image with pre and post
+            // xeBuild patching steps
+            if ( (variables.ctype.ID == 7 || variables.ctype.ID == 13 || variables.ctype.ID == 14) &&
+                 variables.ttyp != variables.hacktypes.devgl )
             {
                 if (MessageBox.Show("XeBuild does not support building 64MB images for Xenon, Zephyr, or Falcon\n\nContinuing will cause a 16MB image to be built\n\nDo you want to continue?", "Steep Hill Ahead", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.No)
                 {
@@ -3161,6 +3141,41 @@ namespace JRunner
         {
             KeyvaultDecrypter dk = new KeyvaultDecrypter();
             dk.ShowDialog();
+        }
+
+        private void injectKeyvaultToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (!nand.ok)
+            {
+                Console.WriteLine("Couldn't inject KV: no NAND loaded.");
+                return;
+            }
+
+            if (!nand.cpukeyverification(variables.cpukey))
+            {
+                Console.WriteLine("Couldn't inject KV: Invalid CPU key.");
+                return;
+            }
+
+            DialogResult mbr = MessageBox.Show("Warning: injecting a KV successfully requires FreeBoot patches or a Type 1 CB.\n\nContinue?", "Are you sure?", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+
+            if (mbr != DialogResult.Yes)
+            {
+                return;
+            }
+
+            OpenFileDialog ofd = new OpenFileDialog();
+            ofd.Filter = "Decrypted KV (*.bin)|*.bin|All files (*.*)|*.*";
+            ofd.Title = "Select Decrypted Keyvault";
+            ofd.InitialDirectory = variables.rootfolder;
+            ofd.RestoreDirectory = false;
+
+            if (ofd.ShowDialog() == DialogResult.OK)
+            {
+                Console.WriteLine("Injecting KV...");
+                Nand.Nand.injectEncryptedKV(variables.filename1, ofd.FileName, Oper.StringToByteArray(variables.cpukey));
+                nand_init(true, true);
+            }
         }
 
         private void loadGlitch2XeLLToolStripMenuItem_Click(object sender, EventArgs e)
@@ -3210,6 +3225,17 @@ namespace JRunner
                 Nand.Nand.injectXell(variables.filename1, ofd.FileName);
                 nand_init();
             }
+        }
+
+        private void zeroPairSbToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (String.IsNullOrWhiteSpace(variables.filename1))
+            {
+                Console.WriteLine("Zeropair SB error: Please select a valid NAND image!");
+                return;
+            }
+
+            Nand.Nand.zeroPairDevkitSb(variables.filename1, false);
         }
 
         private void sMCConfigViewerToolStripMenuItem1_Click(object sender, EventArgs e)
@@ -4270,6 +4296,16 @@ namespace JRunner
             }
             else if (e.KeyCode == Keys.F10)
             {
+                if (!variables.devkitnotdevgl)
+                {
+                    variables.devkitnotdevgl = true;
+                    Console.WriteLine("Devkit instead of DevGL On");
+                }
+                else
+                {
+                    variables.devkitnotdevgl = false;
+                    Console.WriteLine("Devkit instead of DevGL Off");
+                }
             }
             else if (e.KeyCode == Keys.F11)
             {
@@ -5227,8 +5263,7 @@ namespace JRunner
 
 
 
-        #endregion
 
-        
+        #endregion
     }
 }

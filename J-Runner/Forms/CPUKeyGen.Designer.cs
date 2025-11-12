@@ -34,14 +34,15 @@ namespace JRunner.Forms
             this.label1 = new System.Windows.Forms.Label();
             this.btnGenKey = new System.Windows.Forms.Button();
             this.btnInsertKey = new System.Windows.Forms.Button();
+            this.btnValKey = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // txtGenKey
             // 
             this.txtGenKey.Location = new System.Drawing.Point(67, 9);
             this.txtGenKey.Margin = new System.Windows.Forms.Padding(2);
+            this.txtGenKey.MaxLength = 32;
             this.txtGenKey.Name = "txtGenKey";
-            this.txtGenKey.ReadOnly = true;
             this.txtGenKey.Size = new System.Drawing.Size(229, 20);
             this.txtGenKey.TabIndex = 0;
             this.txtGenKey.TextChanged += new System.EventHandler(this.txtGenKey_TextChanged);
@@ -70,7 +71,7 @@ namespace JRunner.Forms
             // btnInsertKey
             // 
             this.btnInsertKey.Enabled = false;
-            this.btnInsertKey.Location = new System.Drawing.Point(430, 8);
+            this.btnInsertKey.Location = new System.Drawing.Point(560, 8);
             this.btnInsertKey.Margin = new System.Windows.Forms.Padding(2);
             this.btnInsertKey.Name = "btnInsertKey";
             this.btnInsertKey.Size = new System.Drawing.Size(126, 22);
@@ -79,11 +80,23 @@ namespace JRunner.Forms
             this.btnInsertKey.UseVisualStyleBackColor = true;
             this.btnInsertKey.Click += new System.EventHandler(this.btnInsertKey_Click);
             // 
+            // btnValKey
+            // 
+            this.btnValKey.Location = new System.Drawing.Point(430, 8);
+            this.btnValKey.Margin = new System.Windows.Forms.Padding(2);
+            this.btnValKey.Name = "btnValKey";
+            this.btnValKey.Size = new System.Drawing.Size(126, 22);
+            this.btnValKey.TabIndex = 6;
+            this.btnValKey.Text = "Validate Key";
+            this.btnValKey.UseVisualStyleBackColor = true;
+            this.btnValKey.Click += new System.EventHandler(this.btnValKey_Click);
+            // 
             // CPUKeyGenGUI
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(564, 38);
+            this.ClientSize = new System.Drawing.Size(694, 38);
+            this.Controls.Add(this.btnValKey);
             this.Controls.Add(this.btnInsertKey);
             this.Controls.Add(this.btnGenKey);
             this.Controls.Add(this.label1);
@@ -107,5 +120,6 @@ namespace JRunner.Forms
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Button btnGenKey;
         private System.Windows.Forms.Button btnInsertKey;
+        private System.Windows.Forms.Button btnValKey;
     }
 }
