@@ -1085,15 +1085,5 @@ namespace JRunner
             });
             xsvfToolThread.Start();
         }
-
-        void process_ErrorDataReceived(object sender, DataReceivedEventArgs e)
-        {
-            Console.WriteLine(e.Data + "\n");
-        }
-
-        void process_OutputDataReceived(object sender, DataReceivedEventArgs e)
-        {
-            Console.WriteLine(e.Data + "\n");
-        }
     }
 }
