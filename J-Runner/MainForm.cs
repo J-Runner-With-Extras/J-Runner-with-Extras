@@ -568,10 +568,6 @@ namespace JRunner
             {
                 return 1;
             }
-            else if (device == DEVICE.XFLASHER_SPI || device == DEVICE.XFLASHER_EMMC)
-            {
-                return 2;
-            }
             else
             {
                 return 0;

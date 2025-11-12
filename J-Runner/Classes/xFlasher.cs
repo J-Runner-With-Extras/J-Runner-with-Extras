@@ -1033,13 +1033,21 @@ namespace JRunner
                         psi.StartInfo.RedirectStandardOutput = true;
                         psi.StartInfo.RedirectStandardInput = true;
                         psi.StartInfo.RedirectStandardError = true;
-
+                        psi.OutputDataReceived += (procSender, procE) =>
+                        {
+                            if (procE.Data != null)
+                            {
+                                if (procE.Data.Contains("Progress : "))
+                                    MainForm.mainForm.updateProgress(int.Parse(new Regex(@"\[(.*?)\]").Match(procE.Data).Groups[0].Value.Replace("[", "").Replace("%]", "")));
+                            }
+                        };
                         inUse = true;
 
                         // Count process time
                         Stopwatch watch = new Stopwatch();
                         watch.Start();
                         psi.Start();
+                        psi.BeginOutputReadLine();
                         psi.WaitForExit();
                         watch.Stop();
 
@@ -1076,6 +1084,16 @@ namespace JRunner
                 }
             });
             xsvfToolThread.Start();
+        }
+
+        void process_ErrorDataReceived(object sender, DataReceivedEventArgs e)
+        {
+            Console.WriteLine(e.Data + "\n");
+        }
+
+        void process_OutputDataReceived(object sender, DataReceivedEventArgs e)
+        {
+            Console.WriteLine(e.Data + "\n");
         }
     }
 }
