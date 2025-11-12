@@ -3147,6 +3147,41 @@ namespace JRunner
             dk.ShowDialog();
         }
 
+        private void injectKeyvaultToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (!nand.ok)
+            {
+                Console.WriteLine("Couldn't inject KV: no NAND loaded.");
+                return;
+            }
+
+            if (!nand.cpukeyverification(variables.cpukey))
+            {
+                Console.WriteLine("Couldn't inject KV: Invalid CPU key.");
+                return;
+            }
+
+            DialogResult mbr = MessageBox.Show("Warning: injecting a KV successfully requires FreeBoot patches or a Type 1 CB.\n\nContinue?", "Are you sure?", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+
+            if (mbr != DialogResult.Yes)
+            {
+                return;
+            }
+
+            OpenFileDialog ofd = new OpenFileDialog();
+            ofd.Filter = "Decrypted KV (*.bin)|*.bin|All files (*.*)|*.*";
+            ofd.Title = "Select Decrypted Keyvault";
+            ofd.InitialDirectory = variables.rootfolder;
+            ofd.RestoreDirectory = false;
+
+            if (ofd.ShowDialog() == DialogResult.OK)
+            {
+                Console.WriteLine("Injecting KV...");
+                Nand.Nand.injectEncryptedKV(variables.filename1, ofd.FileName, Oper.StringToByteArray(variables.cpukey));
+                nand_init(true, true);
+            }
+        }
+
         private void loadGlitch2XeLLToolStripMenuItem_Click(object sender, EventArgs e)
         {
             OpenFileDialog ofd = new OpenFileDialog();

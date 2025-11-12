@@ -47,7 +47,6 @@ namespace JRunner
             this.progressBar = new System.Windows.Forms.ProgressBar();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
             this.groupBox8 = new System.Windows.Forms.GroupBox();
-            this.btnIPGetCPU = new UI.MenuButton();
             this.getCpuKeyMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.getAndSaveToWorkingFolderToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.saveToDesktopToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -56,13 +55,11 @@ namespace JRunner
             this.btnScanner = new System.Windows.Forms.Button();
             this.btnReload = new System.Windows.Forms.Button();
             this.btnNewSession = new System.Windows.Forms.Button();
-            this.btnShowWorkingFolder = new UI.MenuButton();
             this.showWorkingFolderMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.showDataFolderToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showOutputFolderToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showRootFolderToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.btnRestart = new System.Windows.Forms.Button();
-            this.btnBackup = new UI.MenuButton();
             this.backupContextMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.backupToZIPToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.autoBackupNowToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -149,18 +146,21 @@ namespace JRunner
             this.extractFilesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.createDonorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.createSafeDualImageToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStripMenuItem11 = new System.Windows.Forms.ToolStripSeparator();
             this.nANDAlignmentToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.gB16MBToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.mB64MBToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.addressCalculatorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.keyvaultOptionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.decryptKeyvaultToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.toolStripMenuItem11 = new System.Windows.Forms.ToolStripSeparator();
+            this.patchKVToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.injectKeyvaultToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.xeLLToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.loadGlitch2XeLLToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.loadJTAGXeLLToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.injectXeLLToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem9 = new System.Windows.Forms.ToolStripSeparator();
             this.sMCConfigViewerToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
-            this.patchKVToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.changeLDVToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.settingsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.xFlasherToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -172,6 +172,9 @@ namespace JRunner
             this.jRPBLToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.updateJRPToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.keyDatabaseToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.btnShowWorkingFolder = new UI.MenuButton();
+            this.btnIPGetCPU = new UI.MenuButton();
+            this.btnBackup = new UI.MenuButton();
             this.groupBox8.SuspendLayout();
             this.getCpuKeyMenu.SuspendLayout();
             this.showWorkingFolderMenu.SuspendLayout();
@@ -326,25 +329,6 @@ namespace JRunner
         " Xellous or Xell-Reloaded place the displayed IP address in\r\nthe box and retriev" +
         "e your CPU Key by pressing the button.");
             // 
-            // btnIPGetCPU
-            // 
-            this.btnIPGetCPU.AutoSize = true;
-            this.btnIPGetCPU.BtnImage = ((System.Drawing.Image)(resources.GetObject("btnIPGetCPU.BtnImage")));
-            this.btnIPGetCPU.ContextMenuStrip = this.getCpuKeyMenu;
-            this.btnIPGetCPU.DropDownContextMenu = this.getCpuKeyMenu;
-            this.btnIPGetCPU.Image = ((System.Drawing.Image)(resources.GetObject("btnIPGetCPU.Image")));
-            this.btnIPGetCPU.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
-            this.btnIPGetCPU.Location = new System.Drawing.Point(6, 36);
-            this.btnIPGetCPU.Name = "btnIPGetCPU";
-            this.btnIPGetCPU.RightToLeft = System.Windows.Forms.RightToLeft.No;
-            this.btnIPGetCPU.Size = new System.Drawing.Size(152, 26);
-            this.btnIPGetCPU.SplitButton = true;
-            this.btnIPGetCPU.TabIndex = 11;
-            this.btnIPGetCPU.Text = "Get CPU Key";
-            this.toolTip1.SetToolTip(this.btnIPGetCPU, "Tries to retrieve the CPU Key and Fuses from XeLL using the IP above");
-            this.btnIPGetCPU.UseVisualStyleBackColor = true;
-            this.btnIPGetCPU.Click += new System.EventHandler(this.btnIPGetCPU_Click);
-            // 
             // getCpuKeyMenu
             // 
             this.getCpuKeyMenu.ImageScalingSize = new System.Drawing.Size(20, 20);
@@ -421,24 +405,6 @@ namespace JRunner
             this.btnNewSession.UseVisualStyleBackColor = true;
             this.btnNewSession.Click += new System.EventHandler(this.btnNewSession_Click);
             // 
-            // btnShowWorkingFolder
-            // 
-            this.btnShowWorkingFolder.AutoSize = true;
-            this.btnShowWorkingFolder.BtnImage = ((System.Drawing.Image)(resources.GetObject("btnShowWorkingFolder.BtnImage")));
-            this.btnShowWorkingFolder.ContextMenuStrip = this.showWorkingFolderMenu;
-            this.btnShowWorkingFolder.DropDownContextMenu = this.showWorkingFolderMenu;
-            this.btnShowWorkingFolder.Image = ((System.Drawing.Image)(resources.GetObject("btnShowWorkingFolder.Image")));
-            this.btnShowWorkingFolder.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
-            this.btnShowWorkingFolder.Location = new System.Drawing.Point(478, 488);
-            this.btnShowWorkingFolder.Name = "btnShowWorkingFolder";
-            this.btnShowWorkingFolder.Size = new System.Drawing.Size(174, 26);
-            this.btnShowWorkingFolder.SplitButton = true;
-            this.btnShowWorkingFolder.TabIndex = 294;
-            this.btnShowWorkingFolder.Text = "Show Working Folder";
-            this.toolTip1.SetToolTip(this.btnShowWorkingFolder, "Shows the working folder in Windows Explorer");
-            this.btnShowWorkingFolder.UseVisualStyleBackColor = true;
-            this.btnShowWorkingFolder.Click += new System.EventHandler(this.btnShowWorkingFolder_Click);
-            // 
             // showWorkingFolderMenu
             // 
             this.showWorkingFolderMenu.ImageScalingSize = new System.Drawing.Size(20, 20);
@@ -482,22 +448,6 @@ namespace JRunner
             this.toolTip1.SetToolTip(this.btnRestart, "Completely restarts the application");
             this.btnRestart.UseVisualStyleBackColor = true;
             this.btnRestart.Click += new System.EventHandler(this.btnRestart_Click);
-            // 
-            // btnBackup
-            // 
-            this.btnBackup.BtnImage = global::JRunner.Properties.Resources.arrow_dn;
-            this.btnBackup.ContextMenuStrip = this.backupContextMenu;
-            this.btnBackup.DropDownContextMenu = this.backupContextMenu;
-            this.btnBackup.Image = global::JRunner.Properties.Resources.arrow_dn;
-            this.btnBackup.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
-            this.btnBackup.Location = new System.Drawing.Point(390, 13);
-            this.btnBackup.Name = "btnBackup";
-            this.btnBackup.Size = new System.Drawing.Size(65, 22);
-            this.btnBackup.TabIndex = 22;
-            this.btnBackup.Text = "Backup";
-            this.btnBackup.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.toolTip1.SetToolTip(this.btnBackup, "Displays a menu of backup options");
-            this.btnBackup.UseVisualStyleBackColor = true;
             // 
             // backupContextMenu
             // 
@@ -1060,7 +1010,7 @@ namespace JRunner
             // 
             this.updateAvailableToolStripMenuItem.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
             this.updateAvailableToolStripMenuItem.ForeColor = System.Drawing.Color.Blue;
-            this.updateAvailableToolStripMenuItem.Image = global::JRunner.Properties.Resources.update;
+            this.updateAvailableToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("updateAvailableToolStripMenuItem.Image")));
             this.updateAvailableToolStripMenuItem.ImageScaling = System.Windows.Forms.ToolStripItemImageScaling.None;
             this.updateAvailableToolStripMenuItem.Name = "updateAvailableToolStripMenuItem";
             this.updateAvailableToolStripMenuItem.Size = new System.Drawing.Size(120, 20);
@@ -1107,7 +1057,7 @@ namespace JRunner
             this.newSessionToolStripMenuItem,
             this.restartToolStripMenuItem,
             this.exitToolStripMenuItem});
-            this.fileToolStripMenuItem.Image = global::JRunner.Properties.Resources.menu;
+            this.fileToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("fileToolStripMenuItem.Image")));
             this.fileToolStripMenuItem.ImageScaling = System.Windows.Forms.ToolStripItemImageScaling.None;
             this.fileToolStripMenuItem.ImageTransparentColor = System.Drawing.Color.Transparent;
             this.fileToolStripMenuItem.Name = "fileToolStripMenuItem";
@@ -1189,15 +1139,12 @@ namespace JRunner
             this.extractFilesToolStripMenuItem,
             this.createDonorToolStripMenuItem,
             this.createSafeDualImageToolStripMenuItem,
-            this.nANDAlignmentToolStripMenuItem,
-            this.decryptKeyvaultToolStripMenuItem,
             this.toolStripMenuItem11,
-            this.loadGlitch2XeLLToolStripMenuItem,
-            this.loadJTAGXeLLToolStripMenuItem,
-            this.injectXeLLToolStripMenuItem,
+            this.nANDAlignmentToolStripMenuItem,
+            this.keyvaultOptionsToolStripMenuItem,
+            this.xeLLToolStripMenuItem,
             this.toolStripMenuItem9,
             this.sMCConfigViewerToolStripMenuItem1,
-            this.patchKVToolStripMenuItem,
             this.changeLDVToolStripMenuItem});
             this.nandToolStripMenuItem.Name = "nandToolStripMenuItem";
             this.nandToolStripMenuItem.Size = new System.Drawing.Size(48, 20);
@@ -1206,24 +1153,29 @@ namespace JRunner
             // extractFilesToolStripMenuItem
             // 
             this.extractFilesToolStripMenuItem.Name = "extractFilesToolStripMenuItem";
-            this.extractFilesToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
+            this.extractFilesToolStripMenuItem.Size = new System.Drawing.Size(204, 22);
             this.extractFilesToolStripMenuItem.Text = "Extract Files";
             this.extractFilesToolStripMenuItem.Click += new System.EventHandler(this.extractFilesToolStripMenuItem_Click);
             // 
             // createDonorToolStripMenuItem
             // 
             this.createDonorToolStripMenuItem.Name = "createDonorToolStripMenuItem";
-            this.createDonorToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
+            this.createDonorToolStripMenuItem.Size = new System.Drawing.Size(204, 22);
             this.createDonorToolStripMenuItem.Text = "Create Donor…";
             this.createDonorToolStripMenuItem.Click += new System.EventHandler(this.createDonorToolStripMenuItem_Click);
             // 
             // createSafeDualImageToolStripMenuItem
             // 
             this.createSafeDualImageToolStripMenuItem.Name = "createSafeDualImageToolStripMenuItem";
-            this.createSafeDualImageToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
+            this.createSafeDualImageToolStripMenuItem.Size = new System.Drawing.Size(204, 22);
             this.createSafeDualImageToolStripMenuItem.Text = "Create Safe Dual Image";
             this.createSafeDualImageToolStripMenuItem.Visible = false;
             this.createSafeDualImageToolStripMenuItem.Click += new System.EventHandler(this.createSafeDualImageToolStripMenuItem_Click);
+            // 
+            // toolStripMenuItem11
+            // 
+            this.toolStripMenuItem11.Name = "toolStripMenuItem11";
+            this.toolStripMenuItem11.Size = new System.Drawing.Size(201, 6);
             // 
             // nANDAlignmentToolStripMenuItem
             // 
@@ -1232,93 +1184,115 @@ namespace JRunner
             this.mB64MBToolStripMenuItem,
             this.addressCalculatorToolStripMenuItem});
             this.nANDAlignmentToolStripMenuItem.Name = "nANDAlignmentToolStripMenuItem";
-            this.nANDAlignmentToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
+            this.nANDAlignmentToolStripMenuItem.Size = new System.Drawing.Size(204, 22);
             this.nANDAlignmentToolStripMenuItem.Text = "NAND Alignment";
             // 
             // gB16MBToolStripMenuItem
             // 
             this.gB16MBToolStripMenuItem.Name = "gB16MBToolStripMenuItem";
-            this.gB16MBToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.gB16MBToolStripMenuItem.Size = new System.Drawing.Size(173, 22);
             this.gB16MBToolStripMenuItem.Text = "4GB -> 16MB";
             this.gB16MBToolStripMenuItem.Click += new System.EventHandler(this.gB16MBToolStripMenuItem_Click);
             // 
             // mB64MBToolStripMenuItem
             // 
             this.mB64MBToolStripMenuItem.Name = "mB64MBToolStripMenuItem";
-            this.mB64MBToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.mB64MBToolStripMenuItem.Size = new System.Drawing.Size(173, 22);
             this.mB64MBToolStripMenuItem.Text = "16MB -> 64MB";
             this.mB64MBToolStripMenuItem.Click += new System.EventHandler(this.mB64MBToolStripMenuItem_Click);
             // 
             // addressCalculatorToolStripMenuItem
             // 
             this.addressCalculatorToolStripMenuItem.Name = "addressCalculatorToolStripMenuItem";
-            this.addressCalculatorToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.addressCalculatorToolStripMenuItem.Size = new System.Drawing.Size(173, 22);
             this.addressCalculatorToolStripMenuItem.Text = "Address Calculator";
             this.addressCalculatorToolStripMenuItem.Click += new System.EventHandler(this.addressCalculatorToolStripMenuItem_Click);
+            // 
+            // keyvaultOptionsToolStripMenuItem
+            // 
+            this.keyvaultOptionsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.decryptKeyvaultToolStripMenuItem,
+            this.patchKVToolStripMenuItem,
+            this.injectKeyvaultToolStripMenuItem});
+            this.keyvaultOptionsToolStripMenuItem.Name = "keyvaultOptionsToolStripMenuItem";
+            this.keyvaultOptionsToolStripMenuItem.Size = new System.Drawing.Size(204, 22);
+            this.keyvaultOptionsToolStripMenuItem.Text = "Keyvault Options";
             // 
             // decryptKeyvaultToolStripMenuItem
             // 
             this.decryptKeyvaultToolStripMenuItem.Name = "decryptKeyvaultToolStripMenuItem";
-            this.decryptKeyvaultToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
-            this.decryptKeyvaultToolStripMenuItem.Text = "Decrypt Keyvault...";
+            this.decryptKeyvaultToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.decryptKeyvaultToolStripMenuItem.Text = "Decrypt Keyvault";
             this.decryptKeyvaultToolStripMenuItem.Click += new System.EventHandler(this.decryptKeyvaultToolStripMenuItem_Click);
             // 
-            // toolStripMenuItem11
+            // patchKVToolStripMenuItem
             // 
-            this.toolStripMenuItem11.Name = "toolStripMenuItem11";
-            this.toolStripMenuItem11.Size = new System.Drawing.Size(210, 6);
+            this.patchKVToolStripMenuItem.Name = "patchKVToolStripMenuItem";
+            this.patchKVToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.patchKVToolStripMenuItem.Text = "Patch Keyvault";
+            this.patchKVToolStripMenuItem.Click += new System.EventHandler(this.patchKVToolStripMenuItem_Click);
+            // 
+            // injectKeyvaultToolStripMenuItem
+            // 
+            this.injectKeyvaultToolStripMenuItem.Name = "injectKeyvaultToolStripMenuItem";
+            this.injectKeyvaultToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.injectKeyvaultToolStripMenuItem.Text = "Inject Keyvault";
+            this.injectKeyvaultToolStripMenuItem.Click += new System.EventHandler(this.injectKeyvaultToolStripMenuItem_Click);
+            // 
+            // xeLLToolStripMenuItem
+            // 
+            this.xeLLToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.loadGlitch2XeLLToolStripMenuItem,
+            this.loadJTAGXeLLToolStripMenuItem,
+            this.injectXeLLToolStripMenuItem});
+            this.xeLLToolStripMenuItem.Name = "xeLLToolStripMenuItem";
+            this.xeLLToolStripMenuItem.Size = new System.Drawing.Size(204, 22);
+            this.xeLLToolStripMenuItem.Text = "XeLL";
             // 
             // loadGlitch2XeLLToolStripMenuItem
             // 
             this.loadGlitch2XeLLToolStripMenuItem.Name = "loadGlitch2XeLLToolStripMenuItem";
-            this.loadGlitch2XeLLToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
-            this.loadGlitch2XeLLToolStripMenuItem.Text = "Load Glitch2 XeLL...";
+            this.loadGlitch2XeLLToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.loadGlitch2XeLLToolStripMenuItem.Text = "Load Glitch2 XeLL";
             this.loadGlitch2XeLLToolStripMenuItem.Click += new System.EventHandler(this.loadGlitch2XeLLToolStripMenuItem_Click);
             // 
             // loadJTAGXeLLToolStripMenuItem
             // 
             this.loadJTAGXeLLToolStripMenuItem.Name = "loadJTAGXeLLToolStripMenuItem";
-            this.loadJTAGXeLLToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
-            this.loadJTAGXeLLToolStripMenuItem.Text = "Load JTAG XeLL...";
+            this.loadJTAGXeLLToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.loadJTAGXeLLToolStripMenuItem.Text = "Load JTAG XeLL";
             this.loadJTAGXeLLToolStripMenuItem.Click += new System.EventHandler(this.loadJTAGXeLLToolStripMenuItem_Click);
             // 
             // injectXeLLToolStripMenuItem
             // 
             this.injectXeLLToolStripMenuItem.Name = "injectXeLLToolStripMenuItem";
-            this.injectXeLLToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
+            this.injectXeLLToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.injectXeLLToolStripMenuItem.Text = "Inject XeLL";
             this.injectXeLLToolStripMenuItem.Click += new System.EventHandler(this.injectXeLLToolStripMenuItem_Click);
             // 
             // toolStripMenuItem9
             // 
             this.toolStripMenuItem9.Name = "toolStripMenuItem9";
-            this.toolStripMenuItem9.Size = new System.Drawing.Size(210, 6);
+            this.toolStripMenuItem9.Size = new System.Drawing.Size(201, 6);
             // 
             // sMCConfigViewerToolStripMenuItem1
             // 
             this.sMCConfigViewerToolStripMenuItem1.Name = "sMCConfigViewerToolStripMenuItem1";
-            this.sMCConfigViewerToolStripMenuItem1.Size = new System.Drawing.Size(213, 22);
+            this.sMCConfigViewerToolStripMenuItem1.Size = new System.Drawing.Size(204, 22);
             this.sMCConfigViewerToolStripMenuItem1.Text = "SMC Config Editor";
             this.sMCConfigViewerToolStripMenuItem1.Click += new System.EventHandler(this.sMCConfigViewerToolStripMenuItem1_Click);
-            // 
-            // patchKVToolStripMenuItem
-            // 
-            this.patchKVToolStripMenuItem.Name = "patchKVToolStripMenuItem";
-            this.patchKVToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
-            this.patchKVToolStripMenuItem.Text = "Patch Keyvault…";
-            this.patchKVToolStripMenuItem.Click += new System.EventHandler(this.patchKVToolStripMenuItem_Click);
             // 
             // changeLDVToolStripMenuItem
             // 
             this.changeLDVToolStripMenuItem.Name = "changeLDVToolStripMenuItem";
-            this.changeLDVToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
-            this.changeLDVToolStripMenuItem.Text = "Change Lockdown Value…";
+            this.changeLDVToolStripMenuItem.Size = new System.Drawing.Size(204, 22);
+            this.changeLDVToolStripMenuItem.Text = "Change Lockdown Value";
             this.changeLDVToolStripMenuItem.Click += new System.EventHandler(this.changeLDVToolStripMenuItem_Click);
             // 
             // settingsToolStripMenuItem
             // 
             this.settingsToolStripMenuItem.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
-            this.settingsToolStripMenuItem.Image = global::JRunner.Properties.Resources.settings;
+            this.settingsToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("settingsToolStripMenuItem.Image")));
             this.settingsToolStripMenuItem.ImageScaling = System.Windows.Forms.ToolStripItemImageScaling.None;
             this.settingsToolStripMenuItem.Name = "settingsToolStripMenuItem";
             this.settingsToolStripMenuItem.Size = new System.Drawing.Size(77, 20);
@@ -1392,13 +1366,66 @@ namespace JRunner
             // keyDatabaseToolStripMenuItem
             // 
             this.keyDatabaseToolStripMenuItem.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
-            this.keyDatabaseToolStripMenuItem.Image = global::JRunner.Properties.Resources.key;
+            this.keyDatabaseToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("keyDatabaseToolStripMenuItem.Image")));
             this.keyDatabaseToolStripMenuItem.ImageScaling = System.Windows.Forms.ToolStripItemImageScaling.None;
             this.keyDatabaseToolStripMenuItem.Name = "keyDatabaseToolStripMenuItem";
             this.keyDatabaseToolStripMenuItem.ShortcutKeys = System.Windows.Forms.Keys.F7;
             this.keyDatabaseToolStripMenuItem.Size = new System.Drawing.Size(105, 20);
             this.keyDatabaseToolStripMenuItem.Text = "Key Database";
             this.keyDatabaseToolStripMenuItem.Click += new System.EventHandler(this.keyDatabaseToolStripMenuItem_Click);
+            // 
+            // btnShowWorkingFolder
+            // 
+            this.btnShowWorkingFolder.AutoSize = true;
+            this.btnShowWorkingFolder.BtnImage = ((System.Drawing.Image)(resources.GetObject("btnShowWorkingFolder.BtnImage")));
+            this.btnShowWorkingFolder.ContextMenuStrip = this.showWorkingFolderMenu;
+            this.btnShowWorkingFolder.DropDownContextMenu = this.showWorkingFolderMenu;
+            this.btnShowWorkingFolder.Image = ((System.Drawing.Image)(resources.GetObject("btnShowWorkingFolder.Image")));
+            this.btnShowWorkingFolder.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.btnShowWorkingFolder.Location = new System.Drawing.Point(478, 488);
+            this.btnShowWorkingFolder.Name = "btnShowWorkingFolder";
+            this.btnShowWorkingFolder.Size = new System.Drawing.Size(174, 26);
+            this.btnShowWorkingFolder.SplitButton = true;
+            this.btnShowWorkingFolder.TabIndex = 294;
+            this.btnShowWorkingFolder.Text = "Show Working Folder";
+            this.toolTip1.SetToolTip(this.btnShowWorkingFolder, "Shows the working folder in Windows Explorer");
+            this.btnShowWorkingFolder.UseVisualStyleBackColor = true;
+            this.btnShowWorkingFolder.Click += new System.EventHandler(this.btnShowWorkingFolder_Click);
+            // 
+            // btnIPGetCPU
+            // 
+            this.btnIPGetCPU.AutoSize = true;
+            this.btnIPGetCPU.BtnImage = ((System.Drawing.Image)(resources.GetObject("btnIPGetCPU.BtnImage")));
+            this.btnIPGetCPU.ContextMenuStrip = this.getCpuKeyMenu;
+            this.btnIPGetCPU.DropDownContextMenu = this.getCpuKeyMenu;
+            this.btnIPGetCPU.Image = ((System.Drawing.Image)(resources.GetObject("btnIPGetCPU.Image")));
+            this.btnIPGetCPU.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.btnIPGetCPU.Location = new System.Drawing.Point(6, 36);
+            this.btnIPGetCPU.Name = "btnIPGetCPU";
+            this.btnIPGetCPU.RightToLeft = System.Windows.Forms.RightToLeft.No;
+            this.btnIPGetCPU.Size = new System.Drawing.Size(152, 26);
+            this.btnIPGetCPU.SplitButton = true;
+            this.btnIPGetCPU.TabIndex = 11;
+            this.btnIPGetCPU.Text = "Get CPU Key";
+            this.toolTip1.SetToolTip(this.btnIPGetCPU, "Tries to retrieve the CPU Key and Fuses from XeLL using the IP above");
+            this.btnIPGetCPU.UseVisualStyleBackColor = true;
+            this.btnIPGetCPU.Click += new System.EventHandler(this.btnIPGetCPU_Click);
+            // 
+            // btnBackup
+            // 
+            this.btnBackup.BtnImage = ((System.Drawing.Image)(resources.GetObject("btnBackup.BtnImage")));
+            this.btnBackup.ContextMenuStrip = this.backupContextMenu;
+            this.btnBackup.DropDownContextMenu = this.backupContextMenu;
+            this.btnBackup.Image = ((System.Drawing.Image)(resources.GetObject("btnBackup.Image")));
+            this.btnBackup.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.btnBackup.Location = new System.Drawing.Point(390, 13);
+            this.btnBackup.Name = "btnBackup";
+            this.btnBackup.Size = new System.Drawing.Size(65, 22);
+            this.btnBackup.TabIndex = 22;
+            this.btnBackup.Text = "Backup";
+            this.btnBackup.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.toolTip1.SetToolTip(this.btnBackup, "Displays a menu of backup options");
+            this.btnBackup.UseVisualStyleBackColor = true;
             // 
             // MainForm
             // 
@@ -1539,10 +1566,8 @@ namespace JRunner
         private ToolStripMenuItem nandToolStripMenuItem;
         private ToolStripMenuItem extractFilesToolStripMenuItem;
         private ToolStripMenuItem createDonorToolStripMenuItem;
-        private ToolStripMenuItem decryptKeyvaultToolStripMenuItem;
         private ToolStripSeparator toolStripMenuItem9;
         private ToolStripMenuItem sMCConfigViewerToolStripMenuItem1;
-        private ToolStripMenuItem patchKVToolStripMenuItem;
         private ToolStripMenuItem changeLDVToolStripMenuItem;
         private ToolStripMenuItem mTXUSBFirmwareUtilityToolStripMenuItem;
         private ToolStripMenuItem corona4GBToolStripMenuItem;
@@ -1573,8 +1598,6 @@ namespace JRunner
         private ToolStripMenuItem kVViewerToolStripMenuItem;
         private ToolStripMenuItem showDataFolderToolStripMenuItem;
         private ToolStripSeparator toolStripMenuItem11;
-        private ToolStripMenuItem loadGlitch2XeLLToolStripMenuItem;
-        private ToolStripMenuItem loadJTAGXeLLToolStripMenuItem;
         private ToolStripSeparator toolStripMenuItem10;
         private ToolStripMenuItem restoreFilesToolStripMenuItem;
         private ToolStripMenuItem settingsToolStripMenuItem;
@@ -1588,9 +1611,16 @@ namespace JRunner
         private ToolStripMenuItem createSafeDualImageToolStripMenuItem;
         private ToolStripMenuItem nANDAlignmentToolStripMenuItem;
         private ToolStripMenuItem gB16MBToolStripMenuItem;
-        private ToolStripMenuItem injectXeLLToolStripMenuItem;
         private ToolStripMenuItem zeroPairSbToolStripMenuItem;
         private ToolStripMenuItem mB64MBToolStripMenuItem;
         private ToolStripMenuItem addressCalculatorToolStripMenuItem;
+        private ToolStripMenuItem keyvaultOptionsToolStripMenuItem;
+        private ToolStripMenuItem decryptKeyvaultToolStripMenuItem;
+        private ToolStripMenuItem patchKVToolStripMenuItem;
+        private ToolStripMenuItem injectKeyvaultToolStripMenuItem;
+        private ToolStripMenuItem xeLLToolStripMenuItem;
+        private ToolStripMenuItem loadGlitch2XeLLToolStripMenuItem;
+        private ToolStripMenuItem loadJTAGXeLLToolStripMenuItem;
+        private ToolStripMenuItem injectXeLLToolStripMenuItem;
     }
 }
