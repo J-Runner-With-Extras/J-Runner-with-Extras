@@ -1396,6 +1396,82 @@ namespace JRunner.Nand
             return;
         }
 
+        public static void injectEncryptedKV(string flashFilePath, string kvFilePath, byte[] cpukey)
+        {
+            byte[] flashFileData = File.ReadAllBytes(flashFilePath);
+            bool flashHasEcc = false;
+            int blockType = 0;
+
+            byte[] kvFileData = File.ReadAllBytes(kvFilePath);
+
+            // KV size and KV offset are stored in the first page of NAND
+            int flashKvSize = BitConverter.ToInt32(flashFileData.Skip(0x60).Take(0x4).Reverse().ToArray(),0);
+            int flashKvOffset = BitConverter.ToInt32(flashFileData.Skip(0x6c).Take(0x4).Reverse().ToArray(),0);
+
+            if ( kvFileData.Length % 0x200 != 0 )
+            {
+                Console.WriteLine("Error: KV size is not a multiple of 0x200, decrypted KV might be corrupt.");
+                return;
+            }
+
+            if( flashKvOffset % 0x200 != 0 )
+            {
+                Console.WriteLine("Error: KV is not stored on a page boundary. NAND image may be corrupt.");
+                return;
+            }
+
+            if (kvFileData.Length != flashKvSize)
+            {
+                Console.WriteLine("Error: can't inject a different length KV in to an existing NAND");
+                return;
+            }
+
+            // Determine whether this image has ECC
+            if (flashFileData.Length == 17301504 || flashFileData.Length == 69206016)
+            {
+                flashHasEcc = true;
+            }
+            else if (flashFileData.Length == 50331648)
+            {
+                flashHasEcc = false;
+            }
+            else
+            {
+                Console.WriteLine("Couldn't inject KV: Invalid flash image size");
+                return;
+            }
+
+            // Encrypt the KV with the CPU key
+            byte[] kvenc = encryptkv_hmac(kvFileData, cpukey);
+
+            if (flashHasEcc)
+            {
+                // If the flash has ECC data, determine the block type so ECC data can be recalculated
+                byte[] sparedata = flashFileData.Skip(0x4400).Take(0x10).ToArray();
+
+                // Block Types
+                // 0 = Small block NAND (XSB)
+                // 1 = Small block NAND on BB controller (PSB/KSB)
+                // 2 = Big block NAND on BB controller (PSB/KSB)
+                blockType = identifylayout(sparedata);
+
+                int flashKvOffsetPhys = (flashKvOffset / 0x200) * 0x210;
+
+                kvenc = addecc_v2(kvenc, true, flashKvOffsetPhys, blockType);
+
+                Buffer.BlockCopy(kvenc, 0, flashFileData, flashKvOffsetPhys, kvenc.Length);
+            }
+            else
+            {
+                Buffer.BlockCopy(kvenc, 0, flashFileData, flashKvOffset, flashKvSize);
+            }
+
+            File.WriteAllBytes(flashFilePath, flashFileData);
+
+            Console.WriteLine("Success!");
+            return;
+        }
+
         #endregion
 
 
