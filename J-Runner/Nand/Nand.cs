@@ -1408,12 +1408,6 @@ namespace JRunner.Nand
             int flashKvSize = BitConverter.ToInt32(flashFileData.Skip(0x60).Take(0x4).Reverse().ToArray(),0);
             int flashKvOffset = BitConverter.ToInt32(flashFileData.Skip(0x6c).Take(0x4).Reverse().ToArray(),0);
 
-            if ( kvFileData.Length > flashKvSize )
-            {
-                Console.WriteLine("Error: can't inject a larger KV in to an existing NAND");
-                return;
-            }
-
             if ( kvFileData.Length % 0x200 != 0 )
             {
                 Console.WriteLine("Error: KV size is not a multiple of 0x200, decrypted KV might be corrupt.");
@@ -1423,6 +1417,12 @@ namespace JRunner.Nand
             if( flashKvOffset % 0x200 != 0 )
             {
                 Console.WriteLine("Error: KV is not stored on a page boundary. NAND image may be corrupt.");
+                return;
+            }
+
+            if (kvFileData.Length != flashKvSize)
+            {
+                Console.WriteLine("Error: can't inject a different length KV in to an existing NAND");
                 return;
             }
 
