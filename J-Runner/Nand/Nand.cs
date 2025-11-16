@@ -2965,7 +2965,7 @@ namespace JRunner.Nand
         /// use patch slots so the bug didn't really appear before now.
         /// </summary>
         /// <param name="flashFilePath">Flash image to be patched, result will be written back to the same file</param>
-        public static void fixPatchSlotSizeForFalconImage(string flashFilePath)
+        public static void fixPatchSlotSizeForBuggyImage(string flashFilePath)
         {
             byte[] flashData = { };
 
@@ -2984,7 +2984,7 @@ namespace JRunner.Nand
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Glitch2m/DevGL Falcon patch error: couldn't read input flash image");
+                Console.WriteLine("Glitch2m/DevGL image patch error: couldn't read input flash image");
                 if (variables.debugMode) Console.WriteLine(ex.ToString());
                 return;
             }
@@ -3002,7 +3002,7 @@ namespace JRunner.Nand
             }
             else
             {
-                Console.WriteLine("Glitch2m/DevGL Falcon patch error: invalid image size");
+                Console.WriteLine("Glitch2m/DevGL image patch error: invalid image size");
                 return;
             }
 
@@ -3050,12 +3050,12 @@ namespace JRunner.Nand
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Glitch2m/DevGL Falcon patch error: couldn't write output flash image");
+                Console.WriteLine("Glitch2m/DevGL image patch error: couldn't write output flash image");
                 if (variables.debugMode) Console.WriteLine(ex.ToString());
                 return;
             }
 
-            Console.WriteLine("Successfully patched Falcon image at 0x70");
+            Console.WriteLine("Successfully set patch slot size at 0x70");
             Console.WriteLine("");
         }
 

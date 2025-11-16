@@ -2129,7 +2129,7 @@ namespace JRunner
                 }
 
                 // Elpis CB_B for Xenon consoles with CB 73xx
-                if( nand.bl.CB_A >= 7373 && nand.bl.CB_A <= 7378 )
+                if( nand.bl.CB_B >= 7373 && nand.bl.CB_B <= 7378 )
                 {
                     xPanel.setElpisChecked(true);
                 }
@@ -3313,15 +3313,30 @@ namespace JRunner
                 return;
             }
 
-            if (Nand.Nand.VerifyKey(Oper.StringToByteArray(variables.cpukey)))
+            if (!Nand.Nand.VerifyKey(Oper.StringToByteArray(variables.cpukey)))
             {
-                if (nand.cpukeyverification(variables.cpukey))
-                {
-                    rgh3Build.create(variables.boardtype, variables.cpukey);
-                }
-                else Console.WriteLine("Wrong CPU Key");
+                Console.WriteLine("Bad CPU Key");
+                return;
             }
-            else Console.WriteLine("Bad CPU Key");
+
+            if (!nand.cpukeyverification(variables.cpukey))
+            {
+                Console.WriteLine("Wrong CPU Key");
+                return;
+            }
+
+            if (xPanel.getRbtnGlitch2mChecked())
+            {
+                // MFG loaders and by extension Glitch2m images encrypt the CB_B differently
+                // than retail CB_B, so we need to use a zero CPU key for invoking rgh3build
+                rgh3Build.create(variables.boardtype, "00000000000000000000000000000000");
+            }
+            else
+            {
+                rgh3Build.create(variables.boardtype, variables.cpukey);
+            }
+
+            
         }
 
         CustomXeBuild CX;
