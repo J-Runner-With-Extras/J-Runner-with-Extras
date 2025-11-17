@@ -322,7 +322,7 @@ namespace JRunner.Panels
             chkAudClamp.Visible = rbtnJtag.Checked;
             chkRJtag.Visible = rbtnJtag.Checked;
             chk0Fuse.Visible = rbtnDevGL.Checked;
-            chkElpis.Visible = rbtnGlitch2.Checked;
+            chkElpis.Visible = rbtnGlitch2.Checked || rbtnGlitch2m.Checked;
 
             checkWBXdkBuild();
             checkBigffs(variables.boardtype);
@@ -1505,7 +1505,7 @@ namespace JRunner.Panels
                 {
                     File.Copy(Path.Combine(variables.rootfolder, @"xebuild\options.ini"), Path.Combine(variables.rootfolder, @"xebuild\data\options.ini"), true);
                     chkXeSettings.Checked = false;
-                    File.Move(Path.Combine(variables.xefolder, variables.updflash + ".log"), Path.Combine(variables.xefolder, variables.updflash.Substring(0, variables.updflash.IndexOf(".")) + "(" + DateTime.Now.ToString("ddMMyyyyHHmm") + ").bin.log"));
+                    File.Move(Path.Combine(variables.xefolder, variables.updflash + ".log"), Path.Combine(variables.xefolder, variables.updflash.Substring(0, variables.updflash.IndexOf(".")) + "(" + DateTime.Now.ToString("ddMMyyyyHHmmss") + ").bin.log"));
                 }
                 catch (Exception ex) { if (variables.debugMode) Console.WriteLine(ex.ToString()); }
             }

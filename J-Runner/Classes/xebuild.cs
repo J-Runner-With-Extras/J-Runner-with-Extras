@@ -900,18 +900,6 @@ namespace JRunner.Classes
 
             // Type overrides, check doSomeChecks() if changing
             string boardtype = _ctype.Ini;
-            if (_ttype == variables.hacktypes.glitch2 || _ttype == variables.hacktypes.glitch2m || _ttype == variables.hacktypes.devgl)
-            {
-                if (boardtype == "xenon")
-                {
-                    boardtype = "falcon";
-                }
-                else if (boardtype == "zephyr")
-                {
-                    boardtype = "falcon";
-                }
-            }
-
             string ctypebtldr = boardtype + "bl";
             if (!File.Exists(ini)) return XebuildError.noinis;
             if (!parse_ini.getlabels(ini).Contains(ctypebtldr)) return XebuildError.nobootloaders;
@@ -989,7 +977,7 @@ namespace JRunner.Classes
             if( (_xdkbuild && _ttype != variables.hacktypes.devgl) ||
                 _rgh3 ||
                 isDevglFor64MbConsoles() ||
-                isAffectedByXeBuildFalconImageBug() )
+                isAffectedByXeBuildImageBug() )
             {
                 return true;
             }
@@ -1020,9 +1008,9 @@ namespace JRunner.Classes
             }
         }
 
-        private bool isAffectedByXeBuildFalconImageBug()
+        private bool isAffectedByXeBuildImageBug()
         {
-            // If we've selected the following options, we're building a falcon image
+            // If we've selected the following options, we're building an image
             // that is affected by a bug in XeBuild that doesn't set the patch slot
             // size correctly and need to patch the resulting image.
             if ( (_ttype == variables.hacktypes.glitch2m || _ttype == variables.hacktypes.devgl) &&
@@ -1048,21 +1036,6 @@ namespace JRunner.Classes
             string iniFilePath = "";
             string iniFileBackupPath = "";
             string[] iniFileContentsBackup = { };
-
-            // Type overrides, check doSomeChecks() if changing
-            if (_ttype == variables.hacktypes.glitch2 || _ttype == variables.hacktypes.glitch2m || _ttype == variables.hacktypes.devgl)
-            {
-                if (boardtype == "xenon")
-                {
-                    boardtype = "falcon";
-                    Console.WriteLine("Using Falcon type for Xenon");
-                }
-                else if (boardtype == "zephyr")
-                {
-                    boardtype = "falcon";
-                    Console.WriteLine("Using Falcon type for Zephyr");
-                }
-            }
 
             if (_ttype == variables.hacktypes.devgl)
             {
@@ -1275,9 +1248,9 @@ namespace JRunner.Classes
                     // For DevGL and Glitch2m, there is a bug in XeBuild that breaks falcon board types.
                     // To fix the image, we need to set the DWORD at 0x70 in NAND (the patch slot address)
                     // otherwise the CB/CD/CE patches won't be able to find the vfuses
-                    if(isAffectedByXeBuildFalconImageBug())
+                    if(isAffectedByXeBuildImageBug())
                     {
-                        Nand.Nand.fixPatchSlotSizeForFalconImage(Path.Combine(variables.xefolder, variables.updflash));
+                        Nand.Nand.fixBuggyXeBuildImage(Path.Combine(variables.xefolder, variables.updflash));
                     }
 
                     if (_xdkbuild && _rgh3)
