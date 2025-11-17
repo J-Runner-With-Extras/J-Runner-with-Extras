@@ -1250,7 +1250,7 @@ namespace JRunner.Classes
                     // otherwise the CB/CD/CE patches won't be able to find the vfuses
                     if(isAffectedByXeBuildImageBug())
                     {
-                        Nand.Nand.fixPatchSlotSizeForBuggyImage(Path.Combine(variables.xefolder, variables.updflash));
+                        Nand.Nand.fixBuggyXeBuildImage(Path.Combine(variables.xefolder, variables.updflash));
                     }
 
                     if (_xdkbuild && _rgh3)

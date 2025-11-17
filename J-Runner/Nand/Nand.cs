@@ -2965,7 +2965,7 @@ namespace JRunner.Nand
         /// use patch slots so the bug didn't really appear before now.
         /// </summary>
         /// <param name="flashFilePath">Flash image to be patched, result will be written back to the same file</param>
-        public static void fixPatchSlotSizeForBuggyImage(string flashFilePath)
+        public static void fixBuggyXeBuildImage(string flashFilePath)
         {
             byte[] flashData = { };
 
@@ -2976,6 +2976,8 @@ namespace JRunner.Nand
 
             int blockType = 0;
             bool flashHasEcc = false;
+
+            Console.WriteLine("Patching image to resolve xeBuild bugs...");
 
             // Read in the flash image
             try
@@ -3031,10 +3033,27 @@ namespace JRunner.Nand
 
             // Set the patch slot size to 0x00010000, which is the same for all other
             // image types and glitch2m/DevGL on other board types
-            nandPatchPages[0x70] = 0x00;
-            nandPatchPages[0x71] = 0x01;
-            nandPatchPages[0x72] = 0x00;
-            nandPatchPages[0x73] = 0x00;
+            if( 0 == BitConverter.ToInt32(nandPatchPages.Skip(0x70).Take(0x4).ToArray(),0) )
+            {
+                Console.WriteLine("Fixing patch slot size set to zero...");
+
+                nandPatchPages[0x70] = 0x00;
+                nandPatchPages[0x71] = 0x01;
+                nandPatchPages[0x72] = 0x00;
+                nandPatchPages[0x73] = 0x00;
+            }
+
+
+            // Set the KV size to 0x00004000 (this is assuming a retail KV)
+            if (0 == BitConverter.ToInt32(nandPatchPages.Skip(0x60).Take(0x4).ToArray(), 0))
+            {
+                Console.WriteLine("Fixing KV size set to zero...");
+
+                nandPatchPages[0x60] = 0x00;
+                nandPatchPages[0x61] = 0x00;
+                nandPatchPages[0x62] = 0x40;
+                nandPatchPages[0x63] = 0x00;
+            }
 
             // Re-add ECC data and copy it over to the flash data buffer
             if (flashHasEcc)
@@ -3055,7 +3074,7 @@ namespace JRunner.Nand
                 return;
             }
 
-            Console.WriteLine("Successfully set patch slot size at 0x70");
+            Console.WriteLine("Successfully patched image!");
             Console.WriteLine("");
         }
 
