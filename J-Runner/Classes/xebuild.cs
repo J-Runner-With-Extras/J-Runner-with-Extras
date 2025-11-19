@@ -917,6 +917,22 @@ namespace JRunner.Classes
             {
                 File.Copy(Path.Combine(variables.rootfolder, @"xebuild\options.ini"), Path.Combine(variables.rootfolder, @"xebuild\data\options.ini"), true);
             }
+
+            // Don't patch the SMC reset limit if it's not a glitch
+            // type image. JTAG doesn't reset the processor
+            // and DevGL/Devkit/Testkit/Retail images boot directly
+            // in to the kernel so if it takes more than one try
+            // and the SMC is resetting, something is wrong and
+            // we should be getting a red ring of some sort
+            if( ! (_ttype == variables.hacktypes.glitch||
+                   _ttype == variables.hacktypes.glitch2||
+                   _ttype == variables.hacktypes.glitch2m) )
+            {
+                string[] dontPatchSmc = { "patchsmc=false" };
+                string[] delete = { };
+                parse_ini.edit_ini(Path.Combine(variables.rootfolder, @"xeBuild\data\options.ini"), dontPatchSmc, delete);
+            }
+
         }
 
         public XebuildError createxebuild(bool custom)
