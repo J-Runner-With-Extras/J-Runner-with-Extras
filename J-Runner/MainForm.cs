@@ -2303,7 +2303,7 @@ namespace JRunner
             if (xPanel.getRgh3Checked())
             {
                 string mhz = "";
-                if (xPanel.getRgh3Mhz() == 10) mhz = "_10";
+                if (xPanel.getRgh3Mhz() != "27") mhz = xPanel.getRgh3Mhz();
 
                 switch (variables.ctype.ID)
                 {

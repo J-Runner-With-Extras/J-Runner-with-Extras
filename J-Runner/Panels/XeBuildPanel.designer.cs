@@ -214,7 +214,8 @@
             this.Rgh3Mhz.FormattingEnabled = true;
             this.Rgh3Mhz.Items.AddRange(new object[] {
             "10",
-            "27"});
+            "27",
+            "OC"});
             this.Rgh3Mhz.Location = new System.Drawing.Point(284, 61);
             this.Rgh3Mhz.Name = "Rgh3Mhz";
             this.Rgh3Mhz.Size = new System.Drawing.Size(36, 21);

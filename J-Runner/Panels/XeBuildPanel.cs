@@ -136,9 +136,9 @@ namespace JRunner.Panels
         {
             return chkRgh3.Checked;
         }
-        public int getRgh3Mhz()
+        public string getRgh3Mhz()
         {
-            return int.Parse(Rgh3Mhz.Text);
+            return Rgh3Mhz.Text;
         }
         public bool getAudClampChecked()
         {
