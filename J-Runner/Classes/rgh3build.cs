@@ -17,7 +17,7 @@ namespace JRunner
             string mhz = "";
             if (sequenced)
             {
-                if (MainForm.mainForm.xPanel.getRgh3Mhz() != "27") mhz = MainForm.mainForm.xPanel.getRgh3Mhz();
+                if (MainForm.mainForm.xPanel.getRgh3Mhz() != "27") mhz = "_" + MainForm.mainForm.xPanel.getRgh3Mhz();
             }
 
             if (board == "Corona 4GB") ecc = variables.RGH3_corona4gb;
