@@ -2843,11 +2843,11 @@ namespace JRunner.Nand
             xellPageCount = xellData.Length / pagesz;
 
             // Determine whether this image has ECC
-            if (flashData.Length == 17301504 || flashData.Length == 69206016)
+            if (flashData.Length == 17301504 || flashData.Length == 69206016 || flashData.Length == 1351680 )
             {
                 flashHasEcc = true;
             }
-            else if (flashData.Length == 50331648)
+            else if (flashData.Length == 50331648 || flashData.Length == 1310720 )
             {
                 flashHasEcc = false;
             }
@@ -2904,50 +2904,49 @@ namespace JRunner.Nand
                 {
                     xellOffset = testXellOffset;
                     Console.WriteLine("XeLL found at offset 0x" + xellOffset.ToString("x"));
-                    break;
+
+                    if (0 != xellOffsetInPage)
+                    {
+                        // If XeLL is not stored on a page boundary (thank you JTAG)
+                        // then we need to read one more page from the flash data
+                        xellPageCount += 1;
+                    }
+
+                    if (flashHasEcc)
+                    {
+                        // Get the physical pages from the flash image that we need to modify
+                        byte[] xellFlashPages = flashData.Skip(xellFirstPageOffsetPhys).Take(xellPageCount * pagesz_phys).ToArray();
+
+                        // Strip the ECC data
+                        xellFlashPages = unecc(xellFlashPages);
+
+                        // Copy the xell data into the pages
+                        Buffer.BlockCopy(xellData, 0, xellFlashPages, xellOffsetInPage, xellData.Length);
+
+                        // Re-add ECC data
+                        xellFlashPages = addecc_v2(xellFlashPages, true, xellPageNumber * pagesz_phys, blockType);
+
+                        // Copy the ECC'ed pages back to the NAND image
+                        Buffer.BlockCopy(xellFlashPages, 0, flashData, xellFirstPageOffsetPhys, xellFlashPages.Length);
+                    }
+                    else
+                    {
+                        // We can just do a plain copy if there's no ECC data
+                        Buffer.BlockCopy(xellData, 0, flashData, xellOffset, xellData.Length);
+                    }
+
+                    // Do a final sanity check to make sure something didn't go wrong
+                    if (!Oper.ByteArrayCompare(flashData, Oper.StringToByteArray("48000020480000EC4800000048000000"), xellOffsetPhys, 0, 0x10))
+                    {
+                        Console.WriteLine("Couldn't inject XeLL: couldn't detect XeLL in the resulting flash image");
+                        return;
+                    }
                 }
             }
 
             if( 0 == xellOffset )
             {
                 Console.WriteLine("Couldn't inject XeLL: did not find XeLL in this flash image");
-                return;
-            }
-
-            if ( 0 != xellOffsetInPage )
-            {
-                // If XeLL is not stored on a page boundary (thank you JTAG)
-                // then we need to read one more page from the flash data
-                xellPageCount += 1;
-            }
-
-            if( flashHasEcc )
-            {
-                // Get the physical pages from the flash image that we need to modify
-                byte[] xellFlashPages = flashData.Skip(xellFirstPageOffsetPhys).Take(xellPageCount * pagesz_phys).ToArray();
-
-                // Strip the ECC data
-                xellFlashPages = unecc(xellFlashPages);
-
-                // Copy the xell data into the pages
-                Buffer.BlockCopy(xellData, 0, xellFlashPages, xellOffsetInPage, xellData.Length);
-
-                // Re-add ECC data
-                xellFlashPages = addecc_v2(xellFlashPages, true, xellPageNumber * pagesz_phys, blockType);
-
-                // Copy the ECC'ed pages back to the NAND image
-                Buffer.BlockCopy(xellFlashPages, 0, flashData, xellFirstPageOffsetPhys, xellFlashPages.Length);
-            }
-            else
-            {
-                // We can just do a plain copy if there's no ECC data
-                Buffer.BlockCopy(xellData,0,flashData,xellOffset,xellData.Length);
-            }
-
-            // Do a final sanity check to make sure something didn't go wrong
-            if (!Oper.ByteArrayCompare(flashData, Oper.StringToByteArray("48000020480000EC4800000048000000"), xellOffsetPhys, 0, 0x10))
-            {
-                Console.WriteLine("Couldn't inject XeLL: couldn't detect XeLL in the resulting flash image");
                 return;
             }
 
