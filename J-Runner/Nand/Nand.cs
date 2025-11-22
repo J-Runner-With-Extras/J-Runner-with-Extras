@@ -3366,9 +3366,76 @@ namespace JRunner.Nand
             return flashFileResultPath;
         }
 
-        public static bool nandContainsVfuses(string flashFilePath)
+        public static bool g3fixDoesSourceNandContainVfuses(string flashFilePath)
         {
-            return true;
+            byte[] flashData = { };
+            byte[] fuseline0 = { 0xC0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+            bool flashHasEcc = true;
+            
+
+            try
+            {
+                flashData = File.ReadAllBytes(flashFilePath);
+            }
+            catch
+            {
+                // Couldn't read image, we'll return to the caller
+                // such that it prompts the user for a CPU key
+                return true;
+            }
+
+            // Images with vfuses (other than JTAG) store them at the beginning of the patch slots
+            // This is the same thing XeLL does when searching for the virtual CPU key
+            int patchSlotOffset = BitConverter.ToInt32(flashData.Skip(0x64).Take(0x4).Reverse().ToArray(), 0);
+            int patchSlotCount = BitConverter.ToInt16(flashData.Skip(0x68).Take(0x2).Reverse().ToArray(), 0);
+            int patchSlotSize = BitConverter.ToInt32(flashData.Skip(0x70).Take(0x4).Reverse().ToArray(), 0);
+
+            // Determine whether this image has ECC
+            if (flashData.Length == 17301504 || flashData.Length == 69206016)
+            {
+                flashHasEcc = true;
+            }
+            else if (flashData.Length == 50331648)
+            {
+                // Flash data doesn't have ECC
+                flashHasEcc = false;
+            }
+            else
+            {
+                // Invalid image type, we'll return to the caller
+                // such that it prompts the user for a CPU key
+                return true;
+            }
+
+            for (int i = 0; i < patchSlotCount; i++)
+            {
+                int patchSlotAddress = patchSlotOffset + (i * patchSlotSize);
+                int patchSlotAddressPhys = 0;
+
+                if (flashHasEcc)
+                {
+                    // Addresses stored in NAND are logical (no SPARE)
+                    // Calculate the page number and offset in page so
+                    // we can translate to a physical offset
+                    // Logical page size = 0x200
+                    // Physical page size = 0x210
+                    int patchSlotPage = patchSlotAddress / 0x200;
+                    int patchSlotOffsetInPage = patchSlotAddress % 0x200;
+                    patchSlotAddressPhys = (patchSlotPage * 0x210) + patchSlotOffsetInPage;
+                }
+                else
+                {
+                    patchSlotAddressPhys = patchSlotAddress;
+                }
+
+                if (Oper.ByteArrayCompare(fuseline0, flashData.Skip(patchSlotAddressPhys).Take(0x8).ToArray(), 0x8))
+                {
+                    // ByteArrayCompare returns true if the buffers are equal
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>

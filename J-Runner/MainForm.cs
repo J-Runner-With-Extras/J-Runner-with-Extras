@@ -3254,7 +3254,7 @@ namespace JRunner
                 return;
             }
 
-            if (Nand.Nand.nandContainsVfuses(variables.filename1))
+            if (Nand.Nand.g3fixDoesSourceNandContainVfuses(variables.filename1))
             {
                 EnterCPUKey ecpuDialog = new EnterCPUKey();
                 DialogResult dr = ecpuDialog.ShowDialog();
