@@ -3439,12 +3439,12 @@ namespace JRunner.Nand
         }
 
         /// <summary>
-        /// 
+        /// Messes with an RGH3 image so that it can boot old dashboards correctly.
+        /// Tested all the way back to 1888 on the FFFFalcon
         /// </summary>
-        /// <param name="flashFilePath"></param>
-        /// <param name="cpukey_phys"></param>
-        /// <param name="sequenced"></param>
-        public static void g3fix(string flashFilePath, byte[] cpukey_phys, bool sequenced)
+        /// <param name="flashFilePath">Path to the NAND image we want to patch</param>
+        /// <param name="cpukey_phys">The physical CPU key of the machine (not the virtual CPU key!!!!)</param>
+        public static void g3fix(string flashFilePath, byte[] cpukey_phys)
         {
             byte[] flashData = { };
             int blockType = 0;
@@ -3461,12 +3461,6 @@ namespace JRunner.Nand
             {
                 Console.WriteLine("g3fix error: couldn't read input flash image");
                 if (variables.debugMode) Console.WriteLine(ex.ToString());
-
-                if (sequenced)
-                {
-                    variables.xefinished = true;
-                    MainForm.mainForm.xPanel.xeExitActual(false);
-                }
                 return;
             }
 
@@ -3483,11 +3477,6 @@ namespace JRunner.Nand
             else
             {
                 Console.WriteLine("g3fix error: Invalid flash image size");
-                if (sequenced)
-                {
-                    variables.xefinished = true;
-                    MainForm.mainForm.xPanel.xeExitActual(false);
-                }
                 return;
             }
 
@@ -3542,17 +3531,11 @@ namespace JRunner.Nand
 
             // Do some checking on the CB_A and CB_X we've decrypted. For a pre-g3fix'ed image, we
             // should see CB_A 10918 and CB_X 15432 or CB_X 42069
-            if ( cbaVersion != 10918 || (cbxVersion != 15432 && cbxVersion != 42069) )
+            if (cbaVersion != 10918 || (cbxVersion != 15432 && cbxVersion != 42069))
             {
                 Console.WriteLine("g3fix error: invalid bootloaders. Image is not RGH3, has already been g3fixed, or is corrupt.");
                 Console.WriteLine("CB_A version: " + cbaVersion.ToString());
                 Console.WriteLine("CB_X version: " + cbxVersion.ToString());
-
-                if (sequenced)
-                {
-                    variables.xefinished = true;
-                    MainForm.mainForm.xPanel.xeExitActual(false);
-                }
                 return;
             }
 
@@ -3573,22 +3556,12 @@ namespace JRunner.Nand
             {
                 Console.WriteLine("g3fix error: couldn't read replacement CB_A");
                 Console.WriteLine(ex.ToString());
-                if (sequenced)
-                {
-                    variables.xefinished = true;
-                    MainForm.mainForm.xPanel.xeExitActual(false);
-                }
                 return;
             }
 
             if (newcba.Length > cba_dec.Length)
             {
                 Console.WriteLine("g3fix error: replacement CB_A is somehow larger than original CB_A");
-                if (sequenced)
-                {
-                    variables.xefinished = true;
-                    MainForm.mainForm.xPanel.xeExitActual(false);
-                }
                 return;
             }
 
@@ -3620,11 +3593,6 @@ namespace JRunner.Nand
             {
                 Console.WriteLine("g3fix error: couldn't read replacement CB_X");
                 Console.WriteLine(ex.ToString());
-                if (sequenced)
-                {
-                    variables.xefinished = true;
-                    MainForm.mainForm.xPanel.xeExitActual(false);
-                }
                 return;
             }
 
@@ -3635,6 +3603,15 @@ namespace JRunner.Nand
             // MUST be the *physical* CPU key if it differs on a glitch2m image
             newcbx = encrypt_CB_cpukey(newcbx, cba_key, cpukey_phys);
 
+            //
+            // Step 3: Fiddle with the unencrypted CB_B
+            //
+            // SMC sum patching logic based on modern-loadfare:
+            //
+            // https://github.com/wurthless-elektroniks/modern-loadfare/blob/main/newcbpatcher.py
+            // https://github.com/wurthless-elektroniks/modern-loadfare/blob/main/oldcbpatcher.py
+            //
+
             // Need to pad the CB_B to make up the remaining space
             int bootBlockSize = cbaSize + cbxSize + cbbSize;
             byte[] newcbb = cbb_dec;
@@ -3644,26 +3621,54 @@ namespace JRunner.Nand
             byte[] newcbbSizeBytes = BitConverter.GetBytes(newcbb.Length).Reverse().ToArray();
             Buffer.BlockCopy(newcbbSizeBytes, 0, newcbb, 0xC, 0x4);
 
-            // Branch past the CB_B SMC auth hash check
-            byte[] cbb_jump = { 0x48, 0x00, 0x00, 0x14 };
+            // Patch CB_B to branch past the SMC hash check
+            // After RGH dropped, microsoft removed a lot of the POST codes
+            // from the CB_B. To handle the code differences, there are two
+            // different patterns and two different patches to apply depending
+            // on which pattern is found in the CB_B
+            byte?[] oldCbbSmcHashCheckPattern = new byte?[] {
+                0x2F, 0x03, 0x00, 0x00,
+                0x40, 0x9A, 0x00, 0x14,
+                0x38, 0x80, 0x00, 0xA4
+            };
+            int oldCbbPatternSearchResult = Oper.ByteArrayFindPattern(cbb_dec, oldCbbSmcHashCheckPattern);
 
-            switch (cbbVersion)
+            byte?[] newCbbSmcHashCheckPattern = new byte?[] {
+                0x48, null, null, null,
+                0x2F, 0x03, 0x00, 0x00,
+                0x40, 0x9A, 0x00, 0x08,
+                0x00, 0x00, 0x00, 0x00
+            };
+            int newCbbPatternSearchResult = Oper.ByteArrayFindPattern(cbb_dec, newCbbSmcHashCheckPattern);
+
+            if (variables.debugMode)
             {
-                case 5772:
-                    Buffer.BlockCopy(cbb_jump, 0, newcbb, 0x6B2C, 0x4);
-                    break;
-                case 6752:
-                    Buffer.BlockCopy(cbb_jump, 0, newcbb, 0x6B74, 0x4);
-                    break;
-                default:
-                    Console.WriteLine("g3fix error: Unsupported CB_B version");
-                    Console.WriteLine("CB_B version: " + cbbVersion.ToString());
-                    if (sequenced)
-                    {
-                        variables.xefinished = true;
-                        MainForm.mainForm.xPanel.xeExitActual(false);
-                    }
-                    return;
+                Console.WriteLine("SMC hash check pattern search results:");
+                Console.WriteLine("Old CBB pattern: " + oldCbbPatternSearchResult.ToString("x"));
+                Console.WriteLine("New CBB pattern: " + newCbbPatternSearchResult.ToString("x"));
+            }
+
+            if ( (-1 == oldCbbPatternSearchResult && -1 == newCbbPatternSearchResult ) ||
+                 (-1 != oldCbbPatternSearchResult && -1 != newCbbPatternSearchResult) )
+            {
+                // Odd, either the hash check sequence wasn't found at all or it was
+                // found with both the new and old style patterns. Skip this patch
+                // because something has obviously gone wrong or the CB_B is prepatched
+                Console.WriteLine("g3fix: Skipping CB_B SMC hash check patch");
+            }
+            else if (oldCbbPatternSearchResult != -1)
+            {
+                byte[] old_cbb_jump = { 0x48, 0x00, 0x00, 0x14 }; // b +0x14
+                int oldPatchLocation = oldCbbPatternSearchResult + 0x4;
+                Console.WriteLine("g3fix: patching old-style CB_B at location 0x" + oldPatchLocation.ToString("x"));
+                Buffer.BlockCopy(old_cbb_jump, 0, newcbb, oldPatchLocation, 0x4);
+            }
+            else
+            {
+                byte[] new_cbb_jump = { 0x48, 0x00, 0x00, 0x08 }; // b +0x8
+                int newPatchLocation = oldCbbPatternSearchResult + 0xC;
+                Console.WriteLine("g3fix: patching new-style CB_B at location 0x" + newPatchLocation.ToString("x"));
+                Buffer.BlockCopy(new_cbb_jump, 0, newcbb, newPatchLocation, 0x4);
             }
 
             // Copy everything over to the NAND patch pages
@@ -3674,20 +3679,17 @@ namespace JRunner.Nand
             if (newbootblkSize != bootBlockSize)
             {
                 Console.WriteLine("g3fix error: new boot block size not the same size as the old boot block!");
-                if (sequenced)
-                {
-                    variables.xefinished = true;
-                    MainForm.mainForm.xPanel.xeExitActual(false);
-                }
                 return;
             }
 
             byte[] newbootblk = new byte[newbootblkSize];
 
+            // Build the new CB_A/CB_X/CB_B block
             Buffer.BlockCopy(newcba, 0, newbootblk, 0, newcba.Length);
             Buffer.BlockCopy(newcbx, 0, newbootblk, newcba.Length, newcbx.Length);
             Buffer.BlockCopy(newcbb, 0, newbootblk, newcba.Length + newcbx.Length, newcbb.Length);
 
+            // Copy it to the NAND image
             Buffer.BlockCopy(newbootblk, 0, nandPatchPages, cbaOffset, newbootblkSize);
 
             // Re-add ECC data and copy it over to the flash data buffer
@@ -3706,27 +3708,13 @@ namespace JRunner.Nand
             {
                 Console.WriteLine("g3fix error: couldn't write modified flash image");
                 if (variables.debugMode) Console.WriteLine(ex.ToString());
-
-                if (sequenced)
-                {
-                    variables.xefinished = true;
-                    MainForm.mainForm.xPanel.xeExitActual(false);
-                }
                 return;
             }
 
             Console.WriteLine("g3fix: successfully replaced CB_A and CB_X");
             Console.WriteLine("");
 
-            if (sequenced)
-            {
-                variables.xefinished = true;
-                MainForm.mainForm.xPanel.xeExitActual();
-            }
-            else
-            {
-                MainForm.mainForm.nand_init();
-            }
+            MainForm.mainForm.nand_init();
         }
 
         private static byte[] CalculateCPUKeyECD(byte[] key)

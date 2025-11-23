@@ -3271,7 +3271,7 @@ namespace JRunner
                 cpukey = variables.cpukey;
             }
 
-            Nand.Nand.g3fix(variables.filename1, Oper.StringToByteArray(cpukey), false);
+            Nand.Nand.g3fix(variables.filename1, Oper.StringToByteArray(cpukey));
         }
 
         private void sMCConfigViewerToolStripMenuItem1_Click(object sender, EventArgs e)
