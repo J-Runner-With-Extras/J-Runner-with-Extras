@@ -3666,7 +3666,7 @@ namespace JRunner.Nand
             else
             {
                 byte[] new_cbb_jump = { 0x48, 0x00, 0x00, 0x08 }; // b +0x8
-                int newPatchLocation = oldCbbPatternSearchResult + 0xC;
+                int newPatchLocation = newCbbPatternSearchResult + 0xC;
                 Console.WriteLine("g3fix: patching new-style CB_B at location 0x" + newPatchLocation.ToString("x"));
                 Buffer.BlockCopy(new_cbb_jump, 0, newcbb, newPatchLocation, 0x4);
             }
