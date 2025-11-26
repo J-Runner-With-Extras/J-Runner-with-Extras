@@ -2985,7 +2985,7 @@ namespace JRunner.Nand
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Glitch2m/DevGL image patch error: couldn't read input flash image");
+                Console.WriteLine("Image patch error: couldn't read input flash image");
                 if (variables.debugMode) Console.WriteLine(ex.ToString());
                 return;
             }
@@ -3003,7 +3003,7 @@ namespace JRunner.Nand
             }
             else
             {
-                Console.WriteLine("Glitch2m/DevGL image patch error: invalid image size");
+                Console.WriteLine("Image patch error: invalid image size");
                 return;
             }
 
@@ -3068,7 +3068,7 @@ namespace JRunner.Nand
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Glitch2m/DevGL image patch error: couldn't write output flash image");
+                Console.WriteLine("Image patch error: couldn't write output flash image");
                 if (variables.debugMode) Console.WriteLine(ex.ToString());
                 return;
             }
