@@ -2210,6 +2210,7 @@ namespace JRunner
             if (variables.debugMode) Console.WriteLine("{0} file loaded successfully", xellfile);
             if (variables.debugMode) Console.WriteLine("{0:X} | {1:X}", xell.Length, kvraw.Length);
 
+            // Inject the raw KV from the source image
             Buffer.BlockCopy(kvraw, 0, xell, 0x4200, 0x4200);
 
             if (xPanel.getRJtagChecked())
@@ -2230,6 +2231,12 @@ namespace JRunner
             variables.filename1 = Path.Combine(variables.outfolder, "jtag.bin");
             if (variables.debugMode) Console.WriteLine(variables.filename1);
             Oper.savefile(xell, variables.filename1);
+
+            // Inject the latest version of XeLL that we bundle with J-runner
+            // XeLL-1f is required for the dual-xell ECC images, xell-2f is only
+            // needed for the single-xell xeBuild images.
+            Nand.Nand.injectXell(variables.filename1, Path.Combine(variables.rootfolder, @"xeBuild\data\xell-1f.bin"));
+
             if (variables.debugMode) Console.WriteLine("Saved Successfully");
             txtFileSource.Text = variables.filename1;
             Console.WriteLine("XeLL image created");
@@ -2288,7 +2295,13 @@ namespace JRunner
             File.Copy(variables.filename1, Path.Combine(variables.outfolder, "glitch.ecc"), true);
             variables.filename1 = Path.Combine(variables.outfolder, "glitch.ecc");
             txtFileSource.Text = variables.filename1;
+
+            // Inject the raw KV from the source image
             Nand.Nand.injectRawKV(variables.filename1, kv);
+
+            // Inject the latest version of glitch XeLL that we bundle with J-runner
+            Nand.Nand.injectXell(variables.filename1, Path.Combine(variables.rootfolder, @"xeBuild\data\xell-gggggg.bin"));
+
             Console.WriteLine("XeLL image created");
             Console.WriteLine("");
         }
