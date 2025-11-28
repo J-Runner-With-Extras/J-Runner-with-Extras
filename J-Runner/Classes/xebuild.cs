@@ -1029,7 +1029,7 @@ namespace JRunner.Classes
             // If we've selected the following options, we're building an image
             // that is affected by a bug in XeBuild that doesn't set the patch slot
             // size correctly and need to patch the resulting image.
-            if ( (_ttype == variables.hacktypes.glitch2m || _ttype == variables.hacktypes.devgl) &&
+            if ( (_ttype == variables.hacktypes.retail || _ttype == variables.hacktypes.glitch2m || _ttype == variables.hacktypes.devgl) &&
                  ( _ctype.ID == 2 || _ctype.ID == 3 || _ctype.ID == 8 ) )
             {
                 return true;
