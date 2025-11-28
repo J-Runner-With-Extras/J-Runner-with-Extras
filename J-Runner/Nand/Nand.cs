@@ -1757,13 +1757,10 @@ namespace JRunner.Nand
             return decrypt_CD(SD, SC);
         }
 
-        public static byte[] encrypt_CB_cpukey(byte[] image, byte[] CB_A_key, byte[] cpukey)
+        public static byte[] getCbbRc4Key(byte[] CB_A_key, byte[] CB_B_nonce, byte[] cpukey)
         {
-            if (variables.debugMode) Console.WriteLine(cpukey.Length);
-
             byte[] secret = CB_A_key;
-            byte[] crypto = Oper.returnportion(image, 0x10, 0x10);
-            byte[] message = Oper.concatByteArrays(crypto, cpukey, 0x10, 0x10);
+            byte[] message = Oper.concatByteArrays(CB_B_nonce, cpukey, 0x10, 0x10);
 
             if ((Oper.ByteArrayToInt(Oper.returnportion(CB_A_key, 0x6, 2)) & 0x1000) != 0)
             {
@@ -1773,7 +1770,16 @@ namespace JRunner.Nand
                 message = Oper.concatByteArrays(message, CB_A_key, message.Length, 0x10);
             }
 
-            byte[] RC4_key = Oper.HMAC_SHA1(secret, message);
+            return Oper.HMAC_SHA1(secret, message);
+        }
+
+        public static byte[] encrypt_CB_cpukey(byte[] image, byte[] CB_A_key, byte[] cpukey)
+        {
+            if (variables.debugMode) Console.WriteLine(cpukey.Length);
+
+            byte[] cbb_nonce = Oper.returnportion(image, 0x10, 0x10);
+
+            byte[] RC4_key = getCbbRc4Key(CB_A_key, cbb_nonce, cpukey);
             byte[] imfordec = Oper.returnportion(image, 0x20, image.Length - 0x20);
             if (variables.debugMode) Console.WriteLine(Oper.ByteArrayToString(RC4_key));
             Oper.RC4_v(ref imfordec, Oper.returnportion(RC4_key, 0, 0x10));
@@ -1783,7 +1789,7 @@ namespace JRunner.Nand
             for (int i = 0; i < image.Length; i++)
             {
                 if (i < 0x10) finalimage[i] = image[i];
-                else if (i < 0x20) finalimage[i] = crypto[i - 0x10];
+                else if (i < 0x20) finalimage[i] = cbb_nonce[i - 0x10];
                 else finalimage[i] = imfordec[i - 0x20];
             }
             return finalimage;
@@ -2497,16 +2503,50 @@ namespace JRunner.Nand
             Buffer.BlockCopy(Oper.StringToByteArray(s1.ToString("X")), 0, csum, 8, 0x8);
             return csum;
         }
-        public static byte[] FixPerBoxDigest(byte[] SMC_en, byte[] CB_en, byte[] cpukey)
+        public static byte[] FixPerBoxDigest(byte[] SMC_en, byte[] CB_dec, byte[] CB_nonce, byte[] CB_A_key, byte[] cpukey)
         {
-            byte[] RC4_key = Oper.HMAC_SHA1(secret_1bl, Oper.returnportion(CB_en, 0x10, 0x10));
+            
+            byte[] RC4_key = { };
 
-            byte[] CB_dec = decrypt_CB(CB_en);
+            if (null == CB_A_key)
+            {
+                // For a single CB machine, there's no CB_A key
+                // and as such the RC4 key is simple to calculate
+                RC4_key = Oper.HMAC_SHA1(secret_1bl, CB_nonce);
+            }
+            else
+            {
+                RC4_key = getCbbRc4Key(CB_A_key, CB_nonce, cpukey);
+            }
+
             byte[] reserved = Oper.returnportion(CB_dec, 0x24, 0xC);
             byte[] pairingdata = Oper.returnportion(CB_dec, 0x20, 3);
 
             byte[] digest = new byte[0x30];
             byte[] SMC_HASH = CalculateSMCHash(SMC_en);
+
+            // The per-box digest/SMC auth hash/etc, aka what they
+            // were messing with for the timing attack is made up
+            // of the following (CB == CB_B):
+            //
+            // 1) CB RC4 key (calculated)
+            // 2) CB Pairing Data (0x20 - 0x22)
+            // 3) CB LDV (0x23)
+            // 4) CB Reserved data (0x24 - 0x2f)
+            // 5) SMC Hash (of the encrypted SMC)
+            //
+            // Then, do an HMAC SHA1 with all of this as the message
+            // and the CPU key as the key
+            //
+            // Or, if you're RGH, you can just patch out the check
+            // and not need to recalculate anything.
+            // 
+            // Patch:
+            //     0x48 0x00 0x00 0x14
+            //
+            // Location:
+            //     CB_B 5772: 0x6B2C
+            //     CB_B 6752: 0x6B74
 
             Buffer.BlockCopy(RC4_key, 0, digest, 0x0, 0x10);
             Buffer.BlockCopy(pairingdata, 0, digest, 0x10, 0x3);
@@ -3323,6 +3363,357 @@ namespace JRunner.Nand
             Console.WriteLine("Done. Image written to " + flashFileResultPath);
 
             return flashFileResultPath;
+        }
+
+        public static bool g3fixDoesSourceNandContainVfuses(string flashFilePath)
+        {
+            byte[] flashData = { };
+            byte[] fuseline0 = { 0xC0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+            bool flashHasEcc = true;
+            
+
+            try
+            {
+                flashData = File.ReadAllBytes(flashFilePath);
+            }
+            catch
+            {
+                // Couldn't read image, we'll return to the caller
+                // such that it prompts the user for a CPU key
+                return true;
+            }
+
+            // Images with vfuses (other than JTAG) store them at the beginning of the patch slots
+            // This is the same thing XeLL does when searching for the virtual CPU key
+            int patchSlotOffset = BitConverter.ToInt32(flashData.Skip(0x64).Take(0x4).Reverse().ToArray(), 0);
+            int patchSlotCount = BitConverter.ToInt16(flashData.Skip(0x68).Take(0x2).Reverse().ToArray(), 0);
+            int patchSlotSize = BitConverter.ToInt32(flashData.Skip(0x70).Take(0x4).Reverse().ToArray(), 0);
+
+            // Determine whether this image has ECC
+            if (flashData.Length == 17301504 || flashData.Length == 69206016)
+            {
+                flashHasEcc = true;
+            }
+            else if (flashData.Length == 50331648)
+            {
+                // Flash data doesn't have ECC
+                flashHasEcc = false;
+            }
+            else
+            {
+                // Invalid image type, we'll return to the caller
+                // such that it prompts the user for a CPU key
+                return true;
+            }
+
+            for (int i = 0; i < patchSlotCount; i++)
+            {
+                int patchSlotAddress = patchSlotOffset + (i * patchSlotSize);
+                int patchSlotAddressPhys = 0;
+
+                if (flashHasEcc)
+                {
+                    // Addresses stored in NAND are logical (no SPARE)
+                    // Calculate the page number and offset in page so
+                    // we can translate to a physical offset
+                    // Logical page size = 0x200
+                    // Physical page size = 0x210
+                    int patchSlotPage = patchSlotAddress / 0x200;
+                    int patchSlotOffsetInPage = patchSlotAddress % 0x200;
+                    patchSlotAddressPhys = (patchSlotPage * 0x210) + patchSlotOffsetInPage;
+                }
+                else
+                {
+                    patchSlotAddressPhys = patchSlotAddress;
+                }
+
+                if (Oper.ByteArrayCompare(fuseline0, flashData.Skip(patchSlotAddressPhys).Take(0x8).ToArray(), 0x8))
+                {
+                    // ByteArrayCompare returns true if the buffers are equal
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Messes with an RGH3 image so that it can boot old dashboards correctly.
+        /// Tested all the way back to 1888 on the FFFFalcon
+        /// </summary>
+        /// <param name="flashFilePath">Path to the NAND image we want to patch</param>
+        /// <param name="cpukey_phys">The physical CPU key of the machine (not the virtual CPU key!!!!)</param>
+        public static void g3fix(string flashFilePath, byte[] cpukey_phys)
+        {
+            byte[] flashData = { };
+            int blockType = 0;
+            bool flashHasEcc = false;
+
+            Console.WriteLine("g3fix Physical CPU Key: " + Oper.ByteArrayToString(cpukey_phys));
+
+            // Read in the flash image
+            try
+            {
+                flashData = File.ReadAllBytes(flashFilePath);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("g3fix error: couldn't read input flash image");
+                if (variables.debugMode) Console.WriteLine(ex.ToString());
+                return;
+            }
+
+            // Determine whether this image has ECC
+            if (flashData.Length == 17301504 || flashData.Length == 69206016)
+            {
+                flashHasEcc = true;
+            }
+            else if (flashData.Length == 50331648)
+            {
+                // Flash data doesn't have ECC
+                flashHasEcc = false;
+            }
+            else
+            {
+                Console.WriteLine("g3fix error: Invalid flash image size");
+                return;
+            }
+
+            // If the flash has ECC data, determine the block type so ECC data can be recalculated
+            if (flashHasEcc)
+            {
+                byte[] sparedata = flashData.Skip(0x4400).Take(0x10).ToArray();
+
+                // Block Types
+                // 0 = Small block NAND (XSB)
+                // 1 = Small block NAND on BB controller (PSB/KSB)
+                // 2 = Big block NAND on BB controller (PSB/KSB)
+                blockType = identifylayout(sparedata);
+            }
+
+            // Take the first 0x21000 bytes (one block on 256/512mb BB machines)
+            // It's more than enough to capture the CB_A, CB_X, and CB_B. We can
+            // un-ecc it and won't need to monkey around with logical/physical
+            // address calculations
+            byte[] nandPatchPages = flashData.Take(0x21000).ToArray();
+
+            if (flashHasEcc)
+            {
+                // remove the ECC so we can copy our patch data to the logical addresses
+                nandPatchPages = unecc(nandPatchPages);
+            }
+
+            int cbaOffset = BitConverter.ToInt32(nandPatchPages.Skip(0x8).Take(4).Reverse().ToArray(), 0);
+            int cbaSize = BitConverter.ToInt32(nandPatchPages.Skip(cbaOffset + 0xC).Take(4).Reverse().ToArray(), 0);
+
+            int cbxOffset = cbaOffset + cbaSize;
+            int cbxSize = BitConverter.ToInt32(nandPatchPages.Skip(cbxOffset + 0xC).Take(4).Reverse().ToArray(), 0);
+
+            int cbbOffset = cbxOffset + cbxSize;
+            int cbbSize = BitConverter.ToInt32(nandPatchPages.Skip(cbbOffset + 0xC).Take(4).Reverse().ToArray(), 0);
+
+            // Need to decrypt CB_A and CB_X. CB_A is encrypted like usual.
+            byte[] cba_nonce = nandPatchPages.Skip(cbaOffset + 0x10).Take(0x10).ToArray();
+            byte[] cba_dec = decrypt_CB(nandPatchPages.Skip(cbaOffset).Take(cbaSize).ToArray());
+
+            // CB_X is always encrypted with a zero key in an RGH3 image
+            byte[] cbx_nonce = nandPatchPages.Skip(cbxOffset + 0x10).Take(0x10).ToArray();
+            byte[] cbx_dec = decrypt_CB_cpukey(nandPatchPages.Skip(cbxOffset).Take(cbxSize).ToArray(),
+                                               cba_dec, keyZero);
+
+            //byte[] cbb_nonce = nandPatchPages.Skip(cbbOffset + 0x10).Take(0x10).ToArray();
+            byte[] cbb_dec = nandPatchPages.Skip(cbbOffset).Take(cbbSize).ToArray();
+
+            int cbaVersion = BitConverter.ToInt16(cba_dec.Skip(2).Take(2).Reverse().ToArray(), 0);
+            int cbxVersion = BitConverter.ToInt16(cbx_dec.Skip(2).Take(2).Reverse().ToArray(), 0);
+            int cbbVersion = BitConverter.ToInt16(cbb_dec.Skip(2).Take(2).Reverse().ToArray(), 0);
+
+            // Do some checking on the CB_A and CB_X we've decrypted. For a pre-g3fix'ed image, we
+            // should see CB_A 10918 and CB_X 15432 or CB_X 42069
+            if (cbaVersion != 10918 || (cbxVersion != 15432 && cbxVersion != 42069))
+            {
+                Console.WriteLine("g3fix error: invalid bootloaders. Image is not RGH3, has already been g3fixed, or is corrupt.");
+                Console.WriteLine("CB_A version: " + cbaVersion.ToString());
+                Console.WriteLine("CB_X version: " + cbxVersion.ToString());
+                return;
+            }
+
+            //
+            // Step 1: prepare the new CB_A and patch it in to the NAND image
+            //
+
+            byte[] newcba = { };
+
+            // The new CB_A is going to be 5772. It doesn't really matter,
+            // since all the CB_As are pretty much the same, but g3fix.py
+            // uses it and that seems to work so we'll do it here too.
+            try
+            {
+                newcba = File.ReadAllBytes(Path.Combine(variables.rootfolder, "common\\CB\\CB_A.5772.bin"));
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine("g3fix error: couldn't read replacement CB_A");
+                Console.WriteLine(ex.ToString());
+                return;
+            }
+
+            if (newcba.Length > cba_dec.Length)
+            {
+                Console.WriteLine("g3fix error: replacement CB_A is somehow larger than original CB_A");
+                return;
+            }
+
+            // re-encrypt the cba and copy it to the flash image
+            byte[] cba_key = { };
+            newcba = encrypt_CB(newcba, cba_nonce, ref cba_key);
+            Buffer.BlockCopy(newcba, 0 , nandPatchPages, cbaOffset, newcba.Length);
+
+            //
+            // Step 2: Load the pre-patched CB_X
+            //
+            // Credits to wurthless-elektroniks- this CB_X is based on
+            // the "new" RGH3 ECCs. Old dashboards don't get along with
+            // CB_X so we use the RGH3 V2 CB_X and patch it slightly
+            //
+            // 0x3C0: mov r4,r31 (avoid r31 being trashed by cbb_jump)
+            //      : byte[] cbx_mov = { 0x7F, 0xE4, 0xFB, 0x78 };
+            //
+            // 0x3C4: b 0xB4 (jump to the CB_A "jump to CB_B" function)
+            //      : byte[] cba_jump = { 0x48, 0x00, 0x00, 0xB4 };
+            //
+            byte[] newcbx = { };
+
+            try
+            {
+                newcbx = File.ReadAllBytes(Path.Combine(variables.rootfolder, "common\\CB\\CB_X_g3fix.bin"));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("g3fix error: couldn't read replacement CB_X");
+                Console.WriteLine(ex.ToString());
+                return;
+            }
+
+            // Set the nonce in the new CB_X so we don't have to mess with the crypto
+            Buffer.BlockCopy(cbx_dec, 0x10, newcbx, 0x10, 0x10);
+
+            // Re-encrypt the CB_X. CB_A doesn't have vfuses, so this
+            // MUST be the *physical* CPU key if it differs on a glitch2m image
+            newcbx = encrypt_CB_cpukey(newcbx, cba_key, cpukey_phys);
+
+            //
+            // Step 3: Fiddle with the unencrypted CB_B
+            //
+            // SMC sum patching logic based on modern-loadfare:
+            //
+            // https://github.com/wurthless-elektroniks/modern-loadfare/blob/main/newcbpatcher.py
+            // https://github.com/wurthless-elektroniks/modern-loadfare/blob/main/oldcbpatcher.py
+            //
+
+            // Need to pad the CB_B to make up the remaining space
+            int bootBlockSize = cbaSize + cbxSize + cbbSize;
+            byte[] newcbb = cbb_dec;
+            Array.Resize(ref newcbb, bootBlockSize - (newcba.Length + newcbx.Length));
+            
+            // Set the new size of the CB_B in its header
+            byte[] newcbbSizeBytes = BitConverter.GetBytes(newcbb.Length).Reverse().ToArray();
+            Buffer.BlockCopy(newcbbSizeBytes, 0, newcbb, 0xC, 0x4);
+
+            // Patch CB_B to branch past the SMC hash check
+            // After RGH dropped, microsoft removed a lot of the POST codes
+            // from the CB_B. To handle the code differences, there are two
+            // different patterns and two different patches to apply depending
+            // on which pattern is found in the CB_B
+            byte?[] oldCbbSmcHashCheckPattern = new byte?[] {
+                0x2F, 0x03, 0x00, 0x00,
+                0x40, 0x9A, 0x00, 0x14,
+                0x38, 0x80, 0x00, 0xA4
+            };
+            int oldCbbPatternSearchResult = Oper.ByteArrayFindPattern(cbb_dec, oldCbbSmcHashCheckPattern);
+
+            byte?[] newCbbSmcHashCheckPattern = new byte?[] {
+                0x48, null, null, null,
+                0x2F, 0x03, 0x00, 0x00,
+                0x40, 0x9A, 0x00, 0x08,
+                0x00, 0x00, 0x00, 0x00
+            };
+            int newCbbPatternSearchResult = Oper.ByteArrayFindPattern(cbb_dec, newCbbSmcHashCheckPattern);
+
+            if (variables.debugMode)
+            {
+                Console.WriteLine("SMC hash check pattern search results:");
+                Console.WriteLine("Old CBB pattern: " + oldCbbPatternSearchResult.ToString("x"));
+                Console.WriteLine("New CBB pattern: " + newCbbPatternSearchResult.ToString("x"));
+            }
+
+            if ( (-1 == oldCbbPatternSearchResult && -1 == newCbbPatternSearchResult ) ||
+                 (-1 != oldCbbPatternSearchResult && -1 != newCbbPatternSearchResult) )
+            {
+                // Odd, either the hash check sequence wasn't found at all or it was
+                // found with both the new and old style patterns. Skip this patch
+                // because something has obviously gone wrong or the CB_B is prepatched
+                Console.WriteLine("g3fix: Skipping CB_B SMC hash check patch");
+            }
+            else if (oldCbbPatternSearchResult != -1)
+            {
+                byte[] old_cbb_jump = { 0x48, 0x00, 0x00, 0x14 }; // b +0x14
+                int oldPatchLocation = oldCbbPatternSearchResult + 0x4;
+                Console.WriteLine("g3fix: patching old-style CB_B at location 0x" + oldPatchLocation.ToString("x"));
+                Buffer.BlockCopy(old_cbb_jump, 0, newcbb, oldPatchLocation, 0x4);
+            }
+            else
+            {
+                byte[] new_cbb_jump = { 0x48, 0x00, 0x00, 0x08 }; // b +0x8
+                int newPatchLocation = newCbbPatternSearchResult + 0xC;
+                Console.WriteLine("g3fix: patching new-style CB_B at location 0x" + newPatchLocation.ToString("x"));
+                Buffer.BlockCopy(new_cbb_jump, 0, newcbb, newPatchLocation, 0x4);
+            }
+
+            // Copy everything over to the NAND patch pages
+            // Note: we DON'T need to encrypt the CB_B, that's
+            // just the way the RGH3 boot chain works
+            int newbootblkSize = newcba.Length + newcbx.Length + newcbb.Length;
+
+            if (newbootblkSize != bootBlockSize)
+            {
+                Console.WriteLine("g3fix error: new boot block size not the same size as the old boot block!");
+                return;
+            }
+
+            byte[] newbootblk = new byte[newbootblkSize];
+
+            // Build the new CB_A/CB_X/CB_B block
+            Buffer.BlockCopy(newcba, 0, newbootblk, 0, newcba.Length);
+            Buffer.BlockCopy(newcbx, 0, newbootblk, newcba.Length, newcbx.Length);
+            Buffer.BlockCopy(newcbb, 0, newbootblk, newcba.Length + newcbx.Length, newcbb.Length);
+
+            // Copy it to the NAND image
+            Buffer.BlockCopy(newbootblk, 0, nandPatchPages, cbaOffset, newbootblkSize);
+
+            // Re-add ECC data and copy it over to the flash data buffer
+            if (flashHasEcc)
+            {
+                nandPatchPages = addecc_v2(nandPatchPages, true, 0, blockType);
+            }
+            Buffer.BlockCopy(nandPatchPages, 0, flashData, 0, nandPatchPages.Length);
+
+            try
+            {
+                // So we've updated the flashData, write it back to disk!
+                File.WriteAllBytes(flashFilePath, flashData);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("g3fix error: couldn't write modified flash image");
+                if (variables.debugMode) Console.WriteLine(ex.ToString());
+                return;
+            }
+
+            Console.WriteLine("g3fix: successfully replaced CB_A and CB_X");
+            Console.WriteLine("");
+
+            MainForm.mainForm.nand_init();
         }
 
         private static byte[] CalculateCPUKeyECD(byte[] key)

@@ -3238,6 +3238,42 @@ namespace JRunner
             Nand.Nand.zeroPairDevkitSb(variables.filename1, false);
         }
 
+        private void g3fixToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            string cpukey = "";
+
+            if (!nand.cpukeyverification(variables.cpukey))
+            {
+                Console.WriteLine("g3fix error: Invalid CPU key.");
+                return;
+            }
+
+            if (String.IsNullOrWhiteSpace(variables.filename1))
+            {
+                Console.WriteLine("g3fix error: Please select a valid NAND image!");
+                return;
+            }
+
+            if (Nand.Nand.g3fixDoesSourceNandContainVfuses(variables.filename1))
+            {
+                EnterCPUKey ecpuDialog = new EnterCPUKey();
+                DialogResult dr = ecpuDialog.ShowDialog();
+
+                if (dr != DialogResult.OK)
+                {
+                    return;
+                }
+
+                cpukey = ecpuDialog.cpukey;
+            }
+            else
+            {
+                cpukey = variables.cpukey;
+            }
+
+            Nand.Nand.g3fix(variables.filename1, Oper.StringToByteArray(cpukey));
+        }
+
         private void sMCConfigViewerToolStripMenuItem1_Click(object sender, EventArgs e)
         {
             SMCConfigEditor smcedit = new SMCConfigEditor();
@@ -4460,7 +4496,7 @@ namespace JRunner
             {
                 if (variables.debugMode) Console.WriteLine("DevNotify - {0}", e.Device.Name);
                 if (variables.debugMode) Console.WriteLine("EventType - {0}", e.EventType);
-                if (e.EventType == EventType.DeviceArrival)
+                if (e.EventType == EventType.DeviceArrival && e.Device != null)
                 {
                     if (e.Device.IdVendor == 0x600D && e.Device.IdProduct == 0x7001) // PicoFlasher
                     {
@@ -4512,7 +4548,7 @@ namespace JRunner
                         device = DEVICE.XFLASHER_EMMC;
                     }
                 }
-                else if (e.EventType == EventType.DeviceRemoveComplete)
+                else if (e.EventType == EventType.DeviceRemoveComplete && e.Device != null)
                 {
                     if (e.Device.IdVendor == 0x600D && e.Device.IdProduct == 0x7001)
                     {
