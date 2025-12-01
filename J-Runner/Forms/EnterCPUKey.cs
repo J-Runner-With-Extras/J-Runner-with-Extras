@@ -26,12 +26,14 @@ namespace JRunner.Forms
                                                   MessageBoxButtons.YesNo,
                                                   MessageBoxIcon.Warning);
 
-                if (dr == DialogResult.Yes)
+                if (dr != DialogResult.Yes)
                 {
-                    cpukey = txtCpuKey.Text;
-                    this.DialogResult = DialogResult.OK;
+                    return;
                 }
             }
+
+            cpukey = txtCpuKey.Text;
+            this.DialogResult = DialogResult.OK;
         }
 
         private void lblPhysicalCpuKey_DoubleClick(object sender, EventArgs e)
