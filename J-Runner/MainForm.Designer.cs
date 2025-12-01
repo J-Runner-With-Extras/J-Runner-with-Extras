@@ -110,8 +110,6 @@ namespace JRunner
             this.writeFusionToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem1 = new System.Windows.Forms.ToolStripSeparator();
             this.convertToRGH3ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.g3fixToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.zeroPairSbToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.checkSecdataToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.CustomXeBuildMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem5 = new System.Windows.Forms.ToolStripSeparator();
@@ -176,6 +174,10 @@ namespace JRunner
             this.jRPBLToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.updateJRPToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.keyDatabaseToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.experimentalToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
+            this.g3fixToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.zeroPairSbToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.groupBox8.SuspendLayout();
             this.getCpuKeyMenu.SuspendLayout();
             this.showWorkingFolderMenu.SuspendLayout();
@@ -851,14 +853,14 @@ namespace JRunner
             this.writeFusionToolStripMenuItem,
             this.toolStripMenuItem1,
             this.convertToRGH3ToolStripMenuItem,
-            this.g3fixToolStripMenuItem,
-            this.zeroPairSbToolStripMenuItem,
             this.checkSecdataToolStripMenuItem,
             this.CustomXeBuildMenuItem,
             this.toolStripMenuItem5,
             this.hexEditorToolStripMenuItem,
             this.kVViewerToolStripMenuItem,
-            this.generateCpuKeyToolStripMenuItem});
+            this.generateCpuKeyToolStripMenuItem,
+            this.toolStripSeparator1,
+            this.experimentalToolStripMenuItem});
             this.advancedToolStripMenuItem.Name = "advancedToolStripMenuItem";
             this.advancedToolStripMenuItem.Size = new System.Drawing.Size(72, 20);
             this.advancedToolStripMenuItem.Text = "Advanced";
@@ -898,20 +900,6 @@ namespace JRunner
             this.convertToRGH3ToolStripMenuItem.Size = new System.Drawing.Size(240, 22);
             this.convertToRGH3ToolStripMenuItem.Text = "Convert to RGH3";
             this.convertToRGH3ToolStripMenuItem.Click += new System.EventHandler(this.convertToRGH3ToolStripMenuItem_Click);
-            // 
-            // g3fixToolStripMenuItem
-            // 
-            this.g3fixToolStripMenuItem.Name = "g3fixToolStripMenuItem";
-            this.g3fixToolStripMenuItem.Size = new System.Drawing.Size(240, 22);
-            this.g3fixToolStripMenuItem.Text = "G3fix patch";
-            this.g3fixToolStripMenuItem.Click += new System.EventHandler(this.g3fixToolStripMenuItem_Click);
-            // 
-            // zeroPairSbToolStripMenuItem
-            // 
-            this.zeroPairSbToolStripMenuItem.Name = "zeroPairSbToolStripMenuItem";
-            this.zeroPairSbToolStripMenuItem.Size = new System.Drawing.Size(240, 22);
-            this.zeroPairSbToolStripMenuItem.Text = "Zero pair SB";
-            this.zeroPairSbToolStripMenuItem.Click += new System.EventHandler(this.zeroPairSbToolStripMenuItem_Click);
             // 
             // checkSecdataToolStripMenuItem
             // 
@@ -1436,6 +1424,34 @@ namespace JRunner
             this.keyDatabaseToolStripMenuItem.Text = "Key Database";
             this.keyDatabaseToolStripMenuItem.Click += new System.EventHandler(this.keyDatabaseToolStripMenuItem_Click);
             // 
+            // experimentalToolStripMenuItem
+            // 
+            this.experimentalToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.g3fixToolStripMenuItem,
+            this.zeroPairSbToolStripMenuItem});
+            this.experimentalToolStripMenuItem.Name = "experimentalToolStripMenuItem";
+            this.experimentalToolStripMenuItem.Size = new System.Drawing.Size(240, 22);
+            this.experimentalToolStripMenuItem.Text = "Experimental Features";
+            // 
+            // toolStripSeparator1
+            // 
+            this.toolStripSeparator1.Name = "toolStripSeparator1";
+            this.toolStripSeparator1.Size = new System.Drawing.Size(237, 6);
+            // 
+            // g3fixToolStripMenuItem
+            // 
+            this.g3fixToolStripMenuItem.Name = "g3fixToolStripMenuItem";
+            this.g3fixToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.g3fixToolStripMenuItem.Text = "G3fix patch";
+            this.g3fixToolStripMenuItem.Click += new System.EventHandler(this.g3fixToolStripMenuItem_Click);
+            // 
+            // zeroPairSbToolStripMenuItem
+            // 
+            this.zeroPairSbToolStripMenuItem.Name = "zeroPairSbToolStripMenuItem";
+            this.zeroPairSbToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.zeroPairSbToolStripMenuItem.Text = "Zero pair SB";
+            this.zeroPairSbToolStripMenuItem.Click += new System.EventHandler(this.zeroPairSbToolStripMenuItem_Click);
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -1620,7 +1636,6 @@ namespace JRunner
         private ToolStripMenuItem createSafeDualImageToolStripMenuItem;
         private ToolStripMenuItem nANDAlignmentToolStripMenuItem;
         private ToolStripMenuItem gB16MBToolStripMenuItem;
-        private ToolStripMenuItem zeroPairSbToolStripMenuItem;
         private ToolStripMenuItem mB64MBToolStripMenuItem;
         private ToolStripMenuItem addressCalculatorToolStripMenuItem;
         private ToolStripMenuItem keyvaultOptionsToolStripMenuItem;
@@ -1631,6 +1646,9 @@ namespace JRunner
         private ToolStripMenuItem loadGlitch2XeLLToolStripMenuItem;
         private ToolStripMenuItem loadJTAGXeLLToolStripMenuItem;
         private ToolStripMenuItem injectXeLLToolStripMenuItem;
+        private ToolStripSeparator toolStripSeparator1;
+        private ToolStripMenuItem experimentalToolStripMenuItem;
         private ToolStripMenuItem g3fixToolStripMenuItem;
+        private ToolStripMenuItem zeroPairSbToolStripMenuItem;
     }
 }

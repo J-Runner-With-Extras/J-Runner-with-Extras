@@ -3267,6 +3267,15 @@ namespace JRunner
                 return;
             }
 
+            if (mainForm.xPanel.getRgh3Mhz() == "OC")
+            {
+                if (MessageBox.Show("G3fix is currently not supported with the overclocked RGH3 ECC.\n\nContinuing will produce an image that is likely unbootable.\n\nDo you want to continue?", "Steep Hill Ahead", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.No)
+                {
+                    Console.WriteLine("g3fix error: Please create an RGH3 image with the 27mhz or 10mhz option selected.");
+                    return;
+                }
+            }
+
             if (Nand.Nand.g3fixDoesSourceNandContainVfuses(variables.filename1))
             {
                 EnterCPUKey ecpuDialog = new EnterCPUKey();
