@@ -1848,7 +1848,7 @@ namespace JRunner
                 }
             }
 
-            progressBar.Value = progressBar.Minimum;
+            updateProgress(progressBar.Minimum);
 
             if (!partial)
             {
@@ -2255,7 +2255,7 @@ namespace JRunner
         {
             if (nand == null || !nand.ok) return;
             variables.tempfile = variables.filename1;
-            progressBar.Value = progressBar.Minimum;
+            updateProgress(progressBar.Minimum);
             int result = 0;
             try
             {
@@ -2272,7 +2272,7 @@ namespace JRunner
             }
             else if (result == 5)
             {
-                progressBar.Value = progressBar.Maximum;
+                updateProgress(progressBar.Maximum);
             }
             else
             {
@@ -2829,7 +2829,18 @@ namespace JRunner
 
         public void updateProgress(int progress)
         {
-            progressBar.BeginInvoke((Action)(() => progressBar.Value = progress));
+            if (progress <= progressBar.Minimum)
+            {
+                progressBar.BeginInvoke((Action)(() => progressBar.Value = progressBar.Minimum));
+            }
+            else if (progress >= progressBar.Maximum)
+            {
+                progressBar.BeginInvoke((Action)(() => progressBar.Value = progressBar.Maximum));
+            }
+            else
+            {
+                progressBar.BeginInvoke((Action)(() => progressBar.Value = progress));
+            }
         }
 
         public void updateBlock(string progress)
@@ -2840,6 +2851,10 @@ namespace JRunner
         public ProgressBarStyle getProgressBarStyle()
         {
             return progressBar.Style;
+        }
+        public void setProgressBarStyle(ProgressBarStyle style)
+        {
+            progressBar.BeginInvoke((Action)(() => progressBar.Style = style));
         }
 
         public void copyToClipboard(string txt)
@@ -3729,11 +3744,11 @@ namespace JRunner
 
         private void btnScanDevices_Click(object sender, EventArgs e)
         {
-            progressBar.Value = progressBar.Minimum;
+            updateProgress(progressBar.Minimum);
             deviceinit();
             Thread.Sleep(100);
             if (listInfo.Contains(ldInfo)) ldInfo.refreshDrives(true);
-            else progressBar.Value = progressBar.Maximum;
+            else updateProgress(progressBar.Maximum);
         }
 
         private void btnRestart_Click(object sender, EventArgs e)
@@ -5165,30 +5180,24 @@ namespace JRunner
                     else if (mode == 2) ProgressLabel.Text = "Writing";
                     else if (mode == 1) ProgressLabel.Text = "Reading";
                 }));
-                progressBar.BeginInvoke(new Action(() => progressBar.Style = ProgressBarStyle.Blocks));
+                setProgressBarStyle(ProgressBarStyle.Blocks);
             }
             else if (mode == -2)
             {
-                progressBar.BeginInvoke(new Action(() => progressBar.Style = ProgressBarStyle.Marquee));
+                setProgressBarStyle(ProgressBarStyle.Marquee);
             }
             else if (mode == -1)
             {
                 ProgressLabel.BeginInvoke(new Action(() => ProgressLabel.Text = "Progress"));
-                progressBar.BeginInvoke(new Action(() =>
-                {
-                    progressBar.Style = ProgressBarStyle.Blocks;
-                    progressBar.Value = progressBar.Minimum;
-                }));
+                setProgressBarStyle(ProgressBarStyle.Blocks);
+                updateProgress(progressBar.Minimum);
                 txtBlocks.BeginInvoke(new Action(() => txtBlocks.Text = ""));
             }
             else
             {
                 ProgressLabel.BeginInvoke(new Action(() => ProgressLabel.Text = "Progress"));
-                progressBar.BeginInvoke(new Action(() =>
-                {
-                    progressBar.Style = ProgressBarStyle.Blocks;
-                    progressBar.Value = progressBar.Maximum;
-                }));
+                setProgressBarStyle(ProgressBarStyle.Blocks);
+                updateProgress(progressBar.Maximum);
                 txtBlocks.BeginInvoke(new Action(() => { txtBlocks.Text = ""; }));
             }
         }
@@ -5198,8 +5207,7 @@ namespace JRunner
             if (xflasher.inUse)
             {
                 txtBlocks.BeginInvoke((Action)(() => txtBlocks.Text = str));
-                if (progress >= 0) progressBar.BeginInvoke((Action)(() => progressBar.Value = progress)); // Just in case
-                else progressBar.BeginInvoke((Action)(() => progressBar.Value = 0));
+                updateProgress(progress);
             }
         }
 
@@ -5232,30 +5240,24 @@ namespace JRunner
                     else if (mode == 2) ProgressLabel.Text = "Writing";
                     else if (mode == 1) ProgressLabel.Text = "Reading";
                 }));
-                progressBar.BeginInvoke(new Action(() => { progressBar.Style = ProgressBarStyle.Blocks; }));
+                setProgressBarStyle(ProgressBarStyle.Blocks);
             }
             else if (mode == -2)
             {
-                progressBar.BeginInvoke(new Action(() => { progressBar.Style = ProgressBarStyle.Marquee; }));
+                setProgressBarStyle(ProgressBarStyle.Marquee);
             }
             else if (mode == -1)
             {
                 ProgressLabel.BeginInvoke(new Action(() => { ProgressLabel.Text = "Progress"; }));
-                progressBar.BeginInvoke(new Action(() =>
-                {
-                    progressBar.Style = ProgressBarStyle.Blocks;
-                    progressBar.Value = progressBar.Minimum;
-                }));
+                setProgressBarStyle(ProgressBarStyle.Blocks);
+                updateProgress(progressBar.Minimum);
                 txtBlocks.BeginInvoke(new Action(() => { txtBlocks.Text = ""; }));
             }
             else
             {
                 ProgressLabel.BeginInvoke(new Action(() => { ProgressLabel.Text = "Progress"; }));
-                progressBar.BeginInvoke(new Action(() =>
-                {
-                    progressBar.Style = ProgressBarStyle.Blocks;
-                    progressBar.Value = progressBar.Maximum;
-                }));
+                setProgressBarStyle(ProgressBarStyle.Blocks);
+                updateProgress(progressBar.Maximum);
                 txtBlocks.BeginInvoke(new Action(() => { txtBlocks.Text = ""; }));
             }
         }
@@ -5265,10 +5267,7 @@ namespace JRunner
             if (picoflasher.InUse)
             {
                 txtBlocks.BeginInvoke((Action)(() => txtBlocks.Text = str));
-                if (progress >= 0)
-                    progressBar.BeginInvoke((Action)(() => progressBar.Value = progress));
-                else
-                    progressBar.BeginInvoke((Action)(() => progressBar.Value = 0));
+                updateProgress(progress);
             }
         }
         #endregion
@@ -5280,14 +5279,14 @@ namespace JRunner
             if (mode > 0)
             {
                 ProgressLabel.Text = "Writing";
-                progressBar.BeginInvoke((Action)(() => progressBar.Style = ProgressBarStyle.Marquee));
+                setProgressBarStyle(ProgressBarStyle.Marquee);
                 txtBlocks.Text = "";
             }
             else
             {
                 ProgressLabel.Text = "Progress";
-                progressBar.BeginInvoke((Action)(() => progressBar.Style = ProgressBarStyle.Blocks));
-                progressBar.BeginInvoke((Action)(() => progressBar.Value = progressBar.Maximum));
+                setProgressBarStyle(ProgressBarStyle.Blocks);
+                updateProgress(progressBar.Maximum);
                 txtBlocks.Text = "";
             }
         }
