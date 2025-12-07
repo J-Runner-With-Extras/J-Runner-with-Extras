@@ -1006,7 +1006,7 @@ namespace JRunner
                     Console.WriteLine("xFlasher: Setting flash speed to {0}", speed);
 
                     Process psi = new Process();
-                    psi.StartInfo.FileName = @"common/xsvftool/xsvftool.exe";
+                    psi.StartInfo.FileName = @"common/xsvftool/xsvftool-ftd2xx_x86.exe";
                     psi.StartInfo.Arguments = "-l";
                     psi.StartInfo.CreateNoWindow = true;
                     psi.StartInfo.UseShellExecute = false;
