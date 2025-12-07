@@ -1757,14 +1757,16 @@ namespace JRunner.Nand
             return decrypt_CD(SD, SC);
         }
 
-        public static byte[] getCbbRc4Key(byte[] CB_A_key, byte[] CB_B_nonce, byte[] cpukey)
+        public static byte[] getCbbRc4Key(byte[] CB_A_key, bool CB_A_new_crypto, byte[] CB_B_nonce, byte[] cpukey)
         {
             byte[] secret = CB_A_key;
             byte[] message = Oper.concatByteArrays(CB_B_nonce, cpukey, 0x10, 0x10);
-
-            if ((Oper.ByteArrayToInt(Oper.returnportion(CB_A_key, 0x6, 2)) & 0x1000) != 0)
+            
+            // New CB_A versions use a different method to generate the CB_B RC4 key, as seen below.
+            // CB_A flags. WORD at 0x6 in the CB_A binary will have bit 0x1000 set if this is the case.
+            if (CB_A_new_crypto)
             {
-                if (variables.debugMode) Console.WriteLine("Using new encryption scheme");
+                Console.WriteLine("Using new encryption scheme to generate CB_B RC4 key");
                 CB_A_key[0x6] = 0x00;
                 CB_A_key[0x7] = 0x00;
                 message = Oper.concatByteArrays(message, CB_A_key, message.Length, 0x10);
@@ -1773,13 +1775,13 @@ namespace JRunner.Nand
             return Oper.HMAC_SHA1(secret, message);
         }
 
-        public static byte[] encrypt_CB_cpukey(byte[] image, byte[] CB_A_key, byte[] cpukey)
+        public static byte[] encrypt_CB_cpukey(byte[] image, byte[] CB_A_key, bool CB_A_new_crypto, byte[] cpukey)
         {
             if (variables.debugMode) Console.WriteLine(cpukey.Length);
 
             byte[] cbb_nonce = Oper.returnportion(image, 0x10, 0x10);
 
-            byte[] RC4_key = getCbbRc4Key(CB_A_key, cbb_nonce, cpukey);
+            byte[] RC4_key = getCbbRc4Key(CB_A_key, CB_A_new_crypto, cbb_nonce, cpukey);
             byte[] imfordec = Oper.returnportion(image, 0x20, image.Length - 0x20);
             if (variables.debugMode) Console.WriteLine(Oper.ByteArrayToString(RC4_key));
             Oper.RC4_v(ref imfordec, Oper.returnportion(RC4_key, 0, 0x10));
@@ -1797,9 +1799,30 @@ namespace JRunner.Nand
 
         public static byte[] encrypt_CB(byte[] image, byte[] random, ref byte[] key)
         {
+            // Dummy variable so encrypt_CB_A is happy
+            bool CB_A_new_crypto = false;
+
+            return encrypt_CB_A(image, random, ref key, ref CB_A_new_crypto);
+        }
+
+        public static byte[] encrypt_CB_A(byte[] image, byte[] random, ref byte[] key, ref bool CB_A_new_crypto)
+        {
             byte[] finalimage = new byte[image.Length];
             try
             {
+                // Split CB_A that have the bit 0x1000 set in their flags structure use
+                // a different method for generating the CB_B encryption key.
+                if (0 != (BitConverter.ToInt16(image.Skip(0x6).Take(0x2).Reverse().ToArray(), 0) & 0x1000))
+                {
+                    if (variables.debugMode) Console.WriteLine("CB_A uses new encryption scheme...");
+
+                    CB_A_new_crypto = true;
+                }
+                else
+                {
+                    CB_A_new_crypto = false;
+                }
+
                 if (variables.debugMode) Console.WriteLine("Encrypting CB...");
                 byte[] RC4_key = Oper.HMAC_SHA1(secret_1bl, random);
                 //byte[] RC4_key = returnportion(image, 0x10, 0x10);
@@ -2503,7 +2526,7 @@ namespace JRunner.Nand
             Buffer.BlockCopy(Oper.StringToByteArray(s1.ToString("X")), 0, csum, 8, 0x8);
             return csum;
         }
-        public static byte[] FixPerBoxDigest(byte[] SMC_en, byte[] CB_dec, byte[] CB_nonce, byte[] CB_A_key, byte[] cpukey)
+        public static byte[] FixPerBoxDigest(byte[] SMC_en, byte[] CB_dec, byte[] CB_nonce, byte[] CB_A_key, bool CB_A_new_crypto, byte[] cpukey)
         {
             
             byte[] RC4_key = { };
@@ -2516,7 +2539,7 @@ namespace JRunner.Nand
             }
             else
             {
-                RC4_key = getCbbRc4Key(CB_A_key, CB_nonce, cpukey);
+                RC4_key = getCbbRc4Key(CB_A_key, CB_A_new_crypto, CB_nonce, cpukey);
             }
 
             byte[] reserved = Oper.returnportion(CB_dec, 0x24, 0xC);
@@ -3505,32 +3528,25 @@ namespace JRunner.Nand
 
             int cbaOffset = BitConverter.ToInt32(nandPatchPages.Skip(0x8).Take(4).Reverse().ToArray(), 0);
             int cbaSize = BitConverter.ToInt32(nandPatchPages.Skip(cbaOffset + 0xC).Take(4).Reverse().ToArray(), 0);
+            byte[] cba_nonce = nandPatchPages.Skip(cbaOffset + 0x10).Take(0x10).ToArray();
 
             int cbxOffset = cbaOffset + cbaSize;
             int cbxSize = BitConverter.ToInt32(nandPatchPages.Skip(cbxOffset + 0xC).Take(4).Reverse().ToArray(), 0);
+            byte[] cbx_nonce = nandPatchPages.Skip(cbxOffset + 0x10).Take(0x10).ToArray();
 
             int cbbOffset = cbxOffset + cbxSize;
             int cbbSize = BitConverter.ToInt32(nandPatchPages.Skip(cbbOffset + 0xC).Take(4).Reverse().ToArray(), 0);
 
-            // Need to decrypt CB_A and CB_X. CB_A is encrypted like usual.
-            byte[] cba_nonce = nandPatchPages.Skip(cbaOffset + 0x10).Take(0x10).ToArray();
-            byte[] cba_dec = decrypt_CB(nandPatchPages.Skip(cbaOffset).Take(cbaSize).ToArray());
-
-            // CB_X is always encrypted with a zero key in an RGH3 image
-            byte[] cbx_nonce = nandPatchPages.Skip(cbxOffset + 0x10).Take(0x10).ToArray();
-            byte[] cbx_dec = decrypt_CB_cpukey(nandPatchPages.Skip(cbxOffset).Take(cbxSize).ToArray(),
-                                               cba_dec, keyZero);
-
             //byte[] cbb_nonce = nandPatchPages.Skip(cbbOffset + 0x10).Take(0x10).ToArray();
             byte[] cbb_dec = nandPatchPages.Skip(cbbOffset).Take(cbbSize).ToArray();
 
-            int cbaVersion = BitConverter.ToInt16(cba_dec.Skip(2).Take(2).Reverse().ToArray(), 0);
-            int cbxVersion = BitConverter.ToInt16(cbx_dec.Skip(2).Take(2).Reverse().ToArray(), 0);
-            int cbbVersion = BitConverter.ToInt16(cbb_dec.Skip(2).Take(2).Reverse().ToArray(), 0);
+            int cbaVersion = BitConverter.ToInt16(nandPatchPages.Skip(cbaOffset + 2).Take(2).Reverse().ToArray(), 0);
+            int cbxVersion = BitConverter.ToInt16(nandPatchPages.Skip(cbxOffset + 2).Take(2).Reverse().ToArray(), 0);
+            int cbbVersion = BitConverter.ToInt16(nandPatchPages.Skip(cbbOffset + 2).Take(2).Reverse().ToArray(), 0);
 
-            // Do some checking on the CB_A and CB_X we've decrypted. For a pre-g3fix'ed image, we
-            // should see CB_A 10918 and CB_X 15432 or CB_X 42069
-            if (cbaVersion != 10918 || (cbxVersion != 15432 && cbxVersion != 42069))
+            // Do some checking on the CB_A and CB_X we've decrypted.
+            // RGH3 images that use CB_A 10918 and CB_X 15432 are what we're looking to patch
+            if (cbaVersion != 10918 || cbxVersion != 15432)
             {
                 Console.WriteLine("g3fix error: invalid bootloaders. Image is not RGH3, has already been g3fixed, or is corrupt.");
                 Console.WriteLine("CB_A version: " + cbaVersion.ToString());
@@ -3558,7 +3574,7 @@ namespace JRunner.Nand
                 return;
             }
 
-            if (newcba.Length > cba_dec.Length)
+            if (newcba.Length > cbaSize)
             {
                 Console.WriteLine("g3fix error: replacement CB_A is somehow larger than original CB_A");
                 return;
@@ -3595,12 +3611,14 @@ namespace JRunner.Nand
                 return;
             }
 
-            // Set the nonce in the new CB_X so we don't have to mess with the crypto
-            Buffer.BlockCopy(cbx_dec, 0x10, newcbx, 0x10, 0x10);
+            // Set the nonce in the new CB_X
+            Buffer.BlockCopy(cbx_nonce, 0, newcbx, 0x10, 0x10);
 
             // Re-encrypt the CB_X. CB_A doesn't have vfuses, so this
             // MUST be the *physical* CPU key if it differs on a glitch2m image
-            newcbx = encrypt_CB_cpukey(newcbx, cba_key, cpukey_phys);
+            // We're always going to use a CB_A that uses the "old" crypto scheme,
+            // there's really no reason to use one of the newer CB_A binaries
+            newcbx = encrypt_CB_cpukey(newcbx, cba_key, false, cpukey_phys);
 
             //
             // Step 3: Fiddle with the unencrypted CB_B
