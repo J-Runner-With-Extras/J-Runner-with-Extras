@@ -2023,7 +2023,15 @@ namespace JRunner
                             xPanel.BeginInvoke(new Action(() => xPanel.setRbtnGlitchChecked(true)));
                             break;
                         case variables.hacktypes.glitch2:
-                            xPanel.BeginInvoke(new Action(() => xPanel.setRbtnGlitch2Checked(true)));
+                            // If the source NAND image contains a virtual fuse set, select glitch2m
+                            if (Nand.Nand.doesNandContainVfuses(variables.filename1))
+                            {
+                                xPanel.BeginInvoke(new Action(() => xPanel.setRbtnGlitch2mChecked(true)));
+                            }
+                            else
+                            {
+                                xPanel.BeginInvoke(new Action(() => xPanel.setRbtnGlitch2Checked(true)));
+                            }
                             break;
                         case variables.hacktypes.jtag:
                             xPanel.BeginInvoke(new Action(() => xPanel.setRbtnJtagChecked(true)));
@@ -3267,16 +3275,7 @@ namespace JRunner
                 return;
             }
 
-            if (mainForm.xPanel.getRgh3Mhz() == "OC")
-            {
-                if (MessageBox.Show("G3fix is currently not supported with the overclocked RGH3 ECC.\n\nContinuing will produce an image that is likely unbootable.\n\nDo you want to continue?", "Steep Hill Ahead", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.No)
-                {
-                    Console.WriteLine("g3fix error: Please create an RGH3 image with the 27mhz or 10mhz option selected.");
-                    return;
-                }
-            }
-
-            if (Nand.Nand.g3fixDoesSourceNandContainVfuses(variables.filename1))
+            if (Nand.Nand.doesNandContainVfuses(variables.filename1))
             {
                 EnterCPUKey ecpuDialog = new EnterCPUKey();
                 DialogResult dr = ecpuDialog.ShowDialog();
