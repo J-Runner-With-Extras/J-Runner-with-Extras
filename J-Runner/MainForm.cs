@@ -2023,7 +2023,15 @@ namespace JRunner
                             xPanel.BeginInvoke(new Action(() => xPanel.setRbtnGlitchChecked(true)));
                             break;
                         case variables.hacktypes.glitch2:
-                            xPanel.BeginInvoke(new Action(() => xPanel.setRbtnGlitch2Checked(true)));
+                            // If the source NAND image contains a virtual fuse set, select glitch2m
+                            if (Nand.Nand.doesNandContainVfuses(variables.filename1))
+                            {
+                                xPanel.BeginInvoke(new Action(() => xPanel.setRbtnGlitch2mChecked(true)));
+                            }
+                            else
+                            {
+                                xPanel.BeginInvoke(new Action(() => xPanel.setRbtnGlitch2Checked(true)));
+                            }
                             break;
                         case variables.hacktypes.jtag:
                             xPanel.BeginInvoke(new Action(() => xPanel.setRbtnJtagChecked(true)));
@@ -3267,7 +3275,7 @@ namespace JRunner
                 return;
             }
 
-            if (Nand.Nand.g3fixDoesSourceNandContainVfuses(variables.filename1))
+            if (Nand.Nand.doesNandContainVfuses(variables.filename1))
             {
                 EnterCPUKey ecpuDialog = new EnterCPUKey();
                 DialogResult dr = ecpuDialog.ShowDialog();

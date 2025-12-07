@@ -3388,7 +3388,7 @@ namespace JRunner.Nand
             return flashFileResultPath;
         }
 
-        public static bool g3fixDoesSourceNandContainVfuses(string flashFilePath)
+        public static bool doesNandContainVfuses(string flashFilePath)
         {
             byte[] flashData = { };
             byte[] fuseline0 = { 0xC0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
