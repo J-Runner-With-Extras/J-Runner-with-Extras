@@ -588,7 +588,7 @@ namespace JRunner.Panels
         bool chkWB4GEn = true;
         public void checkWBXdkBuild()
         {
-            if ( (rbtnGlitch2m.Checked || rbtnDevGL.Checked) && variables.dashversion.Equals("17489") && File.Exists(variables.rootfolder + @"\xeBuild\17489\!XDKbuild Only!.txt"))
+            if ( (rbtnGlitch2m.Checked || rbtnDevGL.Checked) && File.Exists(variables.rootfolder + @"\xeBuild\" + variables.dashversion + @"\!XDKbuild Only!.txt"))
             {
                 chkWB.Visible = false;
                 chkWB.Checked = false;
