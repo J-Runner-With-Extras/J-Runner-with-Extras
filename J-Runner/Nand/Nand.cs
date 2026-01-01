@@ -223,9 +223,11 @@ namespace JRunner.Nand
             }
             //
 
-            // Early NAND images begin with 0x0F3F
+            // Early NAND images begin with 0x0F3F or 0x0F4F
             // Regular NAND images begin with 0xFF4F
-            if ( (data[0] == 0xFF && data[1] == 0x4F) || (data[0] == 0x0F && data[1] == 0x3F) )
+            if ( (data[0] == 0xFF && data[1] == 0x4F) ||
+                 (data[0] == 0x0F && data[1] == 0x3F) ||
+                 (data[0] == 0x0F && data[1] == 0x4F) )
             {
                 unpack_base_image(data, bigblock);
 
