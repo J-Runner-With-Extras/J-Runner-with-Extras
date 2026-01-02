@@ -332,6 +332,12 @@ namespace JRunner.Nand
                     block_size += 0xF;
                     block_size &= ~0xF;
                     id = block_id & 0xF;
+
+                    if (id == 0 || block_size == 0)
+                    {
+                        break;
+                    }
+
                     if (variables.debugMode) Console.WriteLine("Found {0}BL (build {1}) at {2}", id, block_build, Convert.ToString(block_offset_b, 16));
                     data = new byte[block_size];
                     //data = returnportion(image, block_offset_b, block_size);
