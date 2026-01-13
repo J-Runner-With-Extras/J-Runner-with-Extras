@@ -1026,7 +1026,7 @@ namespace JRunner
                     {
                         Console.WriteLine($"xFlasher: {dev} detected");
                         psi = new Process();
-                        psi.StartInfo.FileName = @"common/xsvftool/xsvftool.exe";
+                        psi.StartInfo.FileName = @"common/xsvftool/xsvftool-ftd2xx_x86.exe";
                         psi.StartInfo.Arguments = "-j 0 -p -f " + speed + (xsvf ? " -x" : " -s") + " \"" + MainForm.tempTimingPath + "\"";
                         psi.StartInfo.CreateNoWindow = true;
                         psi.StartInfo.UseShellExecute = false;
