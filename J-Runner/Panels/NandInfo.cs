@@ -148,7 +148,7 @@ namespace JRunner.Panels
                         textBoxCBX.Visible = false;
                     }
 
-                    if (nand.bl.CD > 0)
+                    if (nand.bl._4BL_magic != "")
                     {
                         label4bl.Text = nand.bl._4BL_magic;
                         textBox4BL.Text = nand.bl.CD.ToString();

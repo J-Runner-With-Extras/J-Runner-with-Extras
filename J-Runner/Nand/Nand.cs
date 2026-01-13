@@ -223,7 +223,11 @@ namespace JRunner.Nand
             }
             //
 
-            if (data[0] == 0xFF && data[1] == 0x4F)
+            // Early NAND images begin with 0x0F3F or 0x0F4F
+            // Regular NAND images begin with 0xFF4F
+            if ( (data[0] == 0xFF && data[1] == 0x4F) ||
+                 (data[0] == 0x0F && data[1] == 0x3F) ||
+                 (data[0] == 0x0F && data[1] == 0x4F) )
             {
                 unpack_base_image(data, bigblock);
 
@@ -314,10 +318,19 @@ namespace JRunner.Nand
 
                 for (block = 0; block < 30; block++)
                 {
-                    // Dev BLs start with 0x53 (S)
-                    isDevBl = (image[block_offset_b] == 0x53);
+                    // Dev BLs start with characters other than 0x43 (C)
+                    isDevBl = (image[block_offset_b] != 0x43);
+
                     // Get the ID string of the BL (CB/CD/SB/SD/etc)
                     blIdString = Encoding.ASCII.GetString(image.Skip(block_offset_b).Take(2).ToArray());
+
+                    // If the first character of the ID string is garbage, it's an old dev bootloader
+                    // Replace it with an S character
+                    if (Path.GetInvalidFileNameChars().Contains(blIdString[0]))
+                    {
+                        blIdString = "S" + blIdString.Substring(1);
+                    }
+
                     block_id = image[block_offset_b + 1];
                     Buffer.BlockCopy(image, block_offset_b + 2, block_build_b, 0, 2);
                     //block_build_b = returnportion(image, block_offset_b + 2, 2);
@@ -328,7 +341,13 @@ namespace JRunner.Nand
                     block_size += 0xF;
                     block_size &= ~0xF;
                     id = block_id & 0xF;
-                    if (variables.debugMode) Console.WriteLine("Found {0}BL (build {1}) at {2}", id, block_build, Convert.ToString(block_offset_b, 16));
+
+                    if (id == 0 || block_size == 0)
+                    {
+                        break;
+                    }
+
+                    if (variables.debugMode) Console.WriteLine("Found {0} {1}BL (build {2}) at {3}", isDevBl ? "dev" : "retail", id, block_build, Convert.ToString(block_offset_b, 16));
                     data = new byte[block_size];
                     //data = returnportion(image, block_offset_b, block_size);
                     if (block_offset_b + block_size <= image.Length) Buffer.BlockCopy(image, block_offset_b, data, 0, block_size);
@@ -438,7 +457,7 @@ namespace JRunner.Nand
                     if (variables.extractfiles) Oper.savefile(sc_dec, "output\\" + bl._3BL_magic + "_dec.bin");
                 }
 
-                if (bl.CD > 0)
+                if (bl._4BL_magic != "")
                 {
 
                     if (variables.extractfiles) Oper.savefile(CD, "output\\" + bl._4BL_magic + ".bin");
