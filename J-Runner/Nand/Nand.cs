@@ -1420,7 +1420,11 @@ namespace JRunner.Nand
                 return;
             }
 
-            if (kvFileData.Length != flashKvSize)
+            if (flashKvSize == 0)
+            {
+                Console.WriteLine("Warning: KV size set to 0 in this flash image. KV size will not be validated.");
+            }
+            else if (kvFileData.Length != flashKvSize)
             {
                 Console.WriteLine("Error: can't inject a different length KV in to an existing NAND");
                 return;
