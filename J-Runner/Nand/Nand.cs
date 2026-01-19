@@ -3413,6 +3413,12 @@ namespace JRunner.Nand
 
         public static bool doesNandContainVfuses(string flashFilePath)
         {
+            byte[] cpukeyArr = { };
+            return getVirtualCPUKey(flashFilePath, ref cpukeyArr);
+        }
+
+        public static bool getVirtualCPUKey(string flashFilePath, ref byte[] cpukey)
+        {
             byte[] flashData = { };
             byte[] fuseline0 = { 0xC0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
             bool flashHasEcc = true;
@@ -3476,8 +3482,18 @@ namespace JRunner.Nand
                 if (Oper.ByteArrayCompare(fuseline0, flashData.Skip(patchSlotAddressPhys).Take(0x8).ToArray(), 0x8))
                 {
                     // ByteArrayCompare returns true if the buffers are equal
+                    cpukey = flashData.Skip(patchSlotAddressPhys + 0x20).Take(0x10).ToArray();
                     return true;
                 }
+            }
+
+            // If we didn't find virtual fuses in the regular locations, 
+            // try the JTAG location (0x95000 logical, 0x99A80 physical)
+            if (Oper.ByteArrayCompare(fuseline0, flashData.Skip(0x99A80).Take(0x8).ToArray(), 0x8))
+            {
+                // ByteArrayCompare returns true if the buffers are equal
+                cpukey = flashData.Skip(0x99A80 + 0x20).Take(0x10).ToArray();
+                return true;
             }
 
             return false;
