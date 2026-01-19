@@ -1899,6 +1899,9 @@ namespace JRunner
 
                 bool sts = objAlphaPattern.IsMatch(variables.cpukey);
 
+                byte[] cpukeyArr = { };
+                bool nandContainsVfuses = Nand.Nand.getVirtualCPUKey(variables.filename1, ref cpukeyArr);
+
                 string cpufile = Path.Combine(Path.GetDirectoryName(variables.filename1), "cpukey.txt");
                 if (File.Exists(cpufile) && !(variables.cpukey.Length == 32 && sts))
                 {
@@ -1906,6 +1909,19 @@ namespace JRunner
                 }
 
                 if (variables.cpukey.Length != 32 || !objAlphaPattern.IsMatch(variables.cpukey)) variables.cpukey = "";
+
+                if (nandContainsVfuses)
+                {
+                    string cpukeyStr = Oper.ByteArrayToString(cpukeyArr);
+
+                    if (variables.debugMode) Console.WriteLine("Virtual CPU Key: " + cpukeyStr);
+
+                    // If we didn't set the CPU key yet, use the virtual CPU key from the NAND dump
+                    if (variables.cpukey == "")
+                    {
+                        variables.cpukey = cpukeyStr;
+                    }
+                }
 
                 bool foundKey = !string.IsNullOrEmpty(variables.cpukey);
                 bool gotKeyFromCrc = false;
@@ -2024,7 +2040,7 @@ namespace JRunner
                             break;
                         case variables.hacktypes.glitch2:
                             // If the source NAND image contains a virtual fuse set, select glitch2m
-                            if (Nand.Nand.doesNandContainVfuses(variables.filename1))
+                            if (nandContainsVfuses)
                             {
                                 xPanel.BeginInvoke(new Action(() => xPanel.setRbtnGlitch2mChecked(true)));
                             }
