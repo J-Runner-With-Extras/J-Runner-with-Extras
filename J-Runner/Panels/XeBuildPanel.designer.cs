@@ -62,6 +62,7 @@
             this.rbtnGlitch = new System.Windows.Forms.RadioButton();
             this.tabPatches = new System.Windows.Forms.TabPage();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
+            this.chkHddSsAuth = new System.Windows.Forms.CheckBox();
             this.chkCoronaKeyFix = new System.Windows.Forms.CheckBox();
             this.chkUsbdSec = new System.Windows.Forms.CheckBox();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
@@ -105,7 +106,6 @@
             this.chkNoWrite = new System.Windows.Forms.CheckBox();
             this.btnXEUpdate = new System.Windows.Forms.Button();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
-            this.chkHddSsAuth = new System.Windows.Forms.CheckBox();
             this.groupBox7.SuspendLayout();
             this.MainTabs.SuspendLayout();
             this.tabXeBuild.SuspendLayout();
@@ -535,6 +535,20 @@
             this.groupBox2.TabIndex = 8;
             this.groupBox2.TabStop = false;
             this.groupBox2.Text = "Other Patches";
+            // 
+            // chkHddSsAuth
+            // 
+            this.chkHddSsAuth.AutoSize = true;
+            this.chkHddSsAuth.Enabled = false;
+            this.chkHddSsAuth.Location = new System.Drawing.Point(21, 56);
+            this.chkHddSsAuth.Name = "chkHddSsAuth";
+            this.chkHddSsAuth.Size = new System.Drawing.Size(80, 17);
+            this.chkHddSsAuth.TabIndex = 2;
+            this.chkHddSsAuth.Text = "HddSsAuth";
+            this.toolTip1.SetToolTip(this.chkHddSsAuth, "Patch Freeboot to do full auth for drives with a security sector,\r\nallowing FATXP" +
+        "lorer retail formatted drives with unused space \r\nto be detected and used.");
+            this.chkHddSsAuth.UseVisualStyleBackColor = true;
+            this.chkHddSsAuth.CheckedChanged += new System.EventHandler(this.chkHddSsAuth_CheckedChanged);
             // 
             // chkCoronaKeyFix
             // 
@@ -1029,20 +1043,6 @@
             this.btnXEUpdate.Text = "Update";
             this.btnXEUpdate.UseVisualStyleBackColor = true;
             this.btnXEUpdate.Click += new System.EventHandler(this.btnXEUpdate_Click);
-            // 
-            // chkHddSsAuth
-            // 
-            this.chkHddSsAuth.AutoSize = true;
-            this.chkHddSsAuth.Enabled = false;
-            this.chkHddSsAuth.Location = new System.Drawing.Point(21, 56);
-            this.chkHddSsAuth.Name = "chkHddSsAuth";
-            this.chkHddSsAuth.Size = new System.Drawing.Size(80, 17);
-            this.chkHddSsAuth.TabIndex = 2;
-            this.chkHddSsAuth.Text = "HddSsAuth";
-            this.toolTip1.SetToolTip(this.chkHddSsAuth, "Patch Freeboot to do full auth for drives with a security sector, allowing FATXPl" +
-        "orer retail formatted drives with \"unused space\" to be detected and used.");
-            this.chkHddSsAuth.UseVisualStyleBackColor = true;
-            this.chkHddSsAuth.CheckedChanged += new System.EventHandler(this.chkHddSsAuth_CheckedChanged);
             // 
             // XeBuildPanel
             // 
