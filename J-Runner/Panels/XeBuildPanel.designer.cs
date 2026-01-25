@@ -105,6 +105,7 @@
             this.chkNoWrite = new System.Windows.Forms.CheckBox();
             this.btnXEUpdate = new System.Windows.Forms.Button();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
+            this.chkHddSsAuth = new System.Windows.Forms.CheckBox();
             this.groupBox7.SuspendLayout();
             this.MainTabs.SuspendLayout();
             this.tabXeBuild.SuspendLayout();
@@ -525,11 +526,12 @@
             // 
             // groupBox2
             // 
+            this.groupBox2.Controls.Add(this.chkHddSsAuth);
             this.groupBox2.Controls.Add(this.chkCoronaKeyFix);
             this.groupBox2.Controls.Add(this.chkUsbdSec);
             this.groupBox2.Location = new System.Drawing.Point(210, 3);
             this.groupBox2.Name = "groupBox2";
-            this.groupBox2.Size = new System.Drawing.Size(104, 61);
+            this.groupBox2.Size = new System.Drawing.Size(104, 80);
             this.groupBox2.TabIndex = 8;
             this.groupBox2.TabStop = false;
             this.groupBox2.Text = "Other Patches";
@@ -1028,6 +1030,20 @@
             this.btnXEUpdate.UseVisualStyleBackColor = true;
             this.btnXEUpdate.Click += new System.EventHandler(this.btnXEUpdate_Click);
             // 
+            // chkHddSsAuth
+            // 
+            this.chkHddSsAuth.AutoSize = true;
+            this.chkHddSsAuth.Enabled = false;
+            this.chkHddSsAuth.Location = new System.Drawing.Point(21, 56);
+            this.chkHddSsAuth.Name = "chkHddSsAuth";
+            this.chkHddSsAuth.Size = new System.Drawing.Size(80, 17);
+            this.chkHddSsAuth.TabIndex = 2;
+            this.chkHddSsAuth.Text = "HddSsAuth";
+            this.toolTip1.SetToolTip(this.chkHddSsAuth, "Patch Freeboot to do full auth for drives with a security sector, allowing FATXPl" +
+        "orer retail formatted drives with \"unused space\" to be detected and used.");
+            this.chkHddSsAuth.UseVisualStyleBackColor = true;
+            this.chkHddSsAuth.CheckedChanged += new System.EventHandler(this.chkHddSsAuth_CheckedChanged);
+            // 
             // XeBuildPanel
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -1136,5 +1152,6 @@
         private System.Windows.Forms.CheckBox chkXLBoth;
         private System.Windows.Forms.CheckBox chkCoronaKeyFix;
         private System.Windows.Forms.CheckBox chkElpis;
+        private System.Windows.Forms.CheckBox chkHddSsAuth;
     }
 }
