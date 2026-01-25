@@ -8,6 +8,26 @@ namespace JRunner
     {
         private string filename;
 
+        public void injectECC(string eccpath, string cpuKey)
+        {
+            Console.WriteLine("Injecting glitch3 ECC...");
+            Thread.Sleep(1000); // Important
+
+            try
+            {
+                Classes.RGH2to3.ConvertRgh2ToRgh3(eccpath, variables.filename1, cpuKey, variables.filename1);
+            }
+            catch (Exception ex)
+            {
+                if (variables.debugMode) Console.WriteLine(ex.ToString());
+                Console.WriteLine("Failed: The image is either already RGH 1.3, already RGH3, or an unsupported image type");
+                Console.WriteLine("");
+                return;
+            }
+
+            MainForm.mainForm.nand_init();
+        }
+
         public void create(string board, string cpuKey, bool sequenced = false)
         {
             Console.WriteLine("Converting Image to RGH3...");
