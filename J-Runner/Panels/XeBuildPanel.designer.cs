@@ -62,6 +62,7 @@
             this.rbtnGlitch = new System.Windows.Forms.RadioButton();
             this.tabPatches = new System.Windows.Forms.TabPage();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
+            this.chkHddSsAuth = new System.Windows.Forms.CheckBox();
             this.chkCoronaKeyFix = new System.Windows.Forms.CheckBox();
             this.chkUsbdSec = new System.Windows.Forms.CheckBox();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
@@ -525,14 +526,29 @@
             // 
             // groupBox2
             // 
+            this.groupBox2.Controls.Add(this.chkHddSsAuth);
             this.groupBox2.Controls.Add(this.chkCoronaKeyFix);
             this.groupBox2.Controls.Add(this.chkUsbdSec);
             this.groupBox2.Location = new System.Drawing.Point(210, 3);
             this.groupBox2.Name = "groupBox2";
-            this.groupBox2.Size = new System.Drawing.Size(104, 61);
+            this.groupBox2.Size = new System.Drawing.Size(104, 80);
             this.groupBox2.TabIndex = 8;
             this.groupBox2.TabStop = false;
             this.groupBox2.Text = "Other Patches";
+            // 
+            // chkHddSsAuth
+            // 
+            this.chkHddSsAuth.AutoSize = true;
+            this.chkHddSsAuth.Enabled = false;
+            this.chkHddSsAuth.Location = new System.Drawing.Point(21, 56);
+            this.chkHddSsAuth.Name = "chkHddSsAuth";
+            this.chkHddSsAuth.Size = new System.Drawing.Size(80, 17);
+            this.chkHddSsAuth.TabIndex = 2;
+            this.chkHddSsAuth.Text = "HddSsAuth";
+            this.toolTip1.SetToolTip(this.chkHddSsAuth, "Patch Freeboot to do full auth for drives with a security sector,\r\nallowing FATXP" +
+        "lorer retail formatted drives with unused space \r\nto be detected and used.");
+            this.chkHddSsAuth.UseVisualStyleBackColor = true;
+            this.chkHddSsAuth.CheckedChanged += new System.EventHandler(this.chkHddSsAuth_CheckedChanged);
             // 
             // chkCoronaKeyFix
             // 
@@ -1136,5 +1152,6 @@
         private System.Windows.Forms.CheckBox chkXLBoth;
         private System.Windows.Forms.CheckBox chkCoronaKeyFix;
         private System.Windows.Forms.CheckBox chkElpis;
+        private System.Windows.Forms.CheckBox chkHddSsAuth;
     }
 }
