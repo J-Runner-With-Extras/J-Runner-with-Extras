@@ -116,6 +116,11 @@ namespace JRunner
             this.hexEditorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.kVViewerToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.generateCpuKeyToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
+            this.experimentalToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.g3fixToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.zeroPairSbToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.injectGlitch3ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.jRPToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.powerOnToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.shutdownToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -174,10 +179,6 @@ namespace JRunner
             this.jRPBLToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.updateJRPToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.keyDatabaseToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.experimentalToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
-            this.g3fixToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.zeroPairSbToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.groupBox8.SuspendLayout();
             this.getCpuKeyMenu.SuspendLayout();
             this.showWorkingFolderMenu.SuspendLayout();
@@ -942,6 +943,42 @@ namespace JRunner
             this.generateCpuKeyToolStripMenuItem.ToolTipText = "Generates a valid CPU Key in the CPU Key box";
             this.generateCpuKeyToolStripMenuItem.Click += new System.EventHandler(this.generateCpuKeyToolStripMenuItem_Click);
             // 
+            // toolStripSeparator1
+            // 
+            this.toolStripSeparator1.Name = "toolStripSeparator1";
+            this.toolStripSeparator1.Size = new System.Drawing.Size(237, 6);
+            // 
+            // experimentalToolStripMenuItem
+            // 
+            this.experimentalToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.g3fixToolStripMenuItem,
+            this.zeroPairSbToolStripMenuItem,
+            this.injectGlitch3ToolStripMenuItem});
+            this.experimentalToolStripMenuItem.Name = "experimentalToolStripMenuItem";
+            this.experimentalToolStripMenuItem.Size = new System.Drawing.Size(240, 22);
+            this.experimentalToolStripMenuItem.Text = "Experimental Features";
+            // 
+            // g3fixToolStripMenuItem
+            // 
+            this.g3fixToolStripMenuItem.Name = "g3fixToolStripMenuItem";
+            this.g3fixToolStripMenuItem.Size = new System.Drawing.Size(205, 22);
+            this.g3fixToolStripMenuItem.Text = "G3fix patch";
+            this.g3fixToolStripMenuItem.Click += new System.EventHandler(this.g3fixToolStripMenuItem_Click);
+            // 
+            // zeroPairSbToolStripMenuItem
+            // 
+            this.zeroPairSbToolStripMenuItem.Name = "zeroPairSbToolStripMenuItem";
+            this.zeroPairSbToolStripMenuItem.Size = new System.Drawing.Size(205, 22);
+            this.zeroPairSbToolStripMenuItem.Text = "Zero pair SB";
+            this.zeroPairSbToolStripMenuItem.Click += new System.EventHandler(this.zeroPairSbToolStripMenuItem_Click);
+            // 
+            // injectGlitch3ToolStripMenuItem
+            // 
+            this.injectGlitch3ToolStripMenuItem.Name = "injectGlitch3ToolStripMenuItem";
+            this.injectGlitch3ToolStripMenuItem.Size = new System.Drawing.Size(205, 22);
+            this.injectGlitch3ToolStripMenuItem.Text = "Inject RGH1.3/RGH3 ECC";
+            this.injectGlitch3ToolStripMenuItem.Click += new System.EventHandler(this.injectGlitch3ToolStripMenuItem_Click);
+            // 
             // jRPToolStripMenuItem
             // 
             this.jRPToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
@@ -1424,34 +1461,6 @@ namespace JRunner
             this.keyDatabaseToolStripMenuItem.Text = "Key Database";
             this.keyDatabaseToolStripMenuItem.Click += new System.EventHandler(this.keyDatabaseToolStripMenuItem_Click);
             // 
-            // experimentalToolStripMenuItem
-            // 
-            this.experimentalToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.g3fixToolStripMenuItem,
-            this.zeroPairSbToolStripMenuItem});
-            this.experimentalToolStripMenuItem.Name = "experimentalToolStripMenuItem";
-            this.experimentalToolStripMenuItem.Size = new System.Drawing.Size(240, 22);
-            this.experimentalToolStripMenuItem.Text = "Experimental Features";
-            // 
-            // toolStripSeparator1
-            // 
-            this.toolStripSeparator1.Name = "toolStripSeparator1";
-            this.toolStripSeparator1.Size = new System.Drawing.Size(237, 6);
-            // 
-            // g3fixToolStripMenuItem
-            // 
-            this.g3fixToolStripMenuItem.Name = "g3fixToolStripMenuItem";
-            this.g3fixToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.g3fixToolStripMenuItem.Text = "G3fix patch";
-            this.g3fixToolStripMenuItem.Click += new System.EventHandler(this.g3fixToolStripMenuItem_Click);
-            // 
-            // zeroPairSbToolStripMenuItem
-            // 
-            this.zeroPairSbToolStripMenuItem.Name = "zeroPairSbToolStripMenuItem";
-            this.zeroPairSbToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.zeroPairSbToolStripMenuItem.Text = "Zero pair SB";
-            this.zeroPairSbToolStripMenuItem.Click += new System.EventHandler(this.zeroPairSbToolStripMenuItem_Click);
-            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -1650,5 +1659,6 @@ namespace JRunner
         private ToolStripMenuItem experimentalToolStripMenuItem;
         private ToolStripMenuItem g3fixToolStripMenuItem;
         private ToolStripMenuItem zeroPairSbToolStripMenuItem;
+        private ToolStripMenuItem injectGlitch3ToolStripMenuItem;
     }
 }

@@ -3423,6 +3423,49 @@ namespace JRunner
             
         }
 
+        private void injectGlitch3ToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(variables.filename1))
+            {
+                MessageBox.Show("No nand loaded in source", "Can't", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            if (!Nand.Nand.VerifyKey(Oper.StringToByteArray(variables.cpukey)))
+            {
+                Console.WriteLine("Bad CPU Key");
+                return;
+            }
+
+            if (!nand.cpukeyverification(variables.cpukey))
+            {
+                Console.WriteLine("Wrong CPU Key");
+                return;
+            }
+
+            OpenFileDialog ofd = new OpenFileDialog();
+            ofd.Filter = "Glitch3 ECC (*.ecc)|*.ecc|All files (*.*)|*.*";
+            ofd.Title = "Select RGH1.3 or RGH3 ECC file";
+            ofd.InitialDirectory = variables.rootfolder;
+            ofd.RestoreDirectory = false;
+
+            if (ofd.ShowDialog() != DialogResult.OK)
+            {
+                return;
+            }
+
+            if (xPanel.getRbtnGlitch2mChecked())
+            {
+                // MFG loaders and by extension Glitch2m images encrypt the CB_B differently
+                // than retail CB_B, so we need to use a zero CPU key for invoking rgh3build
+                rgh3Build.injectECC(ofd.FileName, "00000000000000000000000000000000");
+            }
+            else
+            {
+                rgh3Build.injectECC(ofd.FileName, variables.cpukey);
+            }
+        }
+
         CustomXeBuild CX;
         private void CustomXeBuildMenuItem_Click(object sender, EventArgs e)
         {
