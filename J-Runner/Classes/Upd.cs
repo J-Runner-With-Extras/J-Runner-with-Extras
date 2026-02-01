@@ -35,7 +35,7 @@ namespace JRunner
 
             try
             {
-                xml = new XmlTextReader("https://raw.githubusercontent.com/Octal450/J-Runner-with-Extras-Updater/master/autoupdate.xml");
+                xml = new XmlTextReader("https://raw.githubusercontent.com/Pheeeeenom/J-Runner-with-Extras/release/autoupdate.xml");
                 xml.MoveToContent();
                 string name = "";
 
