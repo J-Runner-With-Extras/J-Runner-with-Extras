@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Media;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
 
@@ -157,24 +159,73 @@ namespace JRunner
                 Console.WriteLine("MTX USB: Device Is Busy");
                 return;
             }
-
+            if (Process.GetProcessesByName("xsvf").Length > 0)
+            {
+                Console.WriteLine("MTX USB: xsvf is already running!");
+                return;
+            }
             Thread xsvfThread = new Thread(() =>
             {
                 try
                 {
-                    System.Diagnostics.Process process = new System.Diagnostics.Process();
-                    process.StartInfo.FileName = "common/mtx-tools/xsvf/xsvf.exe";
-                    process.StartInfo.Arguments = "\"" + filename + "\"";
-                    process.StartInfo.UseShellExecute = false;
-                    process.StartInfo.WorkingDirectory = variables.rootfolder;
-                    process.StartInfo.CreateNoWindow = false;
+                    if (!File.Exists(filename))
+                    {
+                        Console.WriteLine("MTX USB: File Not Found: {0}", filename);
+                        return;
+                    }
+                    if (Path.GetExtension(filename) != ".xsvf")
+                    {
+                        Console.WriteLine("MTX USB: Wrong File Type: {0}", filename);
+                        return;
+                    }
+                    try
+                    {
+                        if (File.Exists(MainForm.tempTimingPath))
+                        {
+                            File.Delete(MainForm.tempTimingPath);
+                        }
+                        File.Copy(filename, MainForm.tempTimingPath);
+                    }
+                    catch
+                    {
+                        Console.WriteLine("MTX USB: Could not open temporary file for flashing");
+                        Console.WriteLine("MTX USB: {0} is locked by another process", MainForm.tempTimingPath);
+                        return;
+                    }
 
+                    Console.WriteLine("MTX USB: Flashing {0}", Path.GetFileName(filename));
+                    Process psi = new Process();
+                    psi.StartInfo.FileName = "common/mtx-tools/xsvf/xsvf.exe";
+                    psi.StartInfo.Arguments = "\"" + MainForm.tempTimingPath + "\"";
+                    psi.StartInfo.WorkingDirectory = variables.rootfolder;
+                    psi.StartInfo.UseShellExecute = false;
+					psi.StartInfo.CreateNoWindow = false;
+					
                     NandX.InUse = true;
-                    process.Start();
-                    process.WaitForExit();
+
+                    // Count process time
+                    Stopwatch watch = new Stopwatch();
+                    watch.Start();
+                    psi.Start();
+                    psi.WaitForExit();
+                    watch.Stop();
 
                     NandX.InUse = false;
-                    Console.WriteLine("Xsvf: Completed!");
+
+                    if (variables.playSuccess)
+                    {
+                        SoundPlayer success = new SoundPlayer(Properties.Resources.chime);
+                        success.Play();
+                    }
+                    Console.WriteLine("MTX USB: Flash success!");
+
+                    Console.WriteLine($"Time: {watch.Elapsed.TotalSeconds:F2}s");
+                    Console.WriteLine();
+
+                    if (File.Exists(MainForm.tempTimingPath))
+                    {
+                        File.Delete(MainForm.tempTimingPath);
+                    }
                 }
                 catch (Exception ex)
                 {

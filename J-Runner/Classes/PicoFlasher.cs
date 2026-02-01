@@ -202,6 +202,8 @@ namespace JRunner
             SendCmd(serial, cmd);
 
             UInt32 flashconfig = RecvUInt32(serial);
+            string flashconfigStr = flashconfig.ToString("X");
+
             if (flashconfig != 0x00000000 && flashconfig != 0xFFFFFFFF) Console.WriteLine("Flash Config: 0x" + flashconfig.ToString("X8"));
 
             if (flashconfig == 0x00000000 || flashconfig == 0xFFFFFFFF)
@@ -209,6 +211,16 @@ namespace JRunner
                 Console.WriteLine("Console Not Found");
                 Console.WriteLine("");
                 return 0;
+            }
+
+            if (!variables.flashconfigs.Contains(flashconfigStr))
+            {
+                if (DialogResult.No == MessageBox.Show("Unrecognized flash config: 0x" + flashconfigStr + "\n\nAre you sure you wish to continue with the read/write operation?", "PicoFlasher Warning", MessageBoxButtons.YesNo, MessageBoxIcon.Warning))
+                {
+                    Console.WriteLine("Unrecognized flash config 0x" + flashconfigStr + ". Aborting operation.");
+                    Console.WriteLine("");
+                    return 0;
+                }
             }
 
             return flashconfig;

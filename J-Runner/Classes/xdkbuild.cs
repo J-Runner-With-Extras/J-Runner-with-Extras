@@ -68,7 +68,11 @@ namespace JRunner
                     pProcess.CancelOutputRead();
                     Console.WriteLine("XDKbuild Conversion Finished!");
                     Console.WriteLine("Remember to program a compatible timing file!");
-                    if (!notlast) MainForm.mainForm.xPanel.xeExitActual();
+                    if (!notlast)
+                    {
+                        variables.xefinished = true;
+                        MainForm.mainForm.xPanel.xeExitActual();
+                    }
                 }
             }
             catch (Exception objException)

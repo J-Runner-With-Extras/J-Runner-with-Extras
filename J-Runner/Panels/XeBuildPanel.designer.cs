@@ -32,6 +32,7 @@
             this.groupBox7 = new System.Windows.Forms.GroupBox();
             this.MainTabs = new System.Windows.Forms.TabControl();
             this.tabXeBuild = new System.Windows.Forms.TabPage();
+            this.chkElpis = new System.Windows.Forms.CheckBox();
             this.Rgh3Label2 = new System.Windows.Forms.Label();
             this.Rgh3Label = new System.Windows.Forms.Label();
             this.Rgh3Mhz = new System.Windows.Forms.ComboBox();
@@ -61,6 +62,7 @@
             this.rbtnGlitch = new System.Windows.Forms.RadioButton();
             this.tabPatches = new System.Windows.Forms.TabPage();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
+            this.chkHddSsAuth = new System.Windows.Forms.CheckBox();
             this.chkCoronaKeyFix = new System.Windows.Forms.CheckBox();
             this.chkUsbdSec = new System.Windows.Forms.CheckBox();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
@@ -143,6 +145,7 @@
             // tabXeBuild
             // 
             this.tabXeBuild.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(240)))), ((int)(((byte)(240)))), ((int)(((byte)(240)))));
+            this.tabXeBuild.Controls.Add(this.chkElpis);
             this.tabXeBuild.Controls.Add(this.Rgh3Label2);
             this.tabXeBuild.Controls.Add(this.Rgh3Label);
             this.tabXeBuild.Controls.Add(this.Rgh3Mhz);
@@ -175,6 +178,19 @@
             this.tabXeBuild.TabIndex = 0;
             this.tabXeBuild.Text = "Home";
             // 
+            // chkElpis
+            // 
+            this.chkElpis.AutoSize = true;
+            this.chkElpis.ForeColor = System.Drawing.SystemColors.ControlText;
+            this.chkElpis.Location = new System.Drawing.Point(229, 70);
+            this.chkElpis.Name = "chkElpis";
+            this.chkElpis.Size = new System.Drawing.Size(48, 17);
+            this.chkElpis.TabIndex = 100;
+            this.chkElpis.Text = "Elpis";
+            this.toolTip1.SetToolTip(this.chkElpis, "Xenon only, use 7378 CB_B for consoles with Elpis or Rhea GPUs");
+            this.chkElpis.UseVisualStyleBackColor = true;
+            this.chkElpis.CheckedChanged += new System.EventHandler(this.chkElpis_CheckedChanged);
+            // 
             // Rgh3Label2
             // 
             this.Rgh3Label2.AutoSize = true;
@@ -199,7 +215,8 @@
             this.Rgh3Mhz.FormattingEnabled = true;
             this.Rgh3Mhz.Items.AddRange(new object[] {
             "10",
-            "27"});
+            "27",
+            "OC"});
             this.Rgh3Mhz.Location = new System.Drawing.Point(284, 61);
             this.Rgh3Mhz.Name = "Rgh3Mhz";
             this.Rgh3Mhz.Size = new System.Drawing.Size(36, 21);
@@ -211,7 +228,7 @@
             // 
             this.chkRgh3.AutoSize = true;
             this.chkRgh3.ForeColor = System.Drawing.SystemColors.ControlText;
-            this.chkRgh3.Location = new System.Drawing.Point(229, 63);
+            this.chkRgh3.Location = new System.Drawing.Point(229, 53);
             this.chkRgh3.Name = "chkRgh3";
             this.chkRgh3.Size = new System.Drawing.Size(56, 17);
             this.chkRgh3.TabIndex = 19;
@@ -237,7 +254,7 @@
             // chkCR4
             // 
             this.chkCR4.AutoSize = true;
-            this.chkCR4.Location = new System.Drawing.Point(229, 31);
+            this.chkCR4.Location = new System.Drawing.Point(229, 21);
             this.chkCR4.Name = "chkCR4";
             this.chkCR4.Size = new System.Drawing.Size(47, 17);
             this.chkCR4.TabIndex = 17;
@@ -304,7 +321,7 @@
             // 
             this.chkSMCP.AutoSize = true;
             this.chkSMCP.ForeColor = System.Drawing.SystemColors.ControlText;
-            this.chkSMCP.Location = new System.Drawing.Point(229, 47);
+            this.chkSMCP.Location = new System.Drawing.Point(229, 37);
             this.chkSMCP.Name = "chkSMCP";
             this.chkSMCP.Size = new System.Drawing.Size(55, 17);
             this.chkSMCP.TabIndex = 18;
@@ -396,7 +413,7 @@
             this.comboDash.FormattingEnabled = true;
             this.comboDash.Location = new System.Drawing.Point(16, 28);
             this.comboDash.Name = "comboDash";
-            this.comboDash.Size = new System.Drawing.Size(71, 21);
+            this.comboDash.Size = new System.Drawing.Size(96, 21);
             this.comboDash.TabIndex = 5;
             this.toolTip1.SetToolTip(this.comboDash, "Select the kernel/dashboard version used for XeBuild");
             this.comboDash.ValueMember = "Dash";
@@ -509,14 +526,29 @@
             // 
             // groupBox2
             // 
+            this.groupBox2.Controls.Add(this.chkHddSsAuth);
             this.groupBox2.Controls.Add(this.chkCoronaKeyFix);
             this.groupBox2.Controls.Add(this.chkUsbdSec);
             this.groupBox2.Location = new System.Drawing.Point(210, 3);
             this.groupBox2.Name = "groupBox2";
-            this.groupBox2.Size = new System.Drawing.Size(104, 61);
+            this.groupBox2.Size = new System.Drawing.Size(104, 80);
             this.groupBox2.TabIndex = 8;
             this.groupBox2.TabStop = false;
             this.groupBox2.Text = "Other Patches";
+            // 
+            // chkHddSsAuth
+            // 
+            this.chkHddSsAuth.AutoSize = true;
+            this.chkHddSsAuth.Enabled = false;
+            this.chkHddSsAuth.Location = new System.Drawing.Point(21, 56);
+            this.chkHddSsAuth.Name = "chkHddSsAuth";
+            this.chkHddSsAuth.Size = new System.Drawing.Size(80, 17);
+            this.chkHddSsAuth.TabIndex = 2;
+            this.chkHddSsAuth.Text = "HddSsAuth";
+            this.toolTip1.SetToolTip(this.chkHddSsAuth, "Patch Freeboot to do full auth for drives with a security sector,\r\nallowing FATXP" +
+        "lorer retail formatted drives with unused space \r\nto be detected and used.");
+            this.chkHddSsAuth.UseVisualStyleBackColor = true;
+            this.chkHddSsAuth.CheckedChanged += new System.EventHandler(this.chkHddSsAuth_CheckedChanged);
             // 
             // chkCoronaKeyFix
             // 
@@ -1119,5 +1151,7 @@
         private System.Windows.Forms.Button btnXEUpdate;
         private System.Windows.Forms.CheckBox chkXLBoth;
         private System.Windows.Forms.CheckBox chkCoronaKeyFix;
+        private System.Windows.Forms.CheckBox chkElpis;
+        private System.Windows.Forms.CheckBox chkHddSsAuth;
     }
 }
