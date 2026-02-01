@@ -113,9 +113,9 @@ namespace JRunner
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(478, 50);
             this.label1.TabIndex = 0;
-            this.label1.Text = "Allows you to cleanup the common and xeBuild folders and restore a clean filesyst" +
-    "em.\r\n\r\nPlease make sure no operations are running, as the application must resta" +
-    "rt.";
+            this.label1.Text = "Allows you to clean up the common and xeBuild folders and restore a clean filesys" +
+    "tem.\r\n\r\nPlease make sure no operations are running, as the application must rest" +
+    "art.";
             // 
             // RestoreFiles
             // 

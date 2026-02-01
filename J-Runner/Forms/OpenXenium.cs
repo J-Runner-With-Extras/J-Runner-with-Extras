@@ -29,7 +29,7 @@ namespace JRunner.Forms
         {
             if (MainForm.mainForm.device == MainForm.DEVICE.XFLASHER_SPI)
             {
-                MainForm.mainForm.xflasher.flashSvf(variables.rootfolder + @"\common\svf\openxenium.svf");
+                MainForm.mainForm.xflasher.flashSvf(variables.rootfolder + @"\common\svf\openxenium.svf", "500K");
                 this.Close();
             }
             else if (MainForm.mainForm.device == MainForm.DEVICE.XFLASHER_EMMC)

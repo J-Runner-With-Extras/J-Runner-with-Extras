@@ -19,7 +19,6 @@ namespace JRunner.Panels
             InitializeComponent();
             lblfcrt.Visible = false;
             lblhashed.Visible = false;
-            label2bl.Visible = false;
             setNand(Nand);
         }
 
@@ -27,9 +26,17 @@ namespace JRunner.Panels
         {
             // Nand Info
             textBox2BLa.Text = "";
+            label2bla.Text = "CB_A";
+
             textBox2BLb.Text = "";
+            label2blb.Text = "CB_B";
+
             textBox4BL.Text = "";
+            label4bl.Text = "CD";
+
             textBox5BL.Text = "";
+            label5bl.Text = "CE";
+
             textBox6BL_p0.Text = "";
             textBox6BL_p1.Text = "";
             textBox7BL_p0.Text = "";
@@ -46,7 +53,10 @@ namespace JRunner.Panels
             textBox2BLb.Enabled = true;
             label2blb.Visible = true;
             label2bla.Visible = true;
-            label2bl.Visible = false;
+
+            textBoxCBX.Text = "";
+            textBoxCBX.Visible = false;
+            labelCBX.Visible = false;
 
             // KV Info
             btnConsoleId.Text = "View: Native";
@@ -74,14 +84,92 @@ namespace JRunner.Panels
             {
                 textBox2BLa.BeginInvoke(new Action(() => {
                     // Nand Info
-                    if (nand.bl.CB_A > 0) textBox2BLa.Text = nand.bl.CB_A.ToString();
-                    else textBox2BLa.Text = "";
-                    if (nand.bl.CB_B > 0) textBox2BLb.Text = nand.bl.CB_B.ToString();
-                    else textBox2BLb.Text = "";
-                    if (nand.bl.CD > 0) textBox4BL.Text = nand.bl.CD.ToString();
-                    else textBox4BL.Text = "";
-                    if (nand.bl.CE > 0) textBox5BL.Text = nand.bl.CE.ToString();
-                    else textBox5BL.Text = "";
+
+                    if (nand.bl.CB_A > 0)
+                    {
+                        textBox2BLa.Text = nand.bl.CB_A.ToString();
+                        label2bla.Text = nand.bl._2BL_magic;
+                    }
+                    else
+                    {
+                        label2bla.Text = "CB_A";
+                        textBox2BLa.Text = "";
+                    }
+
+                    if (nand.bl.CB_B > 0)
+                    {
+                        label2bla.Text = "CB_A";
+                        label2blb.Text = "CB_B";
+                        textBox2BLb.Text = nand.bl.CB_B.ToString();
+                        textBox2BLb.Enabled = true;
+                        label2blb.Visible = true;
+                        textBoxCbType.Text = "Split";
+                    }
+                    else
+                    {
+                        if (nand.bl.SC > 0)
+                        {
+                            label2blb.Text = nand.bl._3BL_magic;
+                            textBox2BLb.Text = nand.bl.SC.ToString();
+                            label2blb.Visible = true;
+                            textBox2BLb.Enabled = true;
+                        }
+                        else
+                        {
+                            label2blb.Text = "CB_B";
+                            textBox2BLb.Text = "";
+                            label2blb.Visible = false;
+                            textBox2BLb.Enabled = false;
+                        }
+                            
+                        textBoxCbType.Text = "Single";
+                    }
+
+                    if (nand.bl.CB_X > 0)
+                    {
+                        // RGH 1.3 uses a *funny* number for the CB_X build
+                        if(nand.bl.CB_X == 42069)
+                        {
+                            textBoxCbType.Text = "RGH 1.3";
+                        }
+                        else
+                        {
+                            textBoxCbType.Text = "RGH3";
+                        } 
+
+                        textBoxCBX.Text = nand.bl.CB_X.ToString();
+                        labelCBX.Visible = true;
+                        textBoxCBX.Visible = true;
+                    }
+                    else
+                    {
+                        textBoxCBX.Text = "";
+                        labelCBX.Visible = false;
+                        textBoxCBX.Visible = false;
+                    }
+
+                    if (nand.bl._4BL_magic != "")
+                    {
+                        label4bl.Text = nand.bl._4BL_magic;
+                        textBox4BL.Text = nand.bl.CD.ToString();
+                    }
+                    else
+                    {
+                        label4bl.Text = "CD";
+                        textBox4BL.Text = "";
+                    }
+
+                    if (nand.bl.CE > 0)
+                    {
+                        label5bl.Text = nand.bl._5BL_magic;
+                        textBox5BL.Text = nand.bl.CE.ToString();
+                    }
+                    else
+                    {
+                        label5bl.Text = "CE";
+                        textBox5BL.Text = "";
+                    }
+
                     if (nand.bl.CF_0 > 0) textBox6BL_p0.Text = nand.bl.CF_0.ToString();
                     else textBox6BL_p0.Text = "";
                     if (nand.bl.CF_1 > 0) textBox6BL_p1.Text = nand.bl.CF_1.ToString();
@@ -96,38 +184,10 @@ namespace JRunner.Panels
                     else textBoxldv_1.Text = "";
                     textBoxpd_0.Text = nand.uf.pd_0;
                     textBoxpd_1.Text = nand.uf.pd_1;
-
-                    if (nand.bl.CB_B != 0)
-                    {
-                        textBox2BLb.Text = nand.bl.CB_B.ToString();
-                        if (textBox2BLb.Text == "15432") textBoxCbType.Text = "RGH3";
-                        else textBoxCbType.Text = "Split";
-                        textBox2BLb.Enabled = true;
-                        label2blb.Visible = true;
-                        label2bla.Visible = true;
-                        label2bl.Visible = false;
-                    }
-                    else
-                    {
-                        textBox2BLb.Enabled = false;
-                        textBoxCbType.Text = "Single";
-                        label2blb.Visible = false;
-                        label2bla.Visible = false;
-                        label2bl.Visible = true;
-                    }
-
-                    if (textBox2BLb.Text == "15432") // It's not currently possible to properly parse the triple CB setup in RGH3
-                    {
-                        textBoxldv_cb.Text = textBoxpd_cb.Text = "";
-                    }
-                    else
-                    {
-                        if (nand.bl.CB_A > 0 || nand.bl.CB_B > 0) textBoxldv_cb.Text = nand.uf.ldv_cb.ToString();
-                        else textBoxldv_cb.Text = "";
-
-                        if (nand.uf.pd_cb == "0x000000") textBoxpd_cb.Text = "";
-                        else textBoxpd_cb.Text = nand.uf.pd_cb;
-                    }
+                    if (nand.bl.CB_A > 0 || nand.bl.CB_B > 0) textBoxldv_cb.Text = nand.uf.ldv_cb.ToString();
+                    else textBoxldv_cb.Text = "";
+                    if (nand.uf.pd_cb == "0x000000") textBoxpd_cb.Text = "";
+                    else textBoxpd_cb.Text = nand.uf.pd_cb;
 
                     string name = Nand.Nand.getConsoleName(nand, variables.flashconfig);
                     textBoxConsole.Text = name;
@@ -247,7 +307,6 @@ namespace JRunner.Panels
         {
             lblfcrt.Visible = false;
             lblhashed.Visible = false;
-            label2bl.Visible = false;
         }
 
         private void NandInfo_DragDrop(object sender, DragEventArgs e)
@@ -402,6 +461,11 @@ namespace JRunner.Panels
         private void txtBadBlocks_DoubleClick(object sender, EventArgs e)
         {
             MainForm.mainForm.copyToClipboard(txtBadBlocks.Text);
+        }
+
+        private void textBoxCBX_DoubleClick(object sender, EventArgs e)
+        {
+            MainForm.mainForm.copyToClipboard(textBoxCBX.Text);
         }
 
         #endregion

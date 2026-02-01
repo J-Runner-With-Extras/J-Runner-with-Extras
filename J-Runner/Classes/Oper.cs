@@ -198,6 +198,42 @@ namespace JRunner
             return true;
         }
 
+        public static int ByteArrayFindPattern(byte[] data, byte?[] pattern)
+        {
+            if (data == null || pattern == null)
+            {
+                return -1;
+            }
+
+            if (pattern.Length == 0 || data.Length < pattern.Length)
+            {
+                return -1;
+            }
+
+            for (int i = 0; i <= data.Length - pattern.Length; i++)
+            {
+                bool match = true;
+
+                for (int j = 0; j < pattern.Length; j++)
+                {
+                    byte? p = pattern[j];
+
+                    // If not a wildcard, compare
+                    if (p.HasValue && data[i + j] != p.Value)
+                    {
+                        match = false;
+                        break;
+                    }
+                }
+
+                if (match)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
 
         public static byte[] concatByteArrays(byte[] byteArray1, byte[] byteArray2, int array1Length, int array2Length)
         {

@@ -294,8 +294,10 @@ namespace JRunner
                     dt.CB_B = patch_CB(dt.CB_B);
 
                     byte[] CB_A_key = { };
-                    dt.CB_A = Nand.Nand.encrypt_CB(dt.CB_A, CB_A_img_RAND, ref CB_A_key);
-                    dt.CB_B = Nand.Nand.encrypt_CB_cpukey(dt.CB_B, CB_A_key, Oper.StringToByteArray(cpukey));
+                    bool CB_A_new_crypto = false;
+
+                    dt.CB_A = Nand.Nand.encrypt_CB_A(dt.CB_A, CB_A_img_RAND, ref CB_A_key, ref CB_A_new_crypto);
+                    dt.CB_B = Nand.Nand.encrypt_CB_cpukey(dt.CB_B, CB_A_key, CB_A_new_crypto, Oper.StringToByteArray(cpukey));
 
                 }
                 ///
