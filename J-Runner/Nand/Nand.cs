@@ -2310,14 +2310,24 @@ namespace JRunner.Nand
         public static int[] identifyConsole(PrivateN nand, string flashconfig = "")
         {
             int[] cons = new int[18];
+            int testCB;
+
+            if (nand.bl.CB_X > 0) // Must check CB_B instead for RGH3
+            {
+                testCB = nand.bl.CB_B;
+            }
+            else
+            {
+                testCB = nand.bl.CB_A;
+            }
 
             // CB check
-            if (nand.bl.CB_A >= 9188 && nand.bl.CB_A <= 9250)
+            if (testCB >= 9188 && testCB <= 9250)
             {
                 cons[1] += 3;
                 cons[12] += 3;
             }
-            else if (nand.bl.CB_A >= 16000)
+            else if (testCB >= 16000)
             {
                 if (nand.noecc) cons[16] += 3;
                 else
@@ -2326,7 +2336,7 @@ namespace JRunner.Nand
                     cons[17] += 3;
                 }
             }
-            else if (nand.bl.CB_A >= 13121 && nand.bl.CB_A <= 13200)
+            else if (testCB >= 13121 && testCB <= 13200)
             {
                 if (nand.noecc) cons[11] += 3;
                 else
@@ -2335,26 +2345,34 @@ namespace JRunner.Nand
                     cons[10] += 3;
                 }
             }
-            else if (nand.bl.CB_A >= 6712 && nand.bl.CB_A <= 6780)
+            else if (testCB >= 6712 && testCB <= 6780)
             {
                 cons[4] += 3;
                 cons[5] += 3;
                 cons[6] += 3;
             }
-            else if (nand.bl.CB_A >= 4558 && nand.bl.CB_A <= 4590)
+            else if (testCB >= 4558 && testCB <= 4590)
             {
                 cons[3] += 3;
                 cons[13] += 3;
             }
-            else if ((nand.bl.CB_A >= 1888 && nand.bl.CB_A <= 1960) || (nand.bl.CB_A >= 7373 && nand.bl.CB_A <= 7378) || nand.bl.CB_A == 8192)
+            else if ((testCB >= 1888 && testCB <= 1960) || (testCB >= 7373 && testCB <= 7378) || testCB == 8192)
             {
                 cons[7] += 3;
                 cons[8] += 3;
             }
-            else if (nand.bl.CB_A >= 5761 && nand.bl.CB_A <= 5780)
+            else if (testCB >= 5761 && testCB <= 5780)
             {
-                cons[2] += 3;
-                cons[14] += 3;
+                if (nand.bl.CB_B >= 7373 && nand.bl.CB_B <= 7378)
+                {
+                    cons[7] += 3;
+                    cons[8] += 3;
+                }
+                else
+                {
+                    cons[2] += 3;
+                    cons[14] += 3;
+                }
             }
 
             // smc check
@@ -3040,7 +3058,6 @@ namespace JRunner.Nand
             File.WriteAllBytes(flashFilePath, flashData);
 
             Console.WriteLine("Successfully injected XeLL");
-            Console.WriteLine("");
         }
 
         /// <summary>

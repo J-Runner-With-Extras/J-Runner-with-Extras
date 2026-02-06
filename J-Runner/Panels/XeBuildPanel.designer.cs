@@ -182,19 +182,19 @@
             // 
             this.chkElpis.AutoSize = true;
             this.chkElpis.ForeColor = System.Drawing.SystemColors.ControlText;
-            this.chkElpis.Location = new System.Drawing.Point(229, 70);
+            this.chkElpis.Location = new System.Drawing.Point(229, 21);
             this.chkElpis.Name = "chkElpis";
-            this.chkElpis.Size = new System.Drawing.Size(48, 17);
+            this.chkElpis.Size = new System.Drawing.Size(79, 17);
             this.chkElpis.TabIndex = 100;
-            this.chkElpis.Text = "Elpis";
-            this.toolTip1.SetToolTip(this.chkElpis, "Xenon only, use 7378 CB_B for consoles with Elpis or Rhea GPUs");
+            this.chkElpis.Text = "Elpis/Rhea";
+            this.toolTip1.SetToolTip(this.chkElpis, "Use 7378 CB_B for consoles with Elpis or Rhea GPUs");
             this.chkElpis.UseVisualStyleBackColor = true;
             this.chkElpis.CheckedChanged += new System.EventHandler(this.chkElpis_CheckedChanged);
             // 
             // Rgh3Label2
             // 
             this.Rgh3Label2.AutoSize = true;
-            this.Rgh3Label2.Location = new System.Drawing.Point(286, 64);
+            this.Rgh3Label2.Location = new System.Drawing.Point(286, 70);
             this.Rgh3Label2.Name = "Rgh3Label2";
             this.Rgh3Label2.Size = new System.Drawing.Size(19, 13);
             this.Rgh3Label2.TabIndex = 21;
@@ -204,7 +204,7 @@
             // Rgh3Label
             // 
             this.Rgh3Label.AutoSize = true;
-            this.Rgh3Label.Location = new System.Drawing.Point(281, 47);
+            this.Rgh3Label.Location = new System.Drawing.Point(281, 53);
             this.Rgh3Label.Name = "Rgh3Label";
             this.Rgh3Label.Size = new System.Drawing.Size(32, 13);
             this.Rgh3Label.TabIndex = 99;
@@ -217,7 +217,7 @@
             "10",
             "27",
             "OC"});
-            this.Rgh3Mhz.Location = new System.Drawing.Point(284, 61);
+            this.Rgh3Mhz.Location = new System.Drawing.Point(284, 67);
             this.Rgh3Mhz.Name = "Rgh3Mhz";
             this.Rgh3Mhz.Size = new System.Drawing.Size(36, 21);
             this.Rgh3Mhz.TabIndex = 20;
@@ -228,7 +228,7 @@
             // 
             this.chkRgh3.AutoSize = true;
             this.chkRgh3.ForeColor = System.Drawing.SystemColors.ControlText;
-            this.chkRgh3.Location = new System.Drawing.Point(229, 53);
+            this.chkRgh3.Location = new System.Drawing.Point(229, 69);
             this.chkRgh3.Name = "chkRgh3";
             this.chkRgh3.Size = new System.Drawing.Size(56, 17);
             this.chkRgh3.TabIndex = 19;
@@ -254,7 +254,7 @@
             // chkCR4
             // 
             this.chkCR4.AutoSize = true;
-            this.chkCR4.Location = new System.Drawing.Point(229, 21);
+            this.chkCR4.Location = new System.Drawing.Point(229, 37);
             this.chkCR4.Name = "chkCR4";
             this.chkCR4.Size = new System.Drawing.Size(47, 17);
             this.chkCR4.TabIndex = 17;
@@ -321,7 +321,7 @@
             // 
             this.chkSMCP.AutoSize = true;
             this.chkSMCP.ForeColor = System.Drawing.SystemColors.ControlText;
-            this.chkSMCP.Location = new System.Drawing.Point(229, 37);
+            this.chkSMCP.Location = new System.Drawing.Point(229, 53);
             this.chkSMCP.Name = "chkSMCP";
             this.chkSMCP.Size = new System.Drawing.Size(55, 17);
             this.chkSMCP.TabIndex = 18;
@@ -1132,7 +1132,6 @@
         private System.Windows.Forms.CheckBox chkRgh3;
         private System.Windows.Forms.Label Rgh3Label;
         private System.Windows.Forms.ComboBox Rgh3Mhz;
-        private System.Windows.Forms.Label Rgh3Label2;
         private System.Windows.Forms.CheckBox chkXLUsb;
         private System.Windows.Forms.GroupBox groupBox1;
         private System.Windows.Forms.CheckBox chkXLHdd;
@@ -1153,5 +1152,6 @@
         private System.Windows.Forms.CheckBox chkCoronaKeyFix;
         private System.Windows.Forms.CheckBox chkElpis;
         private System.Windows.Forms.CheckBox chkHddSsAuth;
+        private System.Windows.Forms.Label Rgh3Label2;
     }
 }
