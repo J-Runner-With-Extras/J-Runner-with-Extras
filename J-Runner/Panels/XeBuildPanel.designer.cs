@@ -33,6 +33,7 @@
             this.MainTabs = new System.Windows.Forms.TabControl();
             this.tabXeBuild = new System.Windows.Forms.TabPage();
             this.chkElpis = new System.Windows.Forms.CheckBox();
+            this.Rgh3Label2 = new System.Windows.Forms.Label();
             this.Rgh3Label = new System.Windows.Forms.Label();
             this.Rgh3Mhz = new System.Windows.Forms.ComboBox();
             this.chkRgh3 = new System.Windows.Forms.CheckBox();
@@ -105,7 +106,6 @@
             this.chkNoWrite = new System.Windows.Forms.CheckBox();
             this.btnXEUpdate = new System.Windows.Forms.Button();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
-            this.Rgh3Label2 = new System.Windows.Forms.Label();
             this.groupBox7.SuspendLayout();
             this.MainTabs.SuspendLayout();
             this.tabXeBuild.SuspendLayout();
@@ -191,6 +191,16 @@
             this.chkElpis.UseVisualStyleBackColor = true;
             this.chkElpis.CheckedChanged += new System.EventHandler(this.chkElpis_CheckedChanged);
             // 
+            // Rgh3Label2
+            // 
+            this.Rgh3Label2.AutoSize = true;
+            this.Rgh3Label2.Location = new System.Drawing.Point(286, 70);
+            this.Rgh3Label2.Name = "Rgh3Label2";
+            this.Rgh3Label2.Size = new System.Drawing.Size(19, 13);
+            this.Rgh3Label2.TabIndex = 21;
+            this.Rgh3Label2.Text = "27";
+            this.Rgh3Label2.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            // 
             // Rgh3Label
             // 
             this.Rgh3Label.AutoSize = true;
@@ -213,6 +223,7 @@
             this.Rgh3Mhz.TabIndex = 20;
             this.Rgh3Mhz.Text = "27";
             this.toolTip1.SetToolTip(this.Rgh3Mhz, "Sets the I2C slowdown type");
+            this.Rgh3Mhz.SelectedIndexChanged += new System.EventHandler(this.Rgh3Mhz_SelectedIndexChanged);
             // 
             // chkRgh3
             // 
@@ -1033,16 +1044,6 @@
             this.btnXEUpdate.Text = "Update";
             this.btnXEUpdate.UseVisualStyleBackColor = true;
             this.btnXEUpdate.Click += new System.EventHandler(this.btnXEUpdate_Click);
-            // 
-            // Rgh3Label2
-            // 
-            this.Rgh3Label2.AutoSize = true;
-            this.Rgh3Label2.Location = new System.Drawing.Point(286, 70);
-            this.Rgh3Label2.Name = "Rgh3Label2";
-            this.Rgh3Label2.Size = new System.Drawing.Size(19, 13);
-            this.Rgh3Label2.TabIndex = 21;
-            this.Rgh3Label2.Text = "27";
-            this.Rgh3Label2.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             // 
             // XeBuildPanel
             // 

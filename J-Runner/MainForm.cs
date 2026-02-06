@@ -2143,7 +2143,7 @@ namespace JRunner
                 if (nand.bl.CB_X > 0) xPanel.setRgh3Checked(true);
 
                 // Winbond
-                if (nand.bl.CB_B == 13182)xPanel.setWBChecked(true);
+                if (nand.bl.CB_B == 13182) xPanel.setWBChecked(true);
 
                 // Elpis/Rhea Xenon
                 if ((nand.bl.CB_A >= 7373 && nand.bl.CB_A <= 7378) || (nand.bl.CB_B >= 7373 && nand.bl.CB_B <= 7378)) xPanel.setElpisChecked(true);

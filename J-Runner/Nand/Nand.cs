@@ -3058,7 +3058,6 @@ namespace JRunner.Nand
             File.WriteAllBytes(flashFilePath, flashData);
 
             Console.WriteLine("Successfully injected XeLL");
-            Console.WriteLine("");
         }
 
         /// <summary>
