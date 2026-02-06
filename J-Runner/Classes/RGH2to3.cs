@@ -397,6 +397,34 @@ namespace JRunner.Classes
                     if(flashHasEcc)
                         patchFlashData = UnEcc(patchFlashData);
                 }
+                else if (loaderName == "CD")
+                {
+                    // SE
+                    loaderName = ReadString(patchFlashData, (int)loaderOffs, 2);
+                    loaderVer = U16ReadBE(patchFlashData, (int)(loaderOffs + 2));
+                    loaderFlags = U32ReadBE(patchFlashData, (int)(loaderOffs + 4));
+                    loaderEntry = U32ReadBE(patchFlashData, (int)(loaderOffs + 8));
+                    loaderSize = U32ReadBE(patchFlashData, (int)(loaderOffs + 12));
+                    loaderOffs += loaderSize;
+
+                    if (loaderName == "SE")
+                    {
+                        // Extra Pages
+                        int numPages = (int)loaderOffs / 0x200;
+                        if (loaderOffs % 0x200 != 0)
+                            numPages += 1;
+                        numPages += 4;
+
+                        int flashEnd = numPages * (flashHasEcc ? 0x210 : 0x200);
+                        patchFlashData = flashData.Take(flashEnd).ToArray();
+                        if (flashHasEcc)
+                            patchFlashData = UnEcc(patchFlashData);
+                    }
+                    else
+                    {
+                        return RGH_CONVERT_ERROR.ERROR_XELL_NOT_FOUND;
+                    }
+                }
                 else
                 {
                     return RGH_CONVERT_ERROR.ERROR_XELL_NOT_FOUND;

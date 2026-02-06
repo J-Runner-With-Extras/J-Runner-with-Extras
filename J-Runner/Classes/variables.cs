@@ -80,10 +80,10 @@ namespace JRunner
             W10_11
         }
 
-        public static string version = "3.3.0 r5 Beta";
-        public static string build = "3304." + DateTime.ParseExact(Properties.Resources.Build.Trim(), "MM-dd-yyyy HH:mm:ss", null).ToString("yyMMdd.HHmm");
-        public const string staticversion = "3.3.0.4";
-        public static int revision = 38;
+        public static string version = "3.4.0";
+        public static string build = "3400." + DateTime.ParseExact(Properties.Resources.Build.Trim(), "MM-dd-yyyy HH:mm:ss", null).ToString("yyMMdd.HHmm");
+        public const string staticversion = "3.4.0.0";
+        public static int revision = 39;
         public static Windows currentOS = Windows.Unknown;
         public static bool isWinXP = false;
         public static bool isscanningip = false;
@@ -114,7 +114,7 @@ namespace JRunner
         public static bool logtofile = true;
         public static bool debugMode = false;
         public static bool generate = false;
-        public static bool checkfiles = true, deletefiles = false, extractfiles = false;
+        public static bool checkfiles = true, deletefiles = false, extractfiles = false, devkitnotdevgl = false;
         public static string preferredDash = latest_dashboard.ToString();
         public static bool DashlaunchE = false;
         public static bool LPTtiming = false;
@@ -299,7 +299,7 @@ namespace JRunner
         public static string FindFolder = "";
         public static bool rgh2 = false, xefinished = false;
         public static bool rgh1able = true;
-        public static int dashversion = 0;
+        public static string dashversion = "";
         public static bool copiedSMC = false;
         public static bool copiedXLDrive = false;
         public static bool foundXlUsb = false, foundXlHdd = false, foundXlBoth = false, foundUsbdSec = false, foundCoronaKeyFix = false;

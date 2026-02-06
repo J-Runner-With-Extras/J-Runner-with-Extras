@@ -14,7 +14,7 @@ namespace JRunner.Forms
 
         private void txtGenKey_TextChanged(object sender, EventArgs e)
         {
-            if (txtGenKey.TextLength > 0) btnInsertKey.Enabled = true;
+            if (txtGenKey.TextLength == 32) btnInsertKey.Enabled = true;
             else btnInsertKey.Enabled = false;
         }
 
@@ -28,6 +28,20 @@ namespace JRunner.Forms
         {
             MainForm.mainForm.updateCpuKeyText(txtGenKey.Text);
             this.Close();
+        }
+
+        private void btnValKey_Click(object sender, EventArgs e)
+        {
+            if(Nand.Nand.VerifyKey(Oper.StringToByteArray(txtGenKey.Text)))
+            {
+                MessageBox.Show("CPU Key is valid!", "Validate CPU Key", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                btnInsertKey.Enabled = true;
+            }
+            else
+            {
+                MessageBox.Show("CPU Key is invalid", "Validate CPU Key", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                btnInsertKey.Enabled = false;
+            }
         }
     }
 }

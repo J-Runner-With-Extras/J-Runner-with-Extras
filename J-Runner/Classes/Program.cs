@@ -152,7 +152,7 @@ namespace JRunner
                     if (process.Id != current.Id)
                     {
                         found = true;
-                        NativeMethods.SendMessage(
+                        NativeMethods.PostMessage(
                             (IntPtr)NativeMethods.HWND_BROADCAST,
                             NativeMethods.WM_SHOWAPP,
                             IntPtr.Zero,
