@@ -330,7 +330,7 @@ namespace JRunner.Panels
 
             if (!rbtnRetail.Checked && !rbtnGlitch.Checked && !rbtnGlitch2.Checked && !rbtnGlitch2m.Checked && !rbtnDevGL.Checked) chkCleanSMC.Checked = false;
 
-            if(!rbtnGlitch2.Checked)
+            if(!rbtnGlitch2.Checked && !rbtnGlitch2m.Checked)
             {
                 chkElpis.Checked = false;
             }
@@ -883,11 +883,11 @@ namespace JRunner.Panels
         {
             if (chkElpis.Checked)
             {
-                Console.WriteLine("Elpis CB_B selected");
+                Console.WriteLine("Elpis/Rhea selected");
             }
             else if (!chkElpis.Checked) // Don't uselessly spam the console
             {
-                Console.WriteLine("Elpis CB_B deselected");
+                Console.WriteLine("Elpis/Rhea deselected");
             }
 
             updateElpis();
@@ -1199,7 +1199,6 @@ namespace JRunner.Panels
             Rgh3Mhz.Visible = false;
             chkWB.Visible = false;
             chkWB4G.Enabled = false;
-            chkElpis.Enabled = false;
             chkElpis.Visible = false;
             chkXdkBuild.Visible = false;
             chkRJtag.Visible = false;
