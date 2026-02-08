@@ -860,7 +860,7 @@ namespace JRunner.Panels
         {
             if (Rgh3Mhz.SelectedIndex == 2)
             {
-                MessageBox.Show("Warning: This mode overclocks the Southbridge in order to work, which MAY CAUSE DAMAGE to your console\n\nUse with caution", "Steep Hill Ahead", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("Warning: This mode overclocks the Southbridge in order to work, which MAY CAUSE DAMAGE to your console.\n\nUse with caution.", "Steep Hill Ahead", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
 
@@ -905,7 +905,7 @@ namespace JRunner.Panels
         {
             if (chkWB4G.Checked)
             {
-                MessageBox.Show("Warning: This function is for advanced users only\n\nIf you don't understand what this is for, use WB 2K on the XeBuild tab instead", "Steep Hill Ahead", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("Warning: This function is for advanced users only.\n\nIf you don't understand what this is for, use WB 2K on the XeBuild tab instead.", "Steep Hill Ahead", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 Console.WriteLine("Winbond 2K Buffer selected");
                 chkWB.Checked = false;
             }
@@ -1353,7 +1353,7 @@ namespace JRunner.Panels
             if( (variables.ctype.ID == 7 || variables.ctype.ID == 13 || variables.ctype.ID == 14) &&
                  variables.ttyp != variables.hacktypes.devgl )
             {
-                if (MessageBox.Show("XeBuild does not support building 64MB images for Xenon, Zephyr, or Falcon\n\nContinuing will cause a 16MB image to be built\n\nDo you want to continue?", "Steep Hill Ahead", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.No)
+                if (MessageBox.Show("XeBuild does not support building 64MB images for Xenon, Zephyr, or Falcon.\n\nContinuing will cause a 16MB image to be built.\n\nDo you want to continue?", "Steep Hill Ahead", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.No)
                 {
                     return;
                 }

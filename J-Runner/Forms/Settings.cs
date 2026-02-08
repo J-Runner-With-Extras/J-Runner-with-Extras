@@ -304,7 +304,7 @@ namespace JRunner.Forms
 
         private void chkNoPatchWarnings_Click(object sender, EventArgs e)
         {
-            if (chkNoPatchWarnings.Checked) MessageBox.Show("Warnings or messages about patches will not be displayed as pop-ups\n\nConsole log messages will continue to show", "Steep Hill Ahead", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            if (chkNoPatchWarnings.Checked) MessageBox.Show("Warnings or messages about patches will not be displayed as pop-ups.\n\nConsole log messages will continue to show.", "Steep Hill Ahead", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
 
         #endregion
