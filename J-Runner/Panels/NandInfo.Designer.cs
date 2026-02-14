@@ -31,6 +31,8 @@
             this.tabControl1 = new System.Windows.Forms.TabControl();
             this.tabPageNand = new System.Windows.Forms.TabPage();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.labelCBX = new System.Windows.Forms.Label();
+            this.textBoxCBX = new System.Windows.Forms.TextBox();
             this.textBoxSmcVer = new System.Windows.Forms.TextBox();
             this.label4 = new System.Windows.Forms.Label();
             this.textBoxCbType = new System.Windows.Forms.TextBox();
@@ -89,8 +91,6 @@
             this.labeldvdkey = new System.Windows.Forms.Label();
             this.tabPageBadBlocks = new System.Windows.Forms.TabPage();
             this.txtBadBlocks = new System.Windows.Forms.TextBox();
-            this.labelCBX = new System.Windows.Forms.Label();
-            this.textBoxCBX = new System.Windows.Forms.TextBox();
             this.tabControl1.SuspendLayout();
             this.tabPageNand.SuspendLayout();
             this.groupBox1.SuspendLayout();
@@ -172,6 +172,28 @@
             this.groupBox1.DragDrop += new System.Windows.Forms.DragEventHandler(this.NandInfo_DragDrop);
             this.groupBox1.DragEnter += new System.Windows.Forms.DragEventHandler(this.NandInfo_DragEnter);
             // 
+            // labelCBX
+            // 
+            this.labelCBX.AutoSize = true;
+            this.labelCBX.Location = new System.Drawing.Point(217, 114);
+            this.labelCBX.Name = "labelCBX";
+            this.labelCBX.Size = new System.Drawing.Size(34, 13);
+            this.labelCBX.TabIndex = 73;
+            this.labelCBX.Text = "CB_X";
+            this.labelCBX.Visible = false;
+            // 
+            // textBoxCBX
+            // 
+            this.textBoxCBX.Location = new System.Drawing.Point(254, 111);
+            this.textBoxCBX.Name = "textBoxCBX";
+            this.textBoxCBX.ReadOnly = true;
+            this.textBoxCBX.Size = new System.Drawing.Size(62, 20);
+            this.textBoxCBX.TabIndex = 72;
+            this.textBoxCBX.TabStop = false;
+            this.textBoxCBX.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
+            this.textBoxCBX.Visible = false;
+            this.textBoxCBX.DoubleClick += new System.EventHandler(this.textBoxCBX_DoubleClick);
+            // 
             // textBoxSmcVer
             // 
             this.textBoxSmcVer.Location = new System.Drawing.Point(254, 15);
@@ -186,7 +208,7 @@
             // label4
             // 
             this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(200, 82);
+            this.label4.Location = new System.Drawing.Point(204, 82);
             this.label4.Name = "label4";
             this.label4.Size = new System.Drawing.Size(48, 13);
             this.label4.TabIndex = 70;
@@ -206,7 +228,7 @@
             // label3
             // 
             this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(180, 18);
+            this.label3.Location = new System.Drawing.Point(184, 18);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(68, 13);
             this.label3.TabIndex = 68;
@@ -777,28 +799,6 @@
             this.txtBadBlocks.TabStop = false;
             this.txtBadBlocks.Text = "No Nand Loaded";
             this.txtBadBlocks.DoubleClick += new System.EventHandler(this.txtBadBlocks_DoubleClick);
-            // 
-            // labelCBX
-            // 
-            this.labelCBX.AutoSize = true;
-            this.labelCBX.Location = new System.Drawing.Point(214, 114);
-            this.labelCBX.Name = "labelCBX";
-            this.labelCBX.Size = new System.Drawing.Size(34, 13);
-            this.labelCBX.TabIndex = 73;
-            this.labelCBX.Text = "CB_X";
-            this.labelCBX.Visible = false;
-            // 
-            // textBoxCBX
-            // 
-            this.textBoxCBX.Location = new System.Drawing.Point(254, 111);
-            this.textBoxCBX.Name = "textBoxCBX";
-            this.textBoxCBX.ReadOnly = true;
-            this.textBoxCBX.Size = new System.Drawing.Size(62, 20);
-            this.textBoxCBX.TabIndex = 72;
-            this.textBoxCBX.TabStop = false;
-            this.textBoxCBX.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
-            this.textBoxCBX.Visible = false;
-            this.textBoxCBX.DoubleClick += new System.EventHandler(this.textBoxCBX_DoubleClick);
             // 
             // NandInfo
             // 
