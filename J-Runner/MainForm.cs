@@ -3159,7 +3159,7 @@ namespace JRunner
             if ( (variables.ctype.ID == 7 || variables.ctype.ID == 13 || variables.ctype.ID == 14) &&
                  variables.ttyp != variables.hacktypes.devgl )
             {
-                if (MessageBox.Show("XeBuild does not support building 64MB images for Xenon, Zephyr, or Falcon\n\nContinuing will cause a 16MB image to be built\n\nDo you want to continue?", "Steep Hill Ahead", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.No)
+                if (MessageBox.Show("XeBuild does not support building 64MB images for Xenon, Zephyr, or Falcon.\n\nContinuing will cause a 16MB image to be built.\n\nDo you want to continue?", "Steep Hill Ahead", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.No)
                 {
                     return;
                 }

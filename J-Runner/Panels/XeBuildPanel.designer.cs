@@ -194,7 +194,7 @@
             // Rgh3Label2
             // 
             this.Rgh3Label2.AutoSize = true;
-            this.Rgh3Label2.Location = new System.Drawing.Point(286, 70);
+            this.Rgh3Label2.Location = new System.Drawing.Point(285, 70);
             this.Rgh3Label2.Name = "Rgh3Label2";
             this.Rgh3Label2.Size = new System.Drawing.Size(19, 13);
             this.Rgh3Label2.TabIndex = 21;
@@ -204,7 +204,7 @@
             // Rgh3Label
             // 
             this.Rgh3Label.AutoSize = true;
-            this.Rgh3Label.Location = new System.Drawing.Point(281, 53);
+            this.Rgh3Label.Location = new System.Drawing.Point(280, 53);
             this.Rgh3Label.Name = "Rgh3Label";
             this.Rgh3Label.Size = new System.Drawing.Size(32, 13);
             this.Rgh3Label.TabIndex = 99;
@@ -217,9 +217,9 @@
             "10",
             "27",
             "OC"});
-            this.Rgh3Mhz.Location = new System.Drawing.Point(284, 67);
+            this.Rgh3Mhz.Location = new System.Drawing.Point(283, 67);
             this.Rgh3Mhz.Name = "Rgh3Mhz";
-            this.Rgh3Mhz.Size = new System.Drawing.Size(36, 21);
+            this.Rgh3Mhz.Size = new System.Drawing.Size(38, 21);
             this.Rgh3Mhz.TabIndex = 20;
             this.Rgh3Mhz.Text = "27";
             this.toolTip1.SetToolTip(this.Rgh3Mhz, "Sets the I2C slowdown type");
