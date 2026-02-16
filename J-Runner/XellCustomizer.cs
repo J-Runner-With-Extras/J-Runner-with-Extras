@@ -35,8 +35,8 @@ namespace JRunner
             }
             catch
             {
-                txtXellPreview.ForeColor = bgcolor = Color.White;
-                txtXellPreview.BackColor = fgcolor = Color.FromArgb(78, 68, 216);
+                txtXellPreview.BackColor = bgcolor = Color.FromArgb(78, 68, 216);
+                txtXellPreview.ForeColor = fgcolor = Color.White;
             }
         }
 
