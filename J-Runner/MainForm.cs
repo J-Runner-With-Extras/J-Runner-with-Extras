@@ -3273,6 +3273,18 @@ namespace JRunner
             }
         }
 
+        private void customizeThemeToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (String.IsNullOrEmpty(variables.filename1))
+            {
+                MessageBox.Show("Please load a source NAND image before attempting to customize the XeLL Theme", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            XellCustomizer xc = new XellCustomizer();
+            xc.InitializeAndShowDialog(variables.filename1);
+        }
+
         private void zeroPairSbToolStripMenuItem_Click(object sender, EventArgs e)
         {
             if (String.IsNullOrWhiteSpace(variables.filename1))

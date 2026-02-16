@@ -219,7 +219,6 @@ namespace JRunner.Nand
             {
                 if (variables.debugMode) Console.WriteLine(ascii.GetString(temp));
                 if (temp[0] == 0x46 && temp[1] == 0x57 && temp[2] == 0x41 && temp[3] == 0x00) Console.WriteLine("DemoN Firmware");
-                else if (s1 != 0x40000) Console.WriteLine("Header is wrong");
             }
             //
 
@@ -2786,7 +2785,6 @@ namespace JRunner.Nand
             {
                 if (variables.debugMode) Console.WriteLine(ascii.GetString(data));
                 if (data[0] == 0x46 && data[1] == 0x57 && data[2] == 0x41 && data[3] == 0x00) Console.WriteLine("DemoN FW");
-                else if (size != 0x40000) Console.WriteLine("Header is wrong");
             }
             if (data[0] == 0xFF && data[1] == 0x4F)
             {

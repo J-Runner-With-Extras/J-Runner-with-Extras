@@ -580,6 +580,12 @@
     <Compile Include="WinUSB\FileIOApi.cs" />
     <Compile Include="WinUSB\WinUsbDevice.cs" />
     <Compile Include="WinUSB\WinUsbDeviceApi.cs" />
+    <Compile Include="XellCustomizer.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="XellCustomizer.Designer.cs">
+      <DependentUpon>XellCustomizer.cs</DependentUpon>
+    </Compile>
     <EmbeddedResource Include="CPUkeydb\EditMobo.resx">
       <DependentUpon>EditMobo.cs</DependentUpon>
       <SubType>Designer</SubType>
@@ -739,6 +745,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Forms\UpdUI.resx">
       <DependentUpon>UpdUI.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="XellCustomizer.resx">
+      <DependentUpon>XellCustomizer.cs</DependentUpon>
     </EmbeddedResource>
     <None Include="app.config">
       <SubType>Designer</SubType>
