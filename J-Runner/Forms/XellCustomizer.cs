@@ -89,7 +89,7 @@ namespace JRunner
                 blockType = Nand.Nand.identifylayout(sparedata);
             }
 
-            if (0 != flashData[0x4C])
+            if (0 != flashData[0x5F])
             {
                 bgcolor = Color.FromArgb(BitConverter.ToInt32(flashData.Skip(0x50).Take(0x4).ToArray(), 0));
                 fgcolor = Color.FromArgb(BitConverter.ToInt32(flashData.Skip(0x54).Take(0x4).ToArray(), 0));
@@ -128,7 +128,7 @@ namespace JRunner
             // Set the colour
             if (chkEnableColours.Checked)
             {
-                flashFirstPage[0x4C] = 0x1;
+                flashFirstPage[0x5F] = 0x1;
 
                 byte[] bgbytes = BitConverter.GetBytes(bgcolor.ToArgb());
                 byte[] fgbytes = BitConverter.GetBytes(fgcolor.ToArgb());
@@ -138,7 +138,7 @@ namespace JRunner
             }
             else
             {
-                flashFirstPage[0x4C] = 0x0;
+                flashFirstPage[0x5F] = 0x0;
             }
 
             // Set the copyright string, we're going to clip the string at 0x47
