@@ -258,7 +258,7 @@ namespace JRunner
             this.MinimizeBox = false;
             this.Name = "ConsoleSelect";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
-            this.Text = "Select Console Type";
+            this.Text = "Select Flash Type";
             this.Load += new System.EventHandler(this.ConsoleSelect_Load);
             this.phatBox.ResumeLayout(false);
             this.slimBox.ResumeLayout(false);
