@@ -251,12 +251,18 @@ namespace JRunner.Panels
                 checkBigffs(txt);
                 checkDashAndConsoleSpecificPatches(txt);
 
-                if (txt.Contains("Xenon") || txt.Contains("Winchester"))
+                if (txt.Contains("Winchester"))
                 {
                     chkCR4.Checked = false;
                     chkCR4.Enabled = false;
                     chkSMCP.Checked = false;
                     chkSMCP.Enabled = false;
+                }
+                else if (txt.Contains("Xenon"))
+                {
+                    chkCR4.Checked = false;
+                    chkCR4.Enabled = false;
+                    chkSMCP.Enabled = true;
                 }
                 else
                 {
