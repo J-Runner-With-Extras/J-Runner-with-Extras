@@ -305,7 +305,7 @@ namespace JRunner.Panels
             if (listView1.SelectedItems.Count == 0) return;
             string ldrive = listView1.SelectedItems[0].SubItems[1].Text;
             if (listView1.SelectedItems[0].SubItems[2].Text != "Removable") { Console.WriteLine("Must be a removable type"); return; }
-            if (MessageBox.Show("You are about to write to " + ldrive + "\n\nAre you sure you want to continue?", "Steep Hill Ahead", MessageBoxButtons.YesNo, MessageBoxIcon.Exclamation) == DialogResult.No) return;
+            if (MessageBox.Show("You are about to write to " + ldrive + ".\n\nAre you sure you want to continue?", "Steep Hill Ahead", MessageBoxButtons.YesNo, MessageBoxIcon.Exclamation) == DialogResult.No) return;
 
             var diskGeometry = DiskGeometry.FromDevice(@"\\.\" + ldrive.Replace("\\", ""));
             uint track = diskGeometry.BytesPerSector * (diskGeometry.Sector + 1);
@@ -364,7 +364,7 @@ namespace JRunner.Panels
             if (listView1.SelectedItems.Count == 0) return;
             string ldrive = listView1.SelectedItems[0].SubItems[1].Text;
             if (listView1.SelectedItems[0].SubItems[2].Text != "Removable") { Console.WriteLine("Must be a removable type"); return; }
-            if (MessageBox.Show("You are about to erase " + ldrive + "\n\nAre you sure you want to continue?", "Steep Hill Ahead", MessageBoxButtons.YesNo, MessageBoxIcon.Exclamation) == DialogResult.No) return;
+            if (MessageBox.Show("You are about to erase " + ldrive + ".\n\nAre you sure you want to continue?", "Steep Hill Ahead", MessageBoxButtons.YesNo, MessageBoxIcon.Exclamation) == DialogResult.No) return;
 
             var diskGeometry = DiskGeometry.FromDevice(@"\\.\" + ldrive.Replace("\\", ""));
             uint track = diskGeometry.BytesPerSector * (diskGeometry.Sector + 1);
@@ -591,7 +591,7 @@ namespace JRunner.Panels
         {
             if (chkFullDump.Checked)
             {
-                MessageBox.Show("Warning: This function is for advanced users only\n\nYou should not do a full dump unless you have a specific reason", "Steep Hill Ahead", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("Warning: This function is for advanced users only.\n\nYou should not do a full dump unless you have a specific reason.", "Steep Hill Ahead", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
     }

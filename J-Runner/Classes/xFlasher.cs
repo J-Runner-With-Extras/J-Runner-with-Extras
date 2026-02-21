@@ -956,7 +956,7 @@ namespace JRunner
 
             if (Process.GetProcessesByName("xsvftool").Length > 0)
             {
-                Console.WriteLine("xFlasher: xsvftool is already running!");
+                Console.WriteLine("xFlasher: XSVFtool is already running!");
                 return;
             }
 
@@ -1060,11 +1060,11 @@ namespace JRunner
                                 SoundPlayer success = new SoundPlayer(Properties.Resources.chime);
                                 success.Play();
                             }
-                            Console.WriteLine("xFlasher: Flash success!");
+                            string time = $"{watch.Elapsed.TotalSeconds:F2} sec(s)";
+                            Console.WriteLine("xFlasher: Flash Successful! Time Elapsed: {0}", time);
                         }
-                        else Console.WriteLine("xFlasher: Flash failed!");
+                        else Console.WriteLine("xFlasher: Flash Failed!");
 
-                        Console.WriteLine($"Time: {watch.Elapsed.TotalSeconds:F2}s");
                         Console.WriteLine();
 
                         if (File.Exists(MainForm.tempTimingPath))

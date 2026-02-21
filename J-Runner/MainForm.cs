@@ -2143,16 +2143,10 @@ namespace JRunner
                 if (nand.bl.CB_X > 0) xPanel.setRgh3Checked(true);
 
                 // Winbond
-                if (nand.bl.CB_B == 13182)
-                {
-                    xPanel.setWBChecked(true);
-                }
+                if (nand.bl.CB_B == 13182) xPanel.setWBChecked(true);
 
-                // Elpis CB_B for Xenon consoles with CB 73xx
-                if( nand.bl.CB_B >= 7373 && nand.bl.CB_B <= 7378 )
-                {
-                    xPanel.setElpisChecked(true);
-                }
+                // Elpis/Rhea Xenon
+                if ((nand.bl.CB_A >= 7373 && nand.bl.CB_A <= 7378) || (nand.bl.CB_B >= 7373 && nand.bl.CB_B <= 7378)) xPanel.setElpisChecked(true);
 
                 // Patches
                 xPanel.setXLUSBChecked(variables.foundXlUsb);
@@ -3165,7 +3159,7 @@ namespace JRunner
             if ( (variables.ctype.ID == 7 || variables.ctype.ID == 13 || variables.ctype.ID == 14) &&
                  variables.ttyp != variables.hacktypes.devgl )
             {
-                if (MessageBox.Show("XeBuild does not support building 64MB images for Xenon, Zephyr, or Falcon\n\nContinuing will cause a 16MB image to be built\n\nDo you want to continue?", "Steep Hill Ahead", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.No)
+                if (MessageBox.Show("XeBuild does not support building 64MB images for Xenon, Zephyr, or Falcon.\n\nContinuing will cause a 16MB image to be built.\n\nDo you want to continue?", "Steep Hill Ahead", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.No)
                 {
                     return;
                 }
@@ -3277,6 +3271,18 @@ namespace JRunner
                 Nand.Nand.injectXell(variables.filename1, ofd.FileName);
                 nand_init();
             }
+        }
+
+        private void customizeThemeToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (String.IsNullOrEmpty(variables.filename1))
+            {
+                MessageBox.Show("Please load a source NAND image before attempting to customize the XeLL Theme", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            XellCustomizer xc = new XellCustomizer();
+            xc.InitializeAndShowDialog(variables.filename1);
         }
 
         private void zeroPairSbToolStripMenuItem_Click(object sender, EventArgs e)
@@ -5391,9 +5397,7 @@ namespace JRunner
             return txtCPUKey.Text;
         }
 
-
-
-
         #endregion
+
     }
 }
