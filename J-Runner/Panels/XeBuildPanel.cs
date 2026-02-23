@@ -862,14 +862,6 @@ namespace JRunner.Panels
             else chkRgh3.Enabled = true;
         }
 
-        private void Rgh3Mhz_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            if (Rgh3Mhz.SelectedIndex == 2)
-            {
-                MessageBox.Show("Warning: This mode overclocks the Southbridge in order to work, which MAY CAUSE DAMAGE to your console.\n\nUse with caution.", "Steep Hill Ahead", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            }
-        }
-
         private void chkWB_CheckedChanged(object sender, EventArgs e)
         {
             if (chkWB.Checked)

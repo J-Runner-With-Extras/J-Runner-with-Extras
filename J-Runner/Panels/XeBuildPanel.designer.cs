@@ -223,7 +223,6 @@
             this.Rgh3Mhz.TabIndex = 20;
             this.Rgh3Mhz.Text = "27";
             this.toolTip1.SetToolTip(this.Rgh3Mhz, "Sets the I2C slowdown type");
-            this.Rgh3Mhz.SelectedIndexChanged += new System.EventHandler(this.Rgh3Mhz_SelectedIndexChanged);
             // 
             // chkRgh3
             // 
