@@ -378,7 +378,7 @@
             this.label2.AutoSize = true;
             this.label2.Location = new System.Drawing.Point(13, 59);
             this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(72, 13);
+            this.label2.Size = new System.Drawing.Size(59, 13);
             this.label2.TabIndex = 72;
             this.label2.Text = "Flash Type";
             // 
@@ -545,8 +545,9 @@
             this.chkHddSsAuth.Size = new System.Drawing.Size(80, 17);
             this.chkHddSsAuth.TabIndex = 2;
             this.chkHddSsAuth.Text = "HddSsAuth";
-            this.toolTip1.SetToolTip(this.chkHddSsAuth, "Patch Freeboot to do full auth for drives with a security sector,\r\nallowing FATXP" +
-        "lorer retail formatted drives with unused space \r\nto be detected and used.");
+            this.toolTip1.SetToolTip(this.chkHddSsAuth, "Patch Freeboot to do full authentication for drives with a security sector,\r\nallo" +
+        "wing FATXplorer retail formatted drives with unused space \r\nto be detected and u" +
+        "sed");
             this.chkHddSsAuth.UseVisualStyleBackColor = true;
             this.chkHddSsAuth.CheckedChanged += new System.EventHandler(this.chkHddSsAuth_CheckedChanged);
             // 
