@@ -202,9 +202,9 @@ namespace JRunner
             SendCmd(serial, cmd);
 
             UInt32 flashconfig = RecvUInt32(serial);
-            string flashconfigStr = flashconfig.ToString("X");
+            string flashconfigStr = flashconfig.ToString("X8");
 
-            if (flashconfig != 0x00000000 && flashconfig != 0xFFFFFFFF) Console.WriteLine("Flash Config: 0x" + flashconfig.ToString("X8"));
+            if (flashconfig != 0x00000000 && flashconfig != 0xFFFFFFFF) Console.WriteLine("Flash Config: 0x" + flashconfigStr);
 
             if (flashconfig == 0x00000000 || flashconfig == 0xFFFFFFFF)
             {
