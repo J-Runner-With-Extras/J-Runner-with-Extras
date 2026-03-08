@@ -2143,7 +2143,7 @@ namespace JRunner
                 if (nand.bl.CB_X > 0) xPanel.setRgh3Checked(true);
 
                 // Winbond
-                if (nand.bl.CB_B == 13182) xPanel.setWBChecked(true);
+                if (nand.bl.CB_A == 13121 && nand.bl.CB_B == 13182) xPanel.setWBChecked(true); // ONLY for images that are already Glitch2 + WB
 
                 // Elpis/Rhea Xenon
                 if ((nand.bl.CB_A >= 7373 && nand.bl.CB_A <= 7378) || (nand.bl.CB_B >= 7373 && nand.bl.CB_B <= 7378)) xPanel.setElpisChecked(true);
@@ -2394,7 +2394,7 @@ namespace JRunner
                         variables.filename1 = Path.Combine(variables.rootfolder, @"common\xell-images\glitch2", variables.Glitch2_jasper + cr4 + smcp + ".ecc");
                         break;
                     case 8:
-                        variables.filename1 = Path.Combine(variables.rootfolder, @"common\xell-images\glitch2", variables.Glitch2_xenon + elpis + ".ecc"); // No CR4 or SMC+
+                        variables.filename1 = Path.Combine(variables.rootfolder, @"common\xell-images\glitch2", variables.Glitch2_xenon + elpis + smcp + ".ecc"); // No CR4
                         break;
                     case 9:
                         variables.filename1 = Path.Combine(variables.rootfolder, @"common\xell-images\glitch2", variables.Glitch2_corona + wb + cr4 + smcp + ".ecc");
