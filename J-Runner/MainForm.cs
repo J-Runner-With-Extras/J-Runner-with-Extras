@@ -2143,7 +2143,7 @@ namespace JRunner
                 if (nand.bl.CB_X > 0) xPanel.setRgh3Checked(true);
 
                 // Winbond
-                if (nand.bl.CB_B == 13182) xPanel.setWBChecked(true);
+                if (nand.bl.CB_A == 13121 && nand.bl.CB_B == 13182) xPanel.setWBChecked(true); // ONLY for images that are already Glitch2 + WB
 
                 // Elpis/Rhea Xenon
                 if ((nand.bl.CB_A >= 7373 && nand.bl.CB_A <= 7378) || (nand.bl.CB_B >= 7373 && nand.bl.CB_B <= 7378)) xPanel.setElpisChecked(true);
@@ -2394,7 +2394,7 @@ namespace JRunner
                         variables.filename1 = Path.Combine(variables.rootfolder, @"common\xell-images\glitch2", variables.Glitch2_jasper + cr4 + smcp + ".ecc");
                         break;
                     case 8:
-                        variables.filename1 = Path.Combine(variables.rootfolder, @"common\xell-images\glitch2", variables.Glitch2_xenon + elpis + ".ecc"); // No CR4 or SMC+
+                        variables.filename1 = Path.Combine(variables.rootfolder, @"common\xell-images\glitch2", variables.Glitch2_xenon + elpis + smcp + ".ecc"); // No CR4
                         break;
                     case 9:
                         variables.filename1 = Path.Combine(variables.rootfolder, @"common\xell-images\glitch2", variables.Glitch2_corona + wb + cr4 + smcp + ".ecc");
@@ -3469,6 +3469,49 @@ namespace JRunner
             else
             {
                 rgh3Build.injectECC(ofd.FileName, variables.cpukey);
+            }
+        }
+
+        private void injectRGH3CBXToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(variables.filename1))
+            {
+                MessageBox.Show("No nand loaded in source", "Can't", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            if (!Nand.Nand.VerifyKey(Oper.StringToByteArray(variables.cpukey)))
+            {
+                Console.WriteLine("Bad CPU Key");
+                return;
+            }
+
+            if (!nand.cpukeyverification(variables.cpukey))
+            {
+                Console.WriteLine("Wrong CPU Key");
+                return;
+            }
+
+            OpenFileDialog ofd = new OpenFileDialog();
+            ofd.Filter = "Glitch3 ECC (*.ecc)|*.ecc|All files (*.*)|*.*";
+            ofd.Title = "Select RGH1.3 or RGH3 ECC file";
+            ofd.InitialDirectory = variables.rootfolder;
+            ofd.RestoreDirectory = false;
+
+            if (ofd.ShowDialog() != DialogResult.OK)
+            {
+                return;
+            }
+
+            if (xPanel.getRbtnGlitch2mChecked())
+            {
+                // MFG loaders and by extension Glitch2m images encrypt the CB_B differently
+                // than retail CB_B, so we need to use a zero CPU key for invoking rgh3build
+                rgh3Build.injectECC(ofd.FileName, "00000000000000000000000000000000", false);
+            }
+            else
+            {
+                rgh3Build.injectECC(ofd.FileName, variables.cpukey, false);
             }
         }
 

@@ -248,11 +248,11 @@
             // labelcon
             // 
             this.labelcon.AutoSize = true;
-            this.labelcon.Location = new System.Drawing.Point(27, 18);
+            this.labelcon.Location = new System.Drawing.Point(13, 18);
             this.labelcon.Name = "labelcon";
-            this.labelcon.Size = new System.Drawing.Size(45, 13);
+            this.labelcon.Size = new System.Drawing.Size(59, 13);
             this.labelcon.TabIndex = 66;
-            this.labelcon.Text = "Console";
+            this.labelcon.Text = "Flash Type";
             // 
             // textBoxpd_cb
             // 
@@ -622,11 +622,11 @@
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(27, 18);
+            this.label2.Location = new System.Drawing.Point(13, 18);
             this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(45, 13);
+            this.label2.Size = new System.Drawing.Size(59, 13);
             this.label2.TabIndex = 70;
-            this.label2.Text = "Console";
+            this.label2.Text = "Flash Type";
             // 
             // label1
             // 

@@ -607,6 +607,10 @@ namespace JRunner.Classes
                 {
                     File.Copy(variables.xepath + "JASPER_SMC+.bin", variables.xepath + "SMC.bin", true);
                 }
+                else if (_ctype.ID == 7 || _ctype.ID == 8)
+                {
+                    File.Copy(variables.xepath + "XENON_SMC+.bin", variables.xepath + "SMC.bin", true);
+                }
                 else if (_ctype.ID == 9 || _ctype.ID == 10 || _ctype.ID == 11)
                 {
                     File.Copy(variables.xepath + "CORONA_SMC+.bin", variables.xepath + "SMC.bin", true);
@@ -703,6 +707,10 @@ namespace JRunner.Classes
                 else if (_ctype.ID == 4 || _ctype.ID == 5 || _ctype.ID == 6)
                 {
                     File.Copy(variables.xepath + "JASPER_SMC+.bin", variables.xepath + "SMC.bin", true);
+                }
+                else if (_ctype.ID == 7 || _ctype.ID == 8)
+                {
+                    File.Copy(variables.xepath + "XENON_SMC+.bin", variables.xepath + "SMC.bin", true);
                 }
                 else if (_ctype.ID == 9 || _ctype.ID == 10 || _ctype.ID == 11)
                 {
