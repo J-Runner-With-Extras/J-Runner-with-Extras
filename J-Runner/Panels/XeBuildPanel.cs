@@ -1,4 +1,5 @@
-﻿using System;
+﻿using JRunner.Classes;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -239,6 +240,8 @@ namespace JRunner.Panels
                 chkListBoxPatches.SetItemChecked(i, false);
             }
             chkXeSettings.Checked = false;
+
+            DiscordRpc.SetIdle();
         }
 
         public void setMBname(string txt)
@@ -285,6 +288,8 @@ namespace JRunner.Panels
 
                 checkRgh3(txt);
             }));
+
+            DiscordRpc.SetPresence("Modding the xbeezy", txt);
         }
         #endregion
 

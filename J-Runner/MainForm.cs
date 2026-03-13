@@ -1,4 +1,5 @@
-﻿using JRunner.Forms;
+﻿using JRunner.Classes;
+using JRunner.Forms;
 using JRunner.Nand;
 using LibUsbDotNet.DeviceNotify;
 using Microsoft.Win32;
@@ -129,6 +130,8 @@ namespace JRunner
                 this.Visible = true;
                 if (splash != null) splash.Dispose();
             }
+
+            DiscordRpc.SetIdle();
         }
 
         private void MainForm_Load(object sender, EventArgs e) // Will not run until the form is shown for the first time
@@ -180,6 +183,8 @@ namespace JRunner
                 if (File.Exists(tempTimingPath)) File.Delete(tempTimingPath);
             }
             catch { }
+
+            DiscordRpc.SetIdle();
         }
 
         private void showApplication()
@@ -388,6 +393,8 @@ namespace JRunner
 
             savesettings();
             saveToLog(true);
+
+            DiscordRpc.Close();
         }
 
         private void saveToLog(bool bFormClosing)
