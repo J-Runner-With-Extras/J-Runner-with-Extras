@@ -44,7 +44,7 @@ namespace JRunner
                 jsonclient = new HttpClient();
                 jsonclient.DefaultRequestHeaders.Add("User-Agent", "J-Runner-With-Extras/" + variables.staticversion);
 
-                string jsondatastring = jsonclient.GetStringAsync("https://api.github.com/repos/Pheeeeenom/J-Runner-with-Extras/releases/latest").Result;
+                string jsondatastring = jsonclient.GetStringAsync("https://api.github.com/repos/J-Runner-With-Extras/J-Runner-with-Extras/releases/latest").Result;
                 JObject releaseData = JObject.Parse(jsondatastring);
 
                 changelog = releaseData["body"].ToString();
