@@ -4636,6 +4636,10 @@ namespace JRunner
                 {
                     nTools.setImage(Properties.Resources.picoflasher);
                 }
+                else if (device == DEVICE.DIRTYPICO)
+                {
+                    nTools.setImage(Properties.Resources.dirtypico);
+                }
                 else
                 {
                     nTools.setImage(null);
@@ -4655,8 +4659,9 @@ namespace JRunner
         {
             try
             {
-                if (variables.debugMode) Console.WriteLine("DevNotify - {0}", e.Device.Name);
+                if (variables.debugMode) Console.WriteLine("DevNotify - {0}", e.Device != null ? e.Device.Name : "null");
                 if (variables.debugMode) Console.WriteLine("EventType - {0}", e.EventType);
+
                 if (e.EventType == EventType.DeviceArrival && e.Device != null)
                 {
                     if (e.Device.IdVendor == 0x600D && e.Device.IdProduct == 0x7001) // PicoFlasher
@@ -4664,6 +4669,11 @@ namespace JRunner
                         if (!DemoN.DemonDetected) nTools.setImage(Properties.Resources.picoflasher);
                         //PicoFlasherToolStripMenuItem.Visible = true;
                         device = DEVICE.PICOFLASHER;
+                    }
+                    else if (e.Device.IdVendor == 0x1209 && e.Device.IdProduct == 0xC0CA) // DirtyPico
+                    {
+                        nTools.setImage(Properties.Resources.dirtypico);
+                        device = DEVICE.DIRTYPICO;
                     }
                     else if (e.Device.IdVendor == 0x0403 && e.Device.IdProduct == 0x6010) // xFlasher SPI
                     {
@@ -4715,6 +4725,11 @@ namespace JRunner
                     {
                         if (!DemoN.DemonDetected) nTools.setImage(null);
                         //PicoFlasherToolStripMenuItem.Visible = false;
+                        device = DEVICE.NO_DEVICE;
+                    }
+                    else if (e.Device.IdVendor == 0x1209 && e.Device.IdProduct == 0xC0CA) // DirtyPico
+                    {
+                        if (!DemoN.DemonDetected) nTools.setImage(null);
                         device = DEVICE.NO_DEVICE;
                     }
                     else if (e.Device.IdVendor == 0x11d4 && e.Device.IdProduct == 0x8334)
