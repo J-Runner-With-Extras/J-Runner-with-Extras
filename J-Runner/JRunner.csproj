@@ -180,6 +180,7 @@
     <Compile Include="CPUkeydb\EditMobo.Designer.cs">
       <DependentUpon>EditMobo.cs</DependentUpon>
     </Compile>
+    <Compile Include="Classes\DirtyPico.cs" />
     <Compile Include="Forms\About.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -883,6 +884,7 @@
     <Content Include="Resources\Build.txt" />
     <None Include="Resources\error.png" />
     <None Include="Resources\greenchecksmall.png" />
+    <None Include="Resources\dirtypico.png" />
     <Content Include="Resources\hourglass_clock.png" />
     <None Include="Resources\sonuslogo.png" />
     <EmbeddedResource Include="Resources\LPT_XSVF_Player.exe" />
@@ -896,6 +898,10 @@
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PreBuildEvent>"$(ProjectDir)UpdateBuildDatetime.exe" "$(ProjectDir)Resources\Build.txt"</PreBuildEvent>
+  </PropertyGroup>
+  <Import Project="..\packages\Fody.6.8.0\build\Fody.targets" Condition="Exists('..\packages\Fody.6.8.0\build\Fody.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
