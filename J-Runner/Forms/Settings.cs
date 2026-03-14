@@ -129,11 +129,16 @@ namespace JRunner.Forms
                 variables.LPTtiming = rbtnTimingLpt.Checked;
                 variables.allowZeroPaired = chkAllowZeroPaired.Checked;
 
+                bool oldDiscordRpc = variables.DiscordRpc;
                 variables.DiscordRpc = chkDiscordRpc.Checked;
 
+                // Only set idle if we enabled RPC support
                 if (variables.DiscordRpc)
                 {
-                    Classes.DiscordRpc.SetIdle();
+                    if (!oldDiscordRpc)
+                    {
+                        Classes.DiscordRpc.SetIdle();
+                    }
                 }
                 else
                 {
