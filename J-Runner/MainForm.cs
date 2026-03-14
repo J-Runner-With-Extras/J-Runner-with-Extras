@@ -130,8 +130,6 @@ namespace JRunner
                 this.Visible = true;
                 if (splash != null) splash.Dispose();
             }
-
-            DiscordRpc.SetIdle();
         }
 
         private void MainForm_Load(object sender, EventArgs e) // Will not run until the form is shown for the first time
