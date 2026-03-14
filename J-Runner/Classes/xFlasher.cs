@@ -952,6 +952,13 @@ namespace JRunner
         // SVF Flashing
         public void flashSvf(string filename, string speed = "1M")
         {
+            string xsvfToolPath = @"common/xsvftool/x86/xsvftool-ftd2xx.exe";
+
+            if (Environment.Is64BitOperatingSystem)
+            {
+                xsvfToolPath = @"common/xsvftool/x64/xsvftool-ftd2xx.exe";
+            }
+
             if (inUse || waiting) return;
 
             if (Process.GetProcessesByName("xsvftool").Length > 0)
@@ -1006,7 +1013,7 @@ namespace JRunner
                     Console.WriteLine("xFlasher: Setting flash speed to {0}", speed);
 
                     Process psi = new Process();
-                    psi.StartInfo.FileName = @"common/xsvftool/xsvftool-ftd2xx_x86.exe";
+                    psi.StartInfo.FileName = xsvfToolPath;
                     psi.StartInfo.Arguments = "-l";
                     psi.StartInfo.CreateNoWindow = true;
                     psi.StartInfo.UseShellExecute = false;
@@ -1026,7 +1033,7 @@ namespace JRunner
                     {
                         Console.WriteLine($"xFlasher: {dev} detected");
                         psi = new Process();
-                        psi.StartInfo.FileName = @"common/xsvftool/xsvftool-ftd2xx_x86.exe";
+                        psi.StartInfo.FileName = xsvfToolPath;
                         psi.StartInfo.Arguments = "-j 0 -p -f " + speed + (xsvf ? " -x" : " -s") + " \"" + MainForm.tempTimingPath + "\"";
                         psi.StartInfo.CreateNoWindow = true;
                         psi.StartInfo.UseShellExecute = false;
