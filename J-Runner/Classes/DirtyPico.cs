@@ -41,8 +41,8 @@ namespace JRunner
                 {
                     bool xsvf = false;
                     bool bChipIsDetected = false;
-                    // Leftover from xFlash class. Not needed here.
 
+                    // Leftover from xFlash class. Not needed here.
                     //if (!ready)
                     //{
                     //    waiting = true;
@@ -84,6 +84,7 @@ namespace JRunner
                     Console.WriteLine("DirtyPico: Flashing {0} via xsvftool", Path.GetFileName(filename));
                     Console.WriteLine("DirtyPico: Setting flash speed to {0}", speed);
 
+                    // Detect CPLD attached to the DirtyPico
                     Process psi = new Process();
                     psi.StartInfo.FileName = xsvfToolPath;
                     psi.StartInfo.Arguments = "-c";
@@ -96,17 +97,11 @@ namespace JRunner
                     inUse = true;
                     psi.Start();
 
-                    // Detect JTAG adapters
-                    // TODO this doesn't work for DirtyPico just yet
-                    
                     StreamReader rr = psi.StandardOutput;
                     string str = rr.ReadToEnd().Replace("\n", "\r\n");
                     rr.Close();
                     inUse = false;
 
-                    //Match dev = Regex.Match(str, @"Device\s+\d+\s+-\s+(.+)");
-
-                    //if (dev.Groups.Count >= 2 && dev.Groups[1].Value != "")
 
                     Match dev = Regex.Match(str, @"idcode=0x(?<idcode>[0-9A-Fa-f]+),\s*revision=0x(?<revision>[0-9A-Fa-f]+),\s*part=0x(?<part>[0-9A-Fa-f]+),\s*manufactor=0x(?<manufacturer>[0-9A-Fa-f]+)");
 
