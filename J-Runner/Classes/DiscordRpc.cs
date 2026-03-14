@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.IO;
 using System.IO.Pipes;
 
 namespace JRunner.Classes
@@ -32,6 +33,54 @@ namespace JRunner.Classes
 
             string handshake = "{\"v\":1,\"client_id\":\"" + clientId + "\"}";
             Send(0, handshake); // opcode 0 = handshake
+
+            // Wait for READY after handshake so we know the pipe is usable
+            try
+            {
+                DateTime waitUntil = DateTime.UtcNow.AddSeconds(2);
+                pipe.ReadTimeout = 2000;
+
+                while (DateTime.UtcNow < waitUntil)
+                {
+                    byte[] header = new byte[8];
+                    int read = 0;
+                    while (read < header.Length)
+                    {
+                        int r = pipe.Read(header, read, header.Length - read);
+                        if (r == 0) throw new IOException("Discord RPC pipe closed during READY wait.");
+                        read += r;
+                    }
+
+                    int opcode = BitConverter.ToInt32(header, 0);
+                    int length = BitConverter.ToInt32(header, 4);
+                    if (length < 0 || length > 1024 * 1024) throw new IOException("Discord RPC invalid payload length.");
+
+                    byte[] payload = new byte[length];
+                    read = 0;
+                    while (read < length)
+                    {
+                        int r = pipe.Read(payload, read, length - read);
+                        if (r == 0) throw new IOException("Discord RPC pipe closed during READY wait.");
+                        read += r;
+                    }
+
+                    string json = Encoding.UTF8.GetString(payload);
+                    if (opcode == 1 && json.Contains("\"evt\":\"READY\""))
+                    {
+                        break;
+                    }
+
+                    if (opcode == 1 && json.Contains("\"evt\":\"ERROR\""))
+                    {
+                        if (variables.debugMode) Console.WriteLine("Discord RPC handshake error: " + json);
+                        break;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                if (variables.debugMode) Console.WriteLine("Discord RPC READY wait failed: " + ex.Message);
+            }
         }
 
         private static void Send(int opcode, string json)
