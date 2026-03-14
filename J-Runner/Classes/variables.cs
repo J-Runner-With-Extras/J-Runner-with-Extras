@@ -141,9 +141,10 @@ namespace JRunner
         public static string COMPort = "";
         public static bool nandTimingAlwaysOnTop = false;
         public static bool allowZeroPaired = false;
+        public static bool DiscordRpc = false;
         public static string[] settings = { "XeBuild", "FileChecks", "COMPort", "Delay", "DashlaunchE", "IP", "NoReads", "IPStart", "IPEnd", "Dashlaunch", "PreferredDash", "KeepFiles", "RootDirOverride",
                                             "LPTtiming", "LPTport", "Server", "AutoExtract", "AllMove", "LogBackground", "LogText", "MtxUsbMode", "NoPatchWarnings", "PlaySuccess", "PlayError", "AutoDelXeLL",
-                                            "CpuKeyDbSerial", "BackupEn", "BackupType", "BackupNaming", "BackupRoot", "ShowAdvancedTabs", "NandTimingAlwaysOnTop", "AllowZeroPaired"};
+                                            "CpuKeyDbSerial", "BackupEn", "BackupType", "BackupNaming", "BackupRoot", "ShowAdvancedTabs", "NandTimingAlwaysOnTop", "AllowZeroPaired", "DiscordRpc"};
 
         /// <summary>
         /// Network

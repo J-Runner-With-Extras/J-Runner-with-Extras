@@ -46,6 +46,7 @@ namespace JRunner.Forms
             chkNoPatchWarnings.Checked = variables.noPatchWarnings;
             chkAllMove.Checked = !variables.allmove;
             chkAllowZeroPaired.Checked = variables.allowZeroPaired;
+            chkDiscordRpc.Checked = variables.DiscordRpc;
 
             if (variables.LPTtiming) rbtnTimingLpt.Checked = true;
             txtTimingLptPort.Text = variables.LPTport;
@@ -127,6 +128,17 @@ namespace JRunner.Forms
                 variables.autoDelXeLL = chkAutoDelXeLL.Checked;
                 variables.LPTtiming = rbtnTimingLpt.Checked;
                 variables.allowZeroPaired = chkAllowZeroPaired.Checked;
+
+                variables.DiscordRpc = chkDiscordRpc.Checked;
+
+                if (variables.DiscordRpc)
+                {
+                    Classes.DiscordRpc.SetIdle();
+                }
+                else
+                {
+                    Classes.DiscordRpc.Close();
+                }
 
                 if (!string.IsNullOrWhiteSpace(txtTimingLptPort.Text)) variables.LPTport = txtTimingLptPort.Text;
                 else variables.LPTport = "378";

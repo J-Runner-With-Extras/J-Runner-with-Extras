@@ -62,6 +62,12 @@ namespace JRunner.Classes
 
         public static void SetPresence(string whatimdoing, string imagetype)
         {
+            // If Discord rich presence support is *disabled*, this is a no-op
+            if (!variables.DiscordRpc)
+            {
+                return;
+            }
+
             string nonce = Guid.NewGuid().ToString();
             string json = "";
 

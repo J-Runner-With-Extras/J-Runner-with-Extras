@@ -76,6 +76,7 @@
             this.groupBackupType = new System.Windows.Forms.GroupBox();
             this.rbtnFolder = new System.Windows.Forms.RadioButton();
             this.rbtnZip = new System.Windows.Forms.RadioButton();
+            this.chkDiscordRpc = new System.Windows.Forms.CheckBox();
             this.groupBox2.SuspendLayout();
             this.groupBox4.SuspendLayout();
             this.tabCSettings.SuspendLayout();
@@ -434,6 +435,7 @@
             // 
             // tabGeneral
             // 
+            this.tabGeneral.Controls.Add(this.chkDiscordRpc);
             this.tabGeneral.Controls.Add(this.chkAllowZeroPaired);
             this.tabGeneral.Controls.Add(this.chkRootOverride);
             this.tabGeneral.Controls.Add(this.btnRootOverride);
@@ -595,6 +597,16 @@
             this.rbtnZip.Text = "ZIP Archive - Compresses all files and folders to a ZIP file";
             this.rbtnZip.UseVisualStyleBackColor = true;
             // 
+            // chkDiscordRpc
+            // 
+            this.chkDiscordRpc.AutoSize = true;
+            this.chkDiscordRpc.Location = new System.Drawing.Point(413, 123);
+            this.chkDiscordRpc.Name = "chkDiscordRpc";
+            this.chkDiscordRpc.Size = new System.Drawing.Size(135, 17);
+            this.chkDiscordRpc.TabIndex = 44;
+            this.chkDiscordRpc.Text = "Discord Rich Presence";
+            this.chkDiscordRpc.UseVisualStyleBackColor = true;
+            // 
             // Settings
             // 
             this.AcceptButton = this.btnOK;
@@ -679,5 +691,6 @@
         private System.Windows.Forms.RadioButton rbtnCtypeSn;
         private System.Windows.Forms.RadioButton rbtnCtypeSnDate;
         private System.Windows.Forms.CheckBox chkAllowZeroPaired;
+        private System.Windows.Forms.CheckBox chkDiscordRpc;
     }
 }
