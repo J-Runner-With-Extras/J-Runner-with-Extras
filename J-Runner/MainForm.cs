@@ -41,6 +41,7 @@ namespace JRunner
             XFLASHER_SPI = 3,
             XFLASHER_EMMC = 4,
             PICOFLASHER = 5,
+            DIRTYPICO = 6,
         }
 
         public static TextWriter _writer = null;
@@ -50,6 +51,7 @@ namespace JRunner
         IP myIP = new IP();
         public static Nand.PrivateN nand = new Nand.PrivateN();
         public xFlasher xflasher = new xFlasher();
+        public DirtyPico dirtypico  = new DirtyPico();
         public PicoFlasher picoflasher = new PicoFlasher();
         public Mtx_Usb mtx_usb = new Mtx_Usb();
         public xdkbuild XDKbuild = new xdkbuild();
@@ -259,6 +261,11 @@ namespace JRunner
                     nTools.setImage(Properties.Resources.picoflasher);
                     //PicoFlasherToolStripMenuItem.Visible = true;
                     device = DEVICE.PICOFLASHER;
+                }
+                else if (IsUsbDeviceConnected("C0CA", "1209")) // DirtyPico
+                {
+                    nTools.setImage(Properties.Resources.dirtypico);
+                    device = DEVICE.DIRTYPICO;
                 }
                 else if (IsUsbDeviceConnected("6010", "0403")) // xFlasher SPI
                 {
@@ -805,6 +812,10 @@ namespace JRunner
                         {
                             xflasher.flashSvf(filename);
                         }
+                        else if (device == DEVICE.DIRTYPICO)
+                        {
+                            dirtypico.flashSvf(filename);
+                        }
                         else if (device == DEVICE.XFLASHER_EMMC)
                         {
                             MessageBox.Show("Unable to program timing in eMMC mode\n\nPlease switch to SPI mode", "Can't", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -914,6 +925,8 @@ namespace JRunner
             if (filex == "") return;
             if (device == DEVICE.XFLASHER_SPI)
                 file = variables.rootfolder + @"\common\svf\" + filex + ".svf";
+            else if (device == DEVICE.DIRTYPICO)
+                file = variables.rootfolder + @"\common\svf\" + filex + ".svf";
             else
                 file = variables.rootfolder + @"\common\xsvf\" + filex + ".xsvf";
 
@@ -935,6 +948,10 @@ namespace JRunner
                     else if (device == DEVICE.XFLASHER_SPI)
                     {
                         xflasher.flashSvf(file);
+                    }
+                    else if (device == DEVICE.DIRTYPICO)
+                    {
+                        dirtypico.flashSvf(file);
                     }
                     else if (device == DEVICE.XFLASHER_EMMC)
                     {
@@ -4619,6 +4636,10 @@ namespace JRunner
                 {
                     nTools.setImage(Properties.Resources.picoflasher);
                 }
+                else if (device == DEVICE.DIRTYPICO)
+                {
+                    nTools.setImage(Properties.Resources.dirtypico);
+                }
                 else
                 {
                     nTools.setImage(null);
@@ -4638,8 +4659,9 @@ namespace JRunner
         {
             try
             {
-                if (variables.debugMode) Console.WriteLine("DevNotify - {0}", e.Device.Name);
+                if (variables.debugMode) Console.WriteLine("DevNotify - {0}", e.Device != null ? e.Device.Name : "null");
                 if (variables.debugMode) Console.WriteLine("EventType - {0}", e.EventType);
+
                 if (e.EventType == EventType.DeviceArrival && e.Device != null)
                 {
                     if (e.Device.IdVendor == 0x600D && e.Device.IdProduct == 0x7001) // PicoFlasher
@@ -4647,6 +4669,11 @@ namespace JRunner
                         if (!DemoN.DemonDetected) nTools.setImage(Properties.Resources.picoflasher);
                         //PicoFlasherToolStripMenuItem.Visible = true;
                         device = DEVICE.PICOFLASHER;
+                    }
+                    else if (e.Device.IdVendor == 0x1209 && e.Device.IdProduct == 0xC0CA) // DirtyPico
+                    {
+                        nTools.setImage(Properties.Resources.dirtypico);
+                        device = DEVICE.DIRTYPICO;
                     }
                     else if (e.Device.IdVendor == 0x0403 && e.Device.IdProduct == 0x6010) // xFlasher SPI
                     {
@@ -4698,6 +4725,11 @@ namespace JRunner
                     {
                         if (!DemoN.DemonDetected) nTools.setImage(null);
                         //PicoFlasherToolStripMenuItem.Visible = false;
+                        device = DEVICE.NO_DEVICE;
+                    }
+                    else if (e.Device.IdVendor == 0x1209 && e.Device.IdProduct == 0xC0CA) // DirtyPico
+                    {
+                        if (!DemoN.DemonDetected) nTools.setImage(null);
                         device = DEVICE.NO_DEVICE;
                     }
                     else if (e.Device.IdVendor == 0x11d4 && e.Device.IdProduct == 0x8334)
