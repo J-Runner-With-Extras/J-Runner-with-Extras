@@ -34,15 +34,7 @@ namespace JRunner
         {
             this.FormClosing -= new FormClosingEventHandler(this.UpdChangelog_FormClosing);
 
-            if (variables.revision >= Upd.minDeltaRevision) // Delta
-            {
-                Upd.startDelta();
-            }
-            else // Full
-            {
-                Upd.startFull();
-            }
-
+            Upd.startFull();
             Upd.changelog = ""; // Clear it
             this.Close();
         }

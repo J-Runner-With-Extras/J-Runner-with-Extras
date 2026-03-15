@@ -7,7 +7,8 @@ using System.Net;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Windows.Forms;
-using System.Xml;
+using System.Net.Http;
+using Newtonsoft.Json.Linq;
 
 namespace JRunner
 {
@@ -17,17 +18,22 @@ namespace JRunner
         public static bool upToDate = true; // Default true
         public static string failedReason = "Unknown";
         public static string changelog = "Could not retrieve changelog for some reason!"; // Overwritten if successful
-        private static string deltaUrl, fullUrl;
-        private static int serverRevision = 0;
-        public static int minDeltaRevision = 0;
-        private static string expectedDeltaMd5 = "";
-        private static string expectedFullMd5 = "";
+
+        private static string fullUrl;
+        private static string expectedFullDigest = "";
+
+        private static int serverVersion = 0;
+        private static int serverRelease = 0;
+        private static int serverModpack = 0;
+        private static int serverFixpack = 0;
+
         public static bool deleteFolders = false;
         public static bool noUpdateChk = false;
         public static bool runFullUpdate = false;
+
         private static WebClient wc = null;
         private static UpdUI updUI = null;
-        private static XmlTextReader xml = null;
+        private static HttpClient jsonclient = null;
 
         public static void check()
         {
@@ -35,80 +41,57 @@ namespace JRunner
 
             try
             {
-                xml = new XmlTextReader("https://raw.githubusercontent.com/Pheeeeenom/J-Runner-with-Extras/release/autoupdate.xml");
-                xml.MoveToContent();
-                string name = "";
+                jsonclient = new HttpClient();
+                jsonclient.DefaultRequestHeaders.Add("User-Agent", "J-Runner-With-Extras/" + variables.staticversion);
 
-                if (xml.NodeType == XmlNodeType.Element && xml.Name == "jrunner")
+                string jsondatastring = jsonclient.GetStringAsync("https://api.github.com/repos/J-Runner-With-Extras/J-Runner-with-Extras/releases/latest").Result;
+                JObject releaseData = JObject.Parse(jsondatastring);
+
+                changelog = releaseData["body"].ToString();
+
+                foreach (JObject j in releaseData["assets"])
                 {
-                    while (xml.Read())
-                    {
-                        if (xml.NodeType == XmlNodeType.Element)
-                        {
-                            name = xml.Name;
-                        }
-                        else
-                        {
-                            string key;
-                            if (xml.NodeType == XmlNodeType.Text && xml.HasValue && (key = name) != null)
-                            {
-                                if (key == "min-delta-revision")
-                                {
-                                    if (!int.TryParse(xml.Value, out minDeltaRevision))
-                                    {
-                                        checkStatus = 1;
-                                        throw new Exception(); // Cancel the rest and go to catch
-                                    }
-                                }
-                                else if (key == "revision")
-                                {
-                                    if (!int.TryParse(xml.Value, out serverRevision))
-                                    {
-                                        checkStatus = 1;
-                                        throw new Exception(); // Cancel the rest and go to catch
-                                    }
-                                }
-                                else if (key == "changelog-multi")
-                                {
-                                    changelog = xml.Value;
-                                }
-                                else if (key == "delta")
-                                {
-                                    deltaUrl = xml.Value;
-                                }
-                                else if (key == "full")
-                                {
-                                    fullUrl = xml.Value;
-                                }
-                                else if (key == "md5-delta")
-                                {
-                                    expectedDeltaMd5 = xml.Value;
-                                }
-                                else if (key == "md5-full")
-                                {
-                                    expectedFullMd5 = xml.Value;
-                                }
-                            }
-                        }
-                    }
+                    string assetName = j["name"].ToString();
 
-                    if (serverRevision == 0) // If this happened we didn't get revision sucessfully, there is never revision 0
+                    if (assetName == "J-Runner-with-Extras.zip" ||
+                        assetName == "J-Runner.with.Extras.zip")
                     {
-                        checkStatus = 1;
+                        fullUrl = j["browser_download_url"].ToString();
+                        expectedFullDigest = j["digest"].ToString();
                     }
+                }
+
+                // Parse the version string woohoo
+                string[] releaseTagStringArr = releaseData["tag_name"].ToString().Split('.');
+
+                if (releaseTagStringArr.Length == 3)
+                {
+                    // Tag is in format V3.4.0-r3 or V3.4.0
+                    serverVersion = int.Parse(releaseTagStringArr[0].Substring(1));
+                    serverRelease = int.Parse(releaseTagStringArr[1]);
+
+                    string[] mfStringArr = releaseTagStringArr[2].Split('-');
+
+                    serverModpack = int.Parse(mfStringArr[0]);
+
+                    if (mfStringArr.Length > 1)
+                    {
+                        serverFixpack = int.Parse(mfStringArr[1].Substring(1));
+                    }
+                }
+                else if (releaseTagStringArr.Length == 4)
+                {
+                    // Tag is in format 3.4.0.3
+                    serverVersion = int.Parse(releaseTagStringArr[0]);
+                    serverRelease = int.Parse(releaseTagStringArr[1]);
+                    serverModpack = int.Parse(releaseTagStringArr[2]);
+                    serverFixpack = int.Parse(releaseTagStringArr[3]);
                 }
             }
             catch (Exception ex)
             {
                 if (ex.Message.Contains("SSL/TLS")) checkStatus = 2;
                 else checkStatus = 1;
-            }
-            finally
-            {
-                if (xml != null)
-                {
-                    xml.Close();
-                }
             }
 
             Thread.Sleep(100);
@@ -124,7 +107,10 @@ namespace JRunner
                 {
                     startFull();
                 }
-                else if (variables.revision >= serverRevision) // Up to Date
+                else if ( variables.jrVersion >= serverVersion &&
+                          variables.jrRelease >= serverRelease &&
+                          variables.jrModpack >= serverModpack &&
+                          variables.jrFixpack >= serverFixpack ) // Up to Date
                 {
                     upToDate = true;
                     MainForm.mainForm.startMainForm(true);
@@ -153,42 +139,6 @@ namespace JRunner
                 {
                     MainForm.mainForm.startMainForm(true);
                 }
-            }
-        }
-
-        public static void startDelta()
-        {
-            Thread updateDelta = new Thread(() =>
-            {
-                if (File.Exists(@"delta.zip")) File.Delete(@"delta.zip");
-
-                wc = new WebClient();
-                wc.DownloadProgressChanged += updUI.updateProgress;
-                wc.DownloadFileCompleted += delta;
-                wc.DownloadFileAsync(new Uri(deltaUrl), "delta.zip");
-            });
-            showUpdUI();
-            updateDelta.Start();
-        }
-
-        private static void delta(object sender, AsyncCompletedEventArgs e)
-        {
-            wc.Dispose();
-
-            if (e.Cancelled)
-            {
-                // Do nothing
-            }
-            else if (e.Error != null)
-            {
-                if (File.Exists(@"delta.zip")) File.Delete(@"delta.zip");
-                if (e.Error.ToString().Contains("SSL/TLS")) failedReason = "Could not connect to the update server because TLS1.2 is not enabled.";
-                else failedReason = "Failed to download the package.";
-                setUpdUIPage(1);
-            }
-            else
-            {
-                install(true);
             }
         }
 
@@ -244,21 +194,15 @@ namespace JRunner
             }
         }
 
-        private static void install(bool delta = false)
+        private static void install()
         {
-            string filename;
-            if (delta) filename = @"delta.zip";
-            else filename = @"full.zip";
-
-            string expectedMd5;
-            if (delta) expectedMd5 = expectedDeltaMd5;
-            else expectedMd5 = expectedFullMd5;
+            string filename = @"full.zip";
 
             try
             {
-                updUI.installMode();
+                setUpdUiInstallMode();
 
-                if (simpleCheckMD5(filename) != expectedMd5)
+                if (true != simpleCheckDigest(filename, expectedFullDigest))
                 {
                     if (File.Exists(filename)) File.Delete(filename);
                     failedReason = "Package checksum is invalid.";
@@ -296,18 +240,32 @@ namespace JRunner
             return BitConverter.ToString(ba).Replace("-", "");
         }
 
-        private static string simpleCheckMD5(string filename)
+        private static bool simpleCheckDigest(string filename, string expectedDigest)
         {
-            using (var md5 = MD5.Create())
+            // Expected digest is in the format <algorithm>:<digest>
+            string[] expectedDigestArr = expectedDigest.Split(':');
+
+            if (expectedDigestArr[0].ToString() != "sha256")
+            {
+                return false;
+            }
+
+            using (var sha256 = SHA256.Create())
             {
                 using (var stream = File.OpenRead(filename))
                 {
-                    string md5str;
-                    md5str = simpleByteArrayToString(md5.ComputeHash(stream));
+                    string shastr;
+                    shastr = simpleByteArrayToString(sha256.ComputeHash(stream));
                     stream.Dispose();
-                    return md5str;
+
+                    if (shastr.ToLower() == expectedDigestArr[1].ToLower())
+                    {
+                        return true;
+                    }
                 }
             }
+
+            return false;
         }
 
         public static void cancel()
@@ -322,7 +280,6 @@ namespace JRunner
 
             try
             {
-                if (File.Exists(@"delta.zip")) File.Delete(@"delta.zip");
                 if (File.Exists(@"full.zip")) File.Delete(@"full.zip");
             }
             catch { }
@@ -361,6 +318,14 @@ namespace JRunner
                 updUI.Show();
                 if (type == 1) updUI.showFailed();
                 MainForm.mainForm.splash.Dispose();
+            }));
+        }
+
+        private static void setUpdUiInstallMode()
+        {
+            updUI.BeginInvoke(new Action(() =>
+            {
+                updUI.installMode();
             }));
         }
 
