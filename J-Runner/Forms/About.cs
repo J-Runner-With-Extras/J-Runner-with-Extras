@@ -20,7 +20,8 @@ namespace JRunner.Forms
                                     "SGCSam: 6717/9199 XeBuild Patches",
                                     "wurthless-elektroniks: Hacked 7378 CB_B for Elpis+Samsung",
                                     "Xvistaman2005: XDKbuild",
-                                    "Harley David-San:\n64mb DevGL support, bugfixes,\nQoL improvements"
+                                    "Harley David-San:\n64mb DevGL support, bugfixes,\nQoL improvements",
+                                    "Cheez: DirtyPico",
         };
         static int contribloc = 0;
         [DllImport("Gdi32.dll", EntryPoint = "CreateRoundRectRgn")]

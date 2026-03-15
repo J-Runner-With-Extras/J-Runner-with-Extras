@@ -8,14 +8,22 @@ namespace JRunner
     {
         private string filename;
 
-        public void injectECC(string eccpath, string cpuKey)
+        public void injectECC(string eccpath, string cpuKey, bool patchSMC = true)
         {
-            Console.WriteLine("Injecting glitch3 ECC...");
+            if (patchSMC)
+            {
+                Console.WriteLine("Injecting glitch3 ECC...");
+            }
+            else
+            {
+                Console.WriteLine("Injecting glitch3 CB_X...");
+            }
+
             Thread.Sleep(1000); // Important
 
             try
             {
-                Classes.RGH2to3.ConvertRgh2ToRgh3(eccpath, variables.filename1, cpuKey, variables.filename1);
+                Classes.RGH2to3.ConvertRgh2ToRgh3(eccpath, variables.filename1, cpuKey, variables.filename1, patchSMC);
             }
             catch (Exception ex)
             {

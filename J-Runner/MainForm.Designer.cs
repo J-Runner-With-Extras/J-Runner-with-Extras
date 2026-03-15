@@ -166,6 +166,7 @@ namespace JRunner
             this.loadGlitch2XeLLToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.loadJTAGXeLLToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.injectXeLLToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.customizeThemeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem9 = new System.Windows.Forms.ToolStripSeparator();
             this.sMCConfigViewerToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             this.changeLDVToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -179,7 +180,7 @@ namespace JRunner
             this.jRPBLToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.updateJRPToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.keyDatabaseToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.customizeThemeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.injectRGH3CBXToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.groupBox8.SuspendLayout();
             this.getCpuKeyMenu.SuspendLayout();
             this.showWorkingFolderMenu.SuspendLayout();
@@ -954,7 +955,8 @@ namespace JRunner
             this.experimentalToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.g3fixToolStripMenuItem,
             this.zeroPairSbToolStripMenuItem,
-            this.injectGlitch3ToolStripMenuItem});
+            this.injectGlitch3ToolStripMenuItem,
+            this.injectRGH3CBXToolStripMenuItem});
             this.experimentalToolStripMenuItem.Name = "experimentalToolStripMenuItem";
             this.experimentalToolStripMenuItem.Size = new System.Drawing.Size(240, 22);
             this.experimentalToolStripMenuItem.Text = "Experimental Features";
@@ -962,21 +964,21 @@ namespace JRunner
             // g3fixToolStripMenuItem
             // 
             this.g3fixToolStripMenuItem.Name = "g3fixToolStripMenuItem";
-            this.g3fixToolStripMenuItem.Size = new System.Drawing.Size(161, 22);
+            this.g3fixToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.g3fixToolStripMenuItem.Text = "G3Fix Patch";
             this.g3fixToolStripMenuItem.Click += new System.EventHandler(this.g3fixToolStripMenuItem_Click);
             // 
             // zeroPairSbToolStripMenuItem
             // 
             this.zeroPairSbToolStripMenuItem.Name = "zeroPairSbToolStripMenuItem";
-            this.zeroPairSbToolStripMenuItem.Size = new System.Drawing.Size(161, 22);
+            this.zeroPairSbToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.zeroPairSbToolStripMenuItem.Text = "Zero Pair SB";
             this.zeroPairSbToolStripMenuItem.Click += new System.EventHandler(this.zeroPairSbToolStripMenuItem_Click);
             // 
             // injectGlitch3ToolStripMenuItem
             // 
             this.injectGlitch3ToolStripMenuItem.Name = "injectGlitch3ToolStripMenuItem";
-            this.injectGlitch3ToolStripMenuItem.Size = new System.Drawing.Size(161, 22);
+            this.injectGlitch3ToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.injectGlitch3ToolStripMenuItem.Text = "Inject RGH3 ECC";
             this.injectGlitch3ToolStripMenuItem.Click += new System.EventHandler(this.injectGlitch3ToolStripMenuItem_Click);
             // 
@@ -1341,23 +1343,30 @@ namespace JRunner
             // loadGlitch2XeLLToolStripMenuItem
             // 
             this.loadGlitch2XeLLToolStripMenuItem.Name = "loadGlitch2XeLLToolStripMenuItem";
-            this.loadGlitch2XeLLToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.loadGlitch2XeLLToolStripMenuItem.Size = new System.Drawing.Size(169, 22);
             this.loadGlitch2XeLLToolStripMenuItem.Text = "Load Glitch2 XeLL";
             this.loadGlitch2XeLLToolStripMenuItem.Click += new System.EventHandler(this.loadGlitch2XeLLToolStripMenuItem_Click);
             // 
             // loadJTAGXeLLToolStripMenuItem
             // 
             this.loadJTAGXeLLToolStripMenuItem.Name = "loadJTAGXeLLToolStripMenuItem";
-            this.loadJTAGXeLLToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.loadJTAGXeLLToolStripMenuItem.Size = new System.Drawing.Size(169, 22);
             this.loadJTAGXeLLToolStripMenuItem.Text = "Load JTAG XeLL";
             this.loadJTAGXeLLToolStripMenuItem.Click += new System.EventHandler(this.loadJTAGXeLLToolStripMenuItem_Click);
             // 
             // injectXeLLToolStripMenuItem
             // 
             this.injectXeLLToolStripMenuItem.Name = "injectXeLLToolStripMenuItem";
-            this.injectXeLLToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.injectXeLLToolStripMenuItem.Size = new System.Drawing.Size(169, 22);
             this.injectXeLLToolStripMenuItem.Text = "Inject XeLL";
             this.injectXeLLToolStripMenuItem.Click += new System.EventHandler(this.injectXeLLToolStripMenuItem_Click);
+            // 
+            // customizeThemeToolStripMenuItem
+            // 
+            this.customizeThemeToolStripMenuItem.Name = "customizeThemeToolStripMenuItem";
+            this.customizeThemeToolStripMenuItem.Size = new System.Drawing.Size(169, 22);
+            this.customizeThemeToolStripMenuItem.Text = "Customize Theme";
+            this.customizeThemeToolStripMenuItem.Click += new System.EventHandler(this.customizeThemeToolStripMenuItem_Click);
             // 
             // toolStripMenuItem9
             // 
@@ -1463,12 +1472,12 @@ namespace JRunner
             this.keyDatabaseToolStripMenuItem.Text = "Key Database";
             this.keyDatabaseToolStripMenuItem.Click += new System.EventHandler(this.keyDatabaseToolStripMenuItem_Click);
             // 
-            // customizeThemeToolStripMenuItem
+            // injectRGH3CBXToolStripMenuItem
             // 
-            this.customizeThemeToolStripMenuItem.Name = "customizeThemeToolStripMenuItem";
-            this.customizeThemeToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.customizeThemeToolStripMenuItem.Text = "Customize Theme";
-            this.customizeThemeToolStripMenuItem.Click += new System.EventHandler(this.customizeThemeToolStripMenuItem_Click);
+            this.injectRGH3CBXToolStripMenuItem.Name = "injectRGH3CBXToolStripMenuItem";
+            this.injectRGH3CBXToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.injectRGH3CBXToolStripMenuItem.Text = "Inject RGH3 CB_X";
+            this.injectRGH3CBXToolStripMenuItem.Click += new System.EventHandler(this.injectRGH3CBXToolStripMenuItem_Click);
             // 
             // MainForm
             // 
@@ -1670,5 +1679,6 @@ namespace JRunner
         private ToolStripMenuItem zeroPairSbToolStripMenuItem;
         private ToolStripMenuItem injectGlitch3ToolStripMenuItem;
         private ToolStripMenuItem customizeThemeToolStripMenuItem;
+        private ToolStripMenuItem injectRGH3CBXToolStripMenuItem;
     }
 }
