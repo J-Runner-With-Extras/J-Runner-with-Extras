@@ -1289,6 +1289,7 @@ namespace JRunner
             this.gB16MBToolStripMenuItem.Name = "gB16MBToolStripMenuItem";
             this.gB16MBToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.gB16MBToolStripMenuItem.Text = "4GB -> 16MB";
+            this.gB16MBToolStripMenuItem.Visible = false;
             this.gB16MBToolStripMenuItem.Click += new System.EventHandler(this.gB16MBToolStripMenuItem_Click);
             // 
             // mB64MBToolStripMenuItem
