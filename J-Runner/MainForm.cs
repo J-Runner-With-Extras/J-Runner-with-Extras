@@ -3097,7 +3097,7 @@ namespace JRunner
         {
             if (string.IsNullOrEmpty(variables.filename1))
             {
-                MessageBox.Show("Select a file first.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("No nand loaded in source", "Can't", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
@@ -3138,13 +3138,19 @@ namespace JRunner
 
         private void mB64MBToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            if (string.IsNullOrEmpty(variables.filename1))
+            {
+                MessageBox.Show("No nand loaded in source", "Can't", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
             variables.filename1 = Nand.Nand.extend16mbTo64mb(variables.filename1);
             xPanel_updateSource(variables.filename1);
         }
         private void addressCalculatorToolStripMenuItem_Click(object sender, EventArgs e)
         {
             AddressCalculator formAC = new AddressCalculator();
-            formAC.Show();
+            formAC.ShowDialog();
         }
 
         private void extractFilesToolStripMenuItem_Click(object sender, EventArgs e)

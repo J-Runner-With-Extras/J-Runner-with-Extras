@@ -173,6 +173,7 @@
             this.MaximizeBox = false;
             this.MinimizeBox = false;
             this.Name = "AddressCalculator";
+            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
             this.Text = "NAND Address Calculator";
             this.ResumeLayout(false);
             this.PerformLayout();
