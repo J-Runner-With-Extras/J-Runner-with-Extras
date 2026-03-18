@@ -276,6 +276,9 @@ namespace JRunner
 
         private void deviceinit()
         {
+            nTools.setImage(null);
+            device = DEVICE.NO_DEVICE;
+
             devNotifier = DeviceNotifier.OpenDeviceNotifier();
             devNotifier.OnDeviceNotify += onDevNotify;
 
