@@ -214,12 +214,16 @@ namespace JRunner
                         string devVid = File.ReadAllText(Path.Combine(dev, "idVendor")).Trim();
                         string devPid = File.ReadAllText(Path.Combine(dev, "idProduct")).Trim();
 
-
-
                         if (devVid.ToLower() == vid.ToLower() && devPid.ToLower() == pid.ToLower())
                         {
-                            if (variables.debugMode) Console.WriteLine("WINE USB: Found!");
-                            return true;
+                            // PicoFlasher is the only supported device on non-windows
+                            // Only return true for PicoFlasher unless we're in debug mode
+                            if ( variables.debugMode ||
+                                 (vid == "600d" && pid == "7001") )
+
+                            {
+                                return true;
+                            }
                         }
                     }
                     catch { }
