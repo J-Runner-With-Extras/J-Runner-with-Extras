@@ -210,8 +210,11 @@ namespace JRunner
                 foreach (string dev in devices)
                 {
                     try
+                    {
                         string devVid = File.ReadAllText(Path.Combine(dev, "idVendor")).Trim();
                         string devPid = File.ReadAllText(Path.Combine(dev, "idProduct")).Trim();
+
+
 
                         if (devVid.ToLower() == vid.ToLower() && devPid.ToLower() == pid.ToLower())
                         {
