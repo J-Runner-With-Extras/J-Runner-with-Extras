@@ -1,11 +1,14 @@
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
+using System.Data.Linq;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Ports;
 using System.Linq;
 using System.Media;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
@@ -61,6 +64,153 @@ namespace JRunner
             public UInt32 lba;
         }
 
+        public static List<string> TheGhettoWay(string vid, string pid)
+        {
+            var results = new List<string>();
+
+            if (File.Exists("/tmp/wine_comport.txt")) File.Delete("/tmp/wine_comport.txt");
+
+            try
+            {
+                Process p = new Process();
+                ProcessStartInfo psi = new ProcessStartInfo();
+
+                psi.FileName = @"C:\windows\system32\winepath.exe";
+                psi.UseShellExecute = false;
+                psi.Arguments = "test.sh";
+                psi.CreateNoWindow = true;
+                psi.RedirectStandardOutput = true;
+
+                p.StartInfo = psi;
+
+                p.Start();
+
+                char[] trimChars = { '\n', '\r', '\t', ' ' };
+
+                string winepath = p.StandardOutput.ReadToEnd().TrimEnd(trimChars);
+
+                p.WaitForExit();
+
+                //Console.WriteLine(winepath);
+
+                Process p2 = new Process();
+                ProcessStartInfo psi2 = new ProcessStartInfo();
+
+                psi2.FileName = "/bin/bash";
+                psi2.UseShellExecute = false;
+                psi2.Arguments = winepath + " 600d 7001";
+                psi2.CreateNoWindow = true;
+
+                p2.StartInfo = psi2;
+
+                p2.Start();
+                p2.WaitForExit();
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+
+            string[] res = null;
+
+            var deadline = DateTime.UtcNow.AddSeconds(1);
+
+            while (DateTime.UtcNow < deadline)
+            {
+                try
+                {
+                    res = File.ReadAllLines("/tmp/wine_comport.txt");
+                    break; // Success, exit retry loop
+                }
+                catch (Exception ex)
+                {
+                    //Console.WriteLine($"Read failed: {ex.Message}. Retrying...");
+                    Thread.Sleep(100); // Optional: wait before retrying
+                }
+            }
+
+            foreach (string s in res)
+            {
+                results.Add(s);
+            }
+
+            return results;
+        }
+
+        public static List<string> ComPortNamesWine(string vid, string pid)
+        {
+            var results = new List<string>();
+            var picoTTYs = new List<string>();
+
+            byte[] buf = new byte[1024];
+
+            string usbDevicesPath = "/sys/bus/usb/devices";
+
+            string winePrefix = Environment.GetEnvironmentVariable("WINEPREFIX")
+                 ?? Path.Combine(Environment.GetEnvironmentVariable("WINE_HOST_HOME"), ".wine");
+
+            string dosDevicesPath = Path.Combine(winePrefix, "dosdevices");
+
+            if (!Directory.Exists(usbDevicesPath))
+            {
+                return results;
+            }
+
+            foreach (string dev in Directory.GetDirectories(usbDevicesPath))
+            {
+                try
+                {
+                    string devVid = File.ReadAllText(Path.Combine(dev, "idVendor")).Trim();
+                    string devPid = File.ReadAllText(Path.Combine(dev, "idProduct")).Trim();
+
+                    if (devVid.ToLower() == vid.ToLower() && devPid.ToLower() == pid.ToLower())
+                    {
+                        foreach (string ttys in Directory.GetDirectories(dev))
+                        {
+                            string ttydir = Path.Combine(dev, ttys + "/tty").Replace('\\', '/');
+
+                            Console.WriteLine(ttydir);
+
+                            if (Directory.Exists(ttydir))
+                            {
+                                picoTTYs.Add(Path.GetFileName(Directory.GetDirectories(ttydir)[0]));
+                            }
+                        }
+                    }
+
+                }
+                catch { }
+            }
+
+            string comportPath = Path.Combine(dosDevicesPath, "com99");
+
+            //File.Delete(comportPath);
+
+            string linkcmd = "-sf /dev/" + picoTTYs[0] + " " + comportPath;
+
+            Console.WriteLine(linkcmd);
+
+            //Process.Start("/bin/ln", linkcmd);
+
+            Process p = new Process();
+            ProcessStartInfo psi = new ProcessStartInfo();
+
+            psi.FileName = "/bin/ln";
+            psi.UseShellExecute = false;
+            psi.Arguments = linkcmd.Replace('\\','/');
+            psi.CreateNoWindow = true;
+            p.StartInfo = psi;
+
+            p.Start();
+            p.WaitForExit();
+
+
+            results.Add("com99");
+
+            return results;
+        }
+
         static List<string> ComPortNames(String VID, String PID)
         {
             String pattern = String.Format("^VID_{0}.PID_{1}", VID, PID);
@@ -98,17 +248,29 @@ namespace JRunner
                 return null;
 
             List<string> ports = null;
+            
+            
+
             SerialPort serial = new SerialPort();
 
             try
             {
-                ports = ComPortNames("600D", "7001");
+                if (WineMethods.IsWine())
+                {
+                    ports = TheGhettoWay("600D", "7001");
+                }
+                else
+                {
+                    ports = ComPortNames("600D", "7001");
+                }
 
                 if (ports.Count <= 0)
                 {
                     MessageBox.Show("Can't find PicoFlasher COM port\n\nUpdate the PicoFlasher firmware and check your drivers", "Can't", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return null;
                 }
+
+                Console.WriteLine(ports[0]);
 
                 serial.PortName = ports[0];
                 serial.ReadTimeout = 5000;

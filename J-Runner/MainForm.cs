@@ -201,6 +201,30 @@ namespace JRunner
 
         public bool IsUsbDeviceConnected(string pid, string vid)
         {
+            if (WineMethods.IsWine())
+            {
+                string[] devices = Directory.GetDirectories("/sys/bus/usb/devices");
+
+                if (variables.debugMode) Console.WriteLine($"WINE USB: searching for device {vid} {pid}");
+
+                foreach (string dev in devices)
+                {
+                    try
+                        string devVid = File.ReadAllText(Path.Combine(dev, "idVendor")).Trim();
+                        string devPid = File.ReadAllText(Path.Combine(dev, "idProduct")).Trim();
+
+                        if (devVid.ToLower() == vid.ToLower() && devPid.ToLower() == pid.ToLower())
+                        {
+                            if (variables.debugMode) Console.WriteLine("WINE USB: Found!");
+                            return true;
+                        }
+                    }
+                    catch { }
+                }
+
+                return false;
+            }
+
             using (var searcher = new ManagementObjectSearcher(@"Select * From Win32_USBControllerDevice"))
             {
                 using (var collection = searcher.Get())
@@ -337,6 +361,12 @@ namespace JRunner
             Console.WriteLine("Session: {0:F}", DateTime.Now.ToString("MM/dd/yyyy H:mm:ss"));
             if (variables.version.Contains("Alpha") || variables.version.Contains("Beta")) Console.WriteLine("Version: {0}", variables.build);
             else Console.WriteLine("Version: {0}", variables.version);
+
+            if (WineMethods.IsWine())
+            {
+                Console.WriteLine("Running under WINE");
+                linuxFeaturesToolStripMenuItem.Visible = true;
+            }
 
             if (Upd.checkStatus == 0)
             {
@@ -5480,5 +5510,18 @@ namespace JRunner
 
         #endregion
 
+        private void toggleDebugModeToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (variables.debugMode)
+            {
+                Console.WriteLine("Debugging Off");
+                variables.debugMode = false;
+            }
+            else
+            {
+                Console.WriteLine("Debugger On");
+                variables.debugMode = true;
+            }
+        }
     }
 }

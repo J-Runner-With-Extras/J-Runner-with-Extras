@@ -13,4 +13,22 @@ namespace JRunner
         [DllImport("user32")]
         public static extern int RegisterWindowMessage(string message);
     }
+
+    internal class WineMethods
+    {
+        [DllImport("ntdll")]
+        public static extern IntPtr wine_get_version();
+
+        public static bool IsWine()
+        {
+            try
+            {
+                IntPtr ptr = wine_get_version();
+                return true;
+            }
+            catch { }
+
+            return false;
+        }
+    }
 }
