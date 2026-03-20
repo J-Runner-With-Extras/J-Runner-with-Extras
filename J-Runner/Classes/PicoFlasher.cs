@@ -1,17 +1,15 @@
-using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
-using System.Data.Linq;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Ports;
 using System.Linq;
 using System.Media;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
+using System.Management;
 
 namespace JRunner
 {
@@ -141,35 +139,72 @@ namespace JRunner
             return results;
         }
 
-        static List<string> ComPortNames(String VID, String PID)
+        public static List<string> ComPortNames(string vid, string pid)
         {
-            String pattern = String.Format("^VID_{0}.PID_{1}", VID, PID);
-            Regex _rx = new Regex(pattern, RegexOptions.IgnoreCase);
-            List<string> comports = new List<string>();
+            string vidPidPattern = string.Format("VID_{0}&PID_{1}", vid.ToUpper(), pid.ToUpper());
 
-            RegistryKey rk1 = Registry.LocalMachine;
-            RegistryKey rk2 = rk1.OpenSubKey("SYSTEM\\CurrentControlSet\\Enum");
+            var results = new Dictionary<string, int>();
 
-            foreach (String s3 in rk2.GetSubKeyNames())
+            using (var searcher = new ManagementObjectSearcher(
+                "SELECT * FROM Win32_PnPEntity WHERE Name LIKE '%(COM%'"))
             {
-                RegistryKey rk3 = rk2.OpenSubKey(s3);
-                foreach (String s in rk3.GetSubKeyNames())
+                ManagementObjectCollection ports = searcher.Get();
+                if (variables.debugMode) Console.WriteLine("PicoFlasher: COM ports found: " + ports.Count);
+
+                foreach (ManagementObject port in ports)
                 {
-                    if (_rx.Match(s).Success)
+                    string deviceId = port["DeviceID"] != null ? port["DeviceID"].ToString() : "";
+                    string name = port["Name"] != null ? port["Name"].ToString() : "";
+
+                    if (deviceId.ToUpper().IndexOf(vidPidPattern, StringComparison.Ordinal) < 0)
                     {
-                        RegistryKey rk4 = rk3.OpenSubKey(s);
-                        foreach (String s2 in rk4.GetSubKeyNames())
-                        {
-                            RegistryKey rk5 = rk4.OpenSubKey(s2);
-                            RegistryKey rk6 = rk5.OpenSubKey("Device Parameters");
-                            string portName = (string)rk6.GetValue("PortName");
-                            if (!string.IsNullOrEmpty(portName) && SerialPort.GetPortNames().Contains(portName))
-                                comports.Add((string)rk6.GetValue("PortName"));
-                        }
+                        continue;
                     }
+
+                    // Extract COM port name from e.g. "USB Serial Device (COM3)"
+                    int comStart = name.IndexOf("(COM", StringComparison.Ordinal) + 1;
+                    int comEnd = name.IndexOf(')', comStart);
+
+                    if (comStart <= 0 || comEnd <= comStart)
+                    {
+                        if (variables.debugMode) Console.WriteLine("PicoFlasher: VID/PID matched but could not parse COM port");
+                        continue;
+                    }
+
+                    string comPort = name.Substring(comStart, comEnd - comStart);
+
+                    // Extract MI_xx interface number from DeviceID
+                    // e.g. USB\VID_1234&PID_5678&MI_01\7&...
+                    Match miMatch = Regex.Match(deviceId, @"MI_([0-9A-Fa-f]+)", RegexOptions.IgnoreCase);
+                    int interfaceIndex = miMatch.Success
+                        ? int.Parse(miMatch.Groups[1].Value, System.Globalization.NumberStyles.HexNumber)
+                        : 0;
+
+                    // Deduplicate- Do not set the com port if it was already found in the list
+                    // with a lower interface index than what we're furrently inspecting. This
+                    // will keep the COM port with the lowest interface index if we run in to a
+                    // situation where the WMI query returns duplicates
+                    if (!(results.ContainsKey(comPort) && interfaceIndex > results[comPort]))
+                    {
+                        results[comPort] = interfaceIndex;
+                    }
+
                 }
             }
-            return comports;
+
+            List<string> ordered = results
+                .OrderBy(kvp => kvp.Value)
+                .Select(kvp => kvp.Key)
+                .ToList();
+
+            if (variables.debugMode)
+            {
+                Console.WriteLine("PicoFlasher: COM port list (" + ordered.Count + " entries):");
+                for (int i = 0; i < ordered.Count; i++)
+                    Console.WriteLine("PicoFlasher:   [" + i + "] " + ordered[i] + " (MI_" + results[ordered[i]] + ")");
+            }
+
+            return ordered;
         }
 
         private SerialPort OpenSerial()
