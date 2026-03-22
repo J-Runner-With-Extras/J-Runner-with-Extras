@@ -23,7 +23,7 @@ namespace JRunner
 
         public bool InUse = false;
 
-        public int Version = 0;
+        public UInt32 Version = 0;
 
         enum COMMANDS : byte
         {
@@ -32,6 +32,11 @@ namespace JRunner
             READ_FLASH,
             WRITE_FLASH,
             READ_FLASH_STREAM,
+            ERASE_FLASH,
+
+            SET_SMC_WORKAROUND = 0x20,
+            STOP_SMC,
+            START_SMC,
 
             EMMC_DETECT = 0x50,
             EMMC_INIT,
@@ -247,7 +252,9 @@ namespace JRunner
 
                 SendCmd(serial, cmd);
 
-                Version = (int)RecvUInt32(serial);
+                Version = RecvUInt32(serial);
+
+                if (variables.debugMode) Console.WriteLine($"PicoFlasher Version: {Version}");
 
                 if (Version < 2)
                 {
@@ -259,6 +266,27 @@ namespace JRunner
                 if (Version < 3)
                 {
                     Console.WriteLine("PicoFlasher: v" + Version + " firmware doesn't support eMMC, only SPI mode is available");
+                }
+
+                if (Version >= 4)
+                {
+                    if (variables.debugMode) Console.WriteLine("PicoFlasher: Enhanced SMC control mode");
+
+                    // We can disable the silly "fallback" mode if the version is reported
+                    // as 4 or later. This is a new feature of the hax360 version of PicoFlasher
+                    // that does not hold the SMC in reset unless we're actually flashing the
+                    // NAND. See https://codeberg.org/hax360/PicoFlasher for more details.
+                    cmd.cmd = COMMANDS.SET_SMC_WORKAROUND;
+                    cmd.lba = 0; // 0 = false, 1 = true. SMC workaround is enabled by default
+                    SendCmd(serial, cmd);
+
+                    // Now that the workaround mode is disabled, we can stop the SMC manually
+                    cmd.cmd = COMMANDS.STOP_SMC;
+                    cmd.lba = 0;
+                    SendCmd(serial, cmd);
+
+                    // Wait for 500ms to allow the SMC to stop
+                    Thread.Sleep(500);
                 }
 
                 InUse = true;
@@ -283,6 +311,17 @@ namespace JRunner
         {
             try
             {
+                if (Version >= 4)
+                {
+                    // Restart the SMC before we close the serial port.
+                    // This allows us to leave the PicoFlasher connected
+                    // and use things like debug UART
+                    CMD startSmcCmd = new CMD();
+                    startSmcCmd.cmd = COMMANDS.START_SMC;
+                    startSmcCmd.lba = 0;
+                    SendCmd(serial, startSmcCmd);
+                }
+
                 serial.Close();
             }
             catch { }
