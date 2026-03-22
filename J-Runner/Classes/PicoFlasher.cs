@@ -463,14 +463,16 @@ namespace JRunner
             return __res & __mask;
         }
 
-        public void getFlashConfig()
+        public bool getFlashConfigEmmc()
         {
+            bool bIsValidEmmcFlashConfig = false;
+
             SerialPort serial = OpenSerial();
 
             try
             {
                 if (serial == null)
-                    return;
+                    return false;
 
                 Console.WriteLine("Checking Console...");
                 CMD cmd = new CMD();
@@ -516,6 +518,8 @@ namespace JRunner
                 }
                 else if (emmc_det != 0)
                 {
+                    bIsValidEmmcFlashConfig = true;
+
                     Console.WriteLine("Corona: 4GB (eMMC connected)");
 
                     cmd.cmd = COMMANDS.EMMC_INIT;
@@ -651,6 +655,8 @@ namespace JRunner
                 else Console.WriteLine(ex.GetType());
                 Console.WriteLine("");
             }
+
+            return bIsValidEmmcFlashConfig;
         }
 
         private void ReadNand(int iterations, uint start = 0, uint end = 0)
@@ -956,7 +962,15 @@ namespace JRunner
 
         private void ReadEmmc(int iterations, uint start = 0, uint end = 0)
         {
-            getFlashConfig();
+            bool isValidEmmcFlashconfig = getFlashConfigEmmc();
+
+            if (!isValidEmmcFlashconfig)
+            {
+                if (DialogResult.No == MessageBox.Show("Unrecognized eMMC flashconfig.\n\nAre you sure you wish to continue with the read operation?", "PicoFlasher Warning", MessageBoxButtons.YesNo, MessageBoxIcon.Warning))
+                {
+                    return;
+                }
+            }
 
             Thread readerThread = new Thread(() =>
             {
@@ -1104,7 +1118,15 @@ namespace JRunner
             if (string.IsNullOrWhiteSpace(variables.filename1)) return;
             if (!File.Exists(variables.filename1)) return;
 
-            getFlashConfig();
+            bool isValidEmmcFlashconfig = getFlashConfigEmmc();
+
+            if (!isValidEmmcFlashconfig)
+            {
+                if (DialogResult.No == MessageBox.Show("Unrecognized eMMC flashconfig.\n\nAre you sure you wish to continue with the write operation?", "PicoFlasher Warning", MessageBoxButtons.YesNo, MessageBoxIcon.Warning))
+                {
+                    return;
+                }
+            }
 
             Thread writerThread = new Thread(() =>
             {
