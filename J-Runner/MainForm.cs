@@ -211,15 +211,15 @@ namespace JRunner
                 {
                     try
                     {
-                        string devVid = File.ReadAllText(Path.Combine(dev, "idVendor")).Trim();
-                        string devPid = File.ReadAllText(Path.Combine(dev, "idProduct")).Trim();
+                        string devVid = File.ReadAllText(Path.Combine(dev, "idVendor")).Trim().ToLower();
+                        string devPid = File.ReadAllText(Path.Combine(dev, "idProduct")).Trim().ToLower();
 
-                        if (devVid.ToLower() == vid.ToLower() && devPid.ToLower() == pid.ToLower())
+                        if (devVid == vid.ToLower() && devPid == pid.ToLower())
                         {
                             // PicoFlasher is the only supported device on non-windows
                             // Only return true for PicoFlasher unless we're in debug mode
                             if ( variables.debugMode ||
-                                 (vid == "600d" && pid == "7001") )
+                                 (devVid == "600d" && devPid == "7001") )
 
                             {
                                 return true;
