@@ -544,7 +544,7 @@ namespace JRunner
         {
             if (device == DEVICE.PICOFLASHER)
             {
-                picoflasher.getFlashConfigEmmc();
+                picoflasher.printFlashConfig();
             }
             else if (device == DEVICE.XFLASHER_SPI)
             {

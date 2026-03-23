@@ -463,7 +463,7 @@ namespace JRunner
             return __res & __mask;
         }
 
-        public bool getFlashConfigEmmc()
+        private bool getFlashConfigEmmc()
         {
             bool bIsValidEmmcFlashConfig = false;
 
@@ -657,6 +657,15 @@ namespace JRunner
             }
 
             return bIsValidEmmcFlashConfig;
+        }
+
+        public void printFlashConfig()
+        {
+            Thread getFlashConfigThread = new Thread(() =>
+            {
+                this.getFlashConfigEmmc();
+            });
+            getFlashConfigThread.Start();
         }
 
         private void ReadNand(int iterations, uint start = 0, uint end = 0)
@@ -1222,126 +1231,134 @@ namespace JRunner
 
         public void Read(int iterations, uint start = 0, uint end = 0)
         {
-            byte emmc_det = 0;
-
-            Console.WriteLine("PicoFlasher: Beginning Read");
-
-            SerialPort serial = OpenSerial();
-
-            if (serial == null)
+            Thread mainReadThread = new Thread(() =>
             {
-                Console.WriteLine("PicoFlasher Error: OpenSerial returned null");
-                return;
-            }
+                byte emmc_det = 0;
 
-            UInt32 flashconfig = getFlashConfig(serial);
+                Console.WriteLine("PicoFlasher: Beginning Read");
 
-            if (flashconfig == 0x00000000)
-            {
-                CloseSerial(serial);
-                return;
-            }
+                SerialPort serial = OpenSerial();
 
-            if ((flashconfig & 0xF0000000) == 0xC0000000)
-            {
-                if (variables.debugMode) Console.WriteLine("PicoFlasher: Flashconfig 0x" + flashconfig.ToString("X8"));
-
-                if (Version >= 3)
+                if (serial == null)
                 {
-                    for (int i = 0; i < 10; i++)
+                    Console.WriteLine("PicoFlasher Error: OpenSerial returned null");
+                    return;
+                }
+
+                UInt32 flashconfig = getFlashConfig(serial);
+
+                if (flashconfig == 0x00000000)
+                {
+                    CloseSerial(serial);
+                    return;
+                }
+
+                if ((flashconfig & 0xF0000000) == 0xC0000000)
+                {
+                    if (variables.debugMode) Console.WriteLine("PicoFlasher: Flashconfig 0x" + flashconfig.ToString("X8"));
+
+                    if (Version >= 3)
                     {
-                        CMD cmd = new CMD();
-                        cmd.cmd = COMMANDS.EMMC_DETECT;
-                        cmd.lba = 0;
-                        SendCmd(serial, cmd);
-                        emmc_det = RecvUInt8(serial);
-
-                        if (emmc_det != 0)
+                        for (int i = 0; i < 10; i++)
                         {
-                            if (variables.debugMode) Console.WriteLine("PicoFlasher: eMMC detected.");
-                            break;
-                        }
+                            CMD cmd = new CMD();
+                            cmd.cmd = COMMANDS.EMMC_DETECT;
+                            cmd.lba = 0;
+                            SendCmd(serial, cmd);
+                            emmc_det = RecvUInt8(serial);
 
-                        if (variables.debugMode) Console.WriteLine("PicoFlasher: eMMC flashconfig, but eMMC was not detected. Retrying.");
+                            if (emmc_det != 0)
+                            {
+                                if (variables.debugMode) Console.WriteLine("PicoFlasher: eMMC detected.");
+                                break;
+                            }
+
+                            if (variables.debugMode) Console.WriteLine("PicoFlasher: eMMC flashconfig, but eMMC was not detected. Retrying.");
+                        }
+                    }
+
+                    if (emmc_det == 0)
+                    {
+                        CloseSerial(serial);
+                        Console.WriteLine("PicoFlasher error: eMMC flashconfig, but eMMC was not detected.");
+                        return;
                     }
                 }
 
+                CloseSerial(serial);
+
                 if (emmc_det == 0)
-                {
-                    CloseSerial(serial);
-                    Console.WriteLine("PicoFlasher error: eMMC flashconfig, but eMMC was not detected.");
-                    return;
-                }
-            }
-
-            CloseSerial(serial);
-
-            if (emmc_det == 0)
-                ReadNand(iterations, start, end);
-            else
-                ReadEmmc(iterations, start, end);
+                    ReadNand(iterations, start, end);
+                else
+                    ReadEmmc(iterations, start, end);
+            });
+            mainReadThread.Start();
         }
 
         public void Write(int fixEcc, uint start = 0, uint end = 0, bool isEccOrXell = false)
         {
-            byte emmc_det = 0;
-
-            Console.WriteLine("PicoFlasher: Beginning Write");
-
-            SerialPort serial = OpenSerial();
-
-            if (serial == null)
+            Thread mainWriteThread = new Thread(() =>
             {
-                Console.WriteLine("PicoFlasher Error: OpenSerial returned null");
-                return;
-            }
+                byte emmc_det = 0;
 
-            UInt32 flashconfig = getFlashConfig(serial);
+                Console.WriteLine("PicoFlasher: Beginning Write");
 
-            if (flashconfig == 0x00000000)
-            {
-                CloseSerial(serial);
-                return;
-            }
+                SerialPort serial = OpenSerial();
 
-            if ((flashconfig & 0xF0000000) == 0xC0000000)
-            {
-                if (variables.debugMode) Console.WriteLine("PicoFlasher: Flashconfig 0x" + flashconfig.ToString("X8"));
-
-                if (Version >= 3)
+                if (serial == null)
                 {
-                    for (int i = 0; i < 10; i++)
+                    Console.WriteLine("PicoFlasher Error: OpenSerial returned null");
+                    return;
+                }
+
+                UInt32 flashconfig = getFlashConfig(serial);
+
+                if (flashconfig == 0x00000000)
+                {
+                    CloseSerial(serial);
+                    return;
+                }
+
+                if ((flashconfig & 0xF0000000) == 0xC0000000)
+                {
+                    if (variables.debugMode) Console.WriteLine("PicoFlasher: Flashconfig 0x" + flashconfig.ToString("X8"));
+
+                    if (Version >= 3)
                     {
-                        CMD cmd = new CMD();
-                        cmd.cmd = COMMANDS.EMMC_DETECT;
-                        cmd.lba = 0;
-                        SendCmd(serial, cmd);
-                        emmc_det = RecvUInt8(serial);
-
-                        if (emmc_det != 0)
+                        for (int i = 0; i < 10; i++)
                         {
-                            if (variables.debugMode) Console.WriteLine("PicoFlasher: eMMC detected.");
-                            break;
-                        }
+                            CMD cmd = new CMD();
+                            cmd.cmd = COMMANDS.EMMC_DETECT;
+                            cmd.lba = 0;
+                            SendCmd(serial, cmd);
+                            emmc_det = RecvUInt8(serial);
 
-                        if (variables.debugMode) Console.WriteLine("PicoFlasher: eMMC flashconfig, but eMMC was not detected. Retrying.");
+                            if (emmc_det != 0)
+                            {
+                                if (variables.debugMode) Console.WriteLine("PicoFlasher: eMMC detected.");
+                                break;
+                            }
+
+                            if (variables.debugMode) Console.WriteLine("PicoFlasher: eMMC flashconfig, but eMMC was not detected. Retrying.");
+                        }
+                    }
+
+                    if (emmc_det == 0)
+                    {
+                        CloseSerial(serial);
+                        Console.WriteLine("PicoFlasher error: eMMC flashconfig, but eMMC was not detected.");
+                        return;
                     }
                 }
 
+                CloseSerial(serial);
+
                 if (emmc_det == 0)
-                {
-                    CloseSerial(serial);
-                    Console.WriteLine("PicoFlasher error: eMMC flashconfig, but eMMC was not detected.");
-                    return;
-                }
-            }
-
-            CloseSerial(serial);
-
-            if (emmc_det == 0)
-                WriteNand(fixEcc, start, end, isEccOrXell);
-            else
-                WriteEmmc(start, end, isEccOrXell);
+                    WriteNand(fixEcc, start, end, isEccOrXell);
+                else
+                    WriteEmmc(start, end, isEccOrXell);
+            });
+            mainWriteThread.Start();
         }
 
         public int Open()
