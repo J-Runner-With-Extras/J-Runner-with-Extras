@@ -903,6 +903,18 @@
     <PreBuildEvent>"$(ProjectDir)UpdateBuildDatetime.exe" "$(ProjectDir)Resources\Build.txt"</PreBuildEvent>
   </PropertyGroup>
   <Import Project="..\packages\Fody.6.8.0\build\Fody.targets" Condition="Exists('..\packages\Fody.6.8.0\build\Fody.targets')" />
+  <Target Name="CheckFody" BeforeTargets="Build">
+    <ItemGroup>
+      <FodyPackage Include="$([System.IO.Directory]::GetDirectories('$(SolutionDir)packages', 'Fody.*'))" />
+      <CosturaFodyPackage Include="$([System.IO.Directory]::GetDirectories('$(SolutionDir)packages', 'Costura.Fody.*'))" />
+    </ItemGroup>
+    <Error
+      Condition="@(FodyPackage->Count()) == '0'"
+      Text="Fody is not installed — do not remove it. It is required to bundle dependencies into the EXE." />
+    <Error
+      Condition="@(CosturaFodyPackage->Count()) == '0'"
+      Text="Costura.Fody is not installed — do not remove it. It is required to bundle dependencies into the EXE." />
+  </Target>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
