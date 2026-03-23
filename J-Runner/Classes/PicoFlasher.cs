@@ -67,7 +67,7 @@ namespace JRunner
             public UInt32 lba;
         }
 
-        public static List<string> ComPortNamesWine(string vid, string pid)
+        private static List<string> ComPortNamesWine(string vid, string pid)
         {
             var results = new List<string>();
             char[] trimChars = { '\n', '\r', '\t', ' ' };
@@ -144,7 +144,7 @@ namespace JRunner
             return results;
         }
 
-        public static List<string> ComPortNames(string vid, string pid)
+        private static List<string> ComPortNames(string vid, string pid)
         {
             string vidPidPattern = string.Format("VID_{0}&PID_{1}", vid.ToUpper(), pid.ToUpper());
 
@@ -1223,6 +1223,9 @@ namespace JRunner
         public void Read(int iterations, uint start = 0, uint end = 0)
         {
             byte emmc_det = 0;
+
+            Console.WriteLine("PicoFlasher: Beginning Read");
+
             SerialPort serial = OpenSerial();
 
             if (serial == null)
@@ -1282,6 +1285,9 @@ namespace JRunner
         public void Write(int fixEcc, uint start = 0, uint end = 0, bool isEccOrXell = false)
         {
             byte emmc_det = 0;
+
+            Console.WriteLine("PicoFlasher: Beginning Write");
+
             SerialPort serial = OpenSerial();
 
             if (serial == null)

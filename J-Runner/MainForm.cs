@@ -220,7 +220,6 @@ namespace JRunner
                             // Only return true for PicoFlasher unless we're in debug mode
                             if ( variables.debugMode ||
                                  (devVid == "600d" && devPid == "7001") )
-
                             {
                                 return true;
                             }
