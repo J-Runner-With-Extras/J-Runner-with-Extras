@@ -201,6 +201,36 @@ namespace JRunner
 
         public bool IsUsbDeviceConnected(string pid, string vid)
         {
+            if (WineMethods.IsWine())
+            {
+                string[] devices = Directory.GetDirectories("/sys/bus/usb/devices");
+
+                if (variables.debugMode) Console.WriteLine($"WINE USB: searching for device {vid} {pid}");
+
+                foreach (string dev in devices)
+                {
+                    try
+                    {
+                        string devVid = File.ReadAllText(Path.Combine(dev, "idVendor")).Trim().ToLower();
+                        string devPid = File.ReadAllText(Path.Combine(dev, "idProduct")).Trim().ToLower();
+
+                        if (devVid == vid.ToLower() && devPid == pid.ToLower())
+                        {
+                            // PicoFlasher is the only supported device on non-windows
+                            // Only return true for PicoFlasher unless we're in debug mode
+                            if ( variables.debugMode ||
+                                 (devVid == "600d" && devPid == "7001") )
+                            {
+                                return true;
+                            }
+                        }
+                    }
+                    catch { }
+                }
+
+                return false;
+            }
+
             using (var searcher = new ManagementObjectSearcher(@"Select * From Win32_USBControllerDevice"))
             {
                 using (var collection = searcher.Get())
@@ -249,6 +279,9 @@ namespace JRunner
 
         private void deviceinit()
         {
+            nTools.setImage(null);
+            device = DEVICE.NO_DEVICE;
+
             devNotifier = DeviceNotifier.OpenDeviceNotifier();
             devNotifier.OnDeviceNotify += onDevNotify;
 
@@ -337,6 +370,12 @@ namespace JRunner
             Console.WriteLine("Session: {0:F}", DateTime.Now.ToString("MM/dd/yyyy H:mm:ss"));
             if (variables.version.Contains("Alpha") || variables.version.Contains("Beta")) Console.WriteLine("Version: {0}", variables.build);
             else Console.WriteLine("Version: {0}", variables.version);
+
+            if (WineMethods.IsWine())
+            {
+                Console.WriteLine("Running under WINE");
+                linuxFeaturesToolStripMenuItem.Visible = true;
+            }
 
             if (Upd.checkStatus == 0)
             {
@@ -505,7 +544,7 @@ namespace JRunner
         {
             if (device == DEVICE.PICOFLASHER)
             {
-                picoflasher.getFlashConfig();
+                picoflasher.printFlashConfig();
             }
             else if (device == DEVICE.XFLASHER_SPI)
             {
@@ -5480,5 +5519,18 @@ namespace JRunner
 
         #endregion
 
+        private void toggleDebugModeToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (variables.debugMode)
+            {
+                Console.WriteLine("Debugging Off");
+                variables.debugMode = false;
+            }
+            else
+            {
+                Console.WriteLine("Debugger On");
+                variables.debugMode = true;
+            }
+        }
     }
 }

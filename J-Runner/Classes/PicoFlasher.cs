@@ -1,6 +1,6 @@
-using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Ports;
 using System.Linq;
@@ -9,6 +9,7 @@ using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
+using System.Management;
 
 namespace JRunner
 {
@@ -22,7 +23,7 @@ namespace JRunner
 
         public bool InUse = false;
 
-        public int Version = 0;
+        public UInt32 Version = 0;
 
         enum COMMANDS : byte
         {
@@ -31,6 +32,11 @@ namespace JRunner
             READ_FLASH,
             WRITE_FLASH,
             READ_FLASH_STREAM,
+            ERASE_FLASH,
+
+            SET_SMC_WORKAROUND = 0x20,
+            STOP_SMC,
+            START_SMC,
 
             EMMC_DETECT = 0x50,
             EMMC_INIT,
@@ -61,35 +67,149 @@ namespace JRunner
             public UInt32 lba;
         }
 
-        static List<string> ComPortNames(String VID, String PID)
+        private static List<string> ComPortNamesWine(string vid, string pid)
         {
-            String pattern = String.Format("^VID_{0}.PID_{1}", VID, PID);
-            Regex _rx = new Regex(pattern, RegexOptions.IgnoreCase);
-            List<string> comports = new List<string>();
+            var results = new List<string>();
+            char[] trimChars = { '\n', '\r', '\t', ' ' };
 
-            RegistryKey rk1 = Registry.LocalMachine;
-            RegistryKey rk2 = rk1.OpenSubKey("SYSTEM\\CurrentControlSet\\Enum");
+            if (File.Exists("/tmp/jrunner_comport.txt")) File.Delete("/tmp/jrunner_comport.txt");
 
-            foreach (String s3 in rk2.GetSubKeyNames())
+            // Using a helper script, write a list of Wine COM ports
+            // matching the specified PID/VID to a file
+            try
             {
-                RegistryKey rk3 = rk2.OpenSubKey(s3);
-                foreach (String s in rk3.GetSubKeyNames())
+                Process p = new Process();
+                ProcessStartInfo psi = new ProcessStartInfo();
+
+                // Determine the "linux path" to our helper script
+                psi.FileName = @"C:\windows\system32\winepath.exe";
+                psi.UseShellExecute = false;
+                psi.Arguments = "scripts/getWineComPorts.sh";
+                psi.CreateNoWindow = true;
+                psi.RedirectStandardOutput = true;
+                p.StartInfo = psi;
+
+                p.Start();
+
+                string winepath = p.StandardOutput.ReadToEnd().TrimEnd(trimChars);
+
+                p.WaitForExit();
+
+                if(variables.debugMode) Console.WriteLine(winepath);
+
+                Process p2 = new Process();
+                ProcessStartInfo psi2 = new ProcessStartInfo();
+
+                // Now we actually run the script
+                psi2.FileName = "/bin/bash";
+                psi2.UseShellExecute = false;
+                psi2.Arguments = winepath + $" {vid} {pid}";
+                psi2.CreateNoWindow = true;
+                p2.StartInfo = psi2;
+
+                p2.Start();
+                p2.WaitForExit();
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+
+            string[] res = null;
+
+            var deadline = DateTime.UtcNow.AddSeconds(1);
+
+            // Loop a bit until we are able to successfully read the file
+            // containing our COM ports from disk
+            while (DateTime.UtcNow < deadline)
+            {
+                try
                 {
-                    if (_rx.Match(s).Success)
-                    {
-                        RegistryKey rk4 = rk3.OpenSubKey(s);
-                        foreach (String s2 in rk4.GetSubKeyNames())
-                        {
-                            RegistryKey rk5 = rk4.OpenSubKey(s2);
-                            RegistryKey rk6 = rk5.OpenSubKey("Device Parameters");
-                            string portName = (string)rk6.GetValue("PortName");
-                            if (!string.IsNullOrEmpty(portName) && SerialPort.GetPortNames().Contains(portName))
-                                comports.Add((string)rk6.GetValue("PortName"));
-                        }
-                    }
+                    res = File.ReadAllLines("/tmp/jrunner_comport.txt");
+                    break; // Success, exit retry loop
+                }
+                catch (Exception ex)
+                {
+                    if (variables.debugMode) Console.WriteLine($"Read failed: {ex.Message}. Retrying...");
+                    Thread.Sleep(100); // wait before retrying
                 }
             }
-            return comports;
+
+            foreach (string s in res)
+            {
+                results.Add(s);
+            }
+
+            return results;
+        }
+
+        private static List<string> ComPortNames(string vid, string pid)
+        {
+            string vidPidPattern = string.Format("VID_{0}&PID_{1}", vid.ToUpper(), pid.ToUpper());
+
+            var results = new Dictionary<string, int>();
+
+            using (var searcher = new ManagementObjectSearcher(
+                "SELECT * FROM Win32_PnPEntity WHERE Name LIKE '%(COM%'"))
+            {
+                ManagementObjectCollection ports = searcher.Get();
+                if (variables.debugMode) Console.WriteLine("PicoFlasher: COM ports found: " + ports.Count);
+
+                foreach (ManagementObject port in ports)
+                {
+                    string deviceId = port["DeviceID"] != null ? port["DeviceID"].ToString() : "";
+                    string name = port["Name"] != null ? port["Name"].ToString() : "";
+
+                    if (deviceId.ToUpper().IndexOf(vidPidPattern, StringComparison.Ordinal) < 0)
+                    {
+                        continue;
+                    }
+
+                    // Extract COM port name from e.g. "USB Serial Device (COM3)"
+                    int comStart = name.IndexOf("(COM", StringComparison.Ordinal) + 1;
+                    int comEnd = name.IndexOf(')', comStart);
+
+                    if (comStart <= 0 || comEnd <= comStart)
+                    {
+                        if (variables.debugMode) Console.WriteLine("PicoFlasher: VID/PID matched but could not parse COM port");
+                        continue;
+                    }
+
+                    string comPort = name.Substring(comStart, comEnd - comStart);
+
+                    // Extract MI_xx interface number from DeviceID
+                    // e.g. USB\VID_1234&PID_5678&MI_01\7&...
+                    Match miMatch = Regex.Match(deviceId, @"MI_([0-9A-Fa-f]+)", RegexOptions.IgnoreCase);
+                    int interfaceIndex = miMatch.Success
+                        ? int.Parse(miMatch.Groups[1].Value, System.Globalization.NumberStyles.HexNumber)
+                        : 0;
+
+                    // Deduplicate- Do not set the com port if it was already found in the list
+                    // with a lower interface index than what we're furrently inspecting. This
+                    // will keep the COM port with the lowest interface index if we run in to a
+                    // situation where the WMI query returns duplicates
+                    if (!(results.ContainsKey(comPort) && interfaceIndex > results[comPort]))
+                    {
+                        results[comPort] = interfaceIndex;
+                    }
+
+                }
+            }
+
+            List<string> ordered = results
+                .OrderBy(kvp => kvp.Value)
+                .Select(kvp => kvp.Key)
+                .ToList();
+
+            if (variables.debugMode)
+            {
+                Console.WriteLine("PicoFlasher: COM port list (" + ordered.Count + " entries):");
+                for (int i = 0; i < ordered.Count; i++)
+                    Console.WriteLine("PicoFlasher:   [" + i + "] " + ordered[i] + " (MI_" + results[ordered[i]] + ")");
+            }
+
+            return ordered;
         }
 
         private SerialPort OpenSerial()
@@ -98,17 +218,27 @@ namespace JRunner
                 return null;
 
             List<string> ports = null;
+            
             SerialPort serial = new SerialPort();
 
             try
             {
-                ports = ComPortNames("600D", "7001");
+                if (WineMethods.IsWine())
+                {
+                    ports = ComPortNamesWine("600D", "7001");
+                }
+                else
+                {
+                    ports = ComPortNames("600D", "7001");
+                }
 
                 if (ports.Count <= 0)
                 {
                     MessageBox.Show("Can't find PicoFlasher COM port\n\nUpdate the PicoFlasher firmware and check your drivers", "Can't", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return null;
                 }
+
+                if(variables.debugMode) Console.WriteLine(ports[0]);
 
                 serial.PortName = ports[0];
                 serial.ReadTimeout = 5000;
@@ -122,7 +252,9 @@ namespace JRunner
 
                 SendCmd(serial, cmd);
 
-                Version = (int)RecvUInt32(serial);
+                Version = RecvUInt32(serial);
+
+                if (variables.debugMode) Console.WriteLine($"PicoFlasher Version: {Version}");
 
                 if (Version < 2)
                 {
@@ -131,8 +263,30 @@ namespace JRunner
                     return null;
                 }
 
-                if (Version < 3) {
+                if (Version < 3)
+                {
                     Console.WriteLine("PicoFlasher: v" + Version + " firmware doesn't support eMMC, only SPI mode is available");
+                }
+
+                if (Version >= 4)
+                {
+                    if (variables.debugMode) Console.WriteLine("PicoFlasher: Enhanced SMC control mode");
+
+                    // We can disable the silly "fallback" mode if the version is reported
+                    // as 4 or later. This is a new feature of the hax360 version of PicoFlasher
+                    // that does not hold the SMC in reset unless we're actually flashing the
+                    // NAND. See https://codeberg.org/hax360/PicoFlasher for more details.
+                    cmd.cmd = COMMANDS.SET_SMC_WORKAROUND;
+                    cmd.lba = 0; // 0 = false, 1 = true. SMC workaround is enabled by default
+                    SendCmd(serial, cmd);
+
+                    // Now that the workaround mode is disabled, we can stop the SMC manually
+                    cmd.cmd = COMMANDS.STOP_SMC;
+                    cmd.lba = 0;
+                    SendCmd(serial, cmd);
+
+                    // Wait for 500ms to allow the SMC to stop
+                    Thread.Sleep(500);
                 }
 
                 InUse = true;
@@ -141,6 +295,11 @@ namespace JRunner
             {
                 if (variables.debugMode) Console.WriteLine(ex.ToString());
                 else Console.WriteLine(ex.GetType());
+
+                if (ex.GetType() == typeof(UnauthorizedAccessException) && WineMethods.IsWine())
+                {
+                    Console.WriteLine("Ensure the current user is part of the dialout group, then reboot the computer.");
+                }
 
                 MessageBox.Show("PicoFlasher COM port could not be found\n\nYou may need to update the PicoFlasher firmware or check your connections to continue", "Can't", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
@@ -152,6 +311,17 @@ namespace JRunner
         {
             try
             {
+                if (Version >= 4)
+                {
+                    // Restart the SMC before we close the serial port.
+                    // This allows us to leave the PicoFlasher connected
+                    // and use things like debug UART
+                    CMD startSmcCmd = new CMD();
+                    startSmcCmd.cmd = COMMANDS.START_SMC;
+                    startSmcCmd.lba = 0;
+                    SendCmd(serial, startSmcCmd);
+                }
+
                 serial.Close();
             }
             catch { }
@@ -169,15 +339,30 @@ namespace JRunner
             Marshal.Copy(ptr, arr, 0, size);
             Marshal.FreeHGlobal(ptr);
 
-            serial.Write(arr, 0, arr.Length);
+            try
+            {
+                serial.Write(arr, 0, arr.Length);
+            }
+            catch(Exception ex)
+            {
+                if (variables.debugMode) Console.WriteLine($"PicoFlasher: SendCmd failed ({ex.Message})");
+            }
         }
 
         private UInt32 RecvUInt32(SerialPort serial)
         {
             byte[] rxbuffer = new byte[4];
             int got = 0;
-            while (got < rxbuffer.Length)
-                got += serial.Read(rxbuffer, got, rxbuffer.Length - got);
+
+            try
+            {
+                while (got < rxbuffer.Length)
+                    got += serial.Read(rxbuffer, got, rxbuffer.Length - got);
+            }
+            catch (Exception ex)
+            {
+                if (variables.debugMode) Console.WriteLine($"PicoFlasher: RecvUInt32 failed ({ex.Message})");
+            }
 
             return BitConverter.ToUInt32(rxbuffer, 0);
         }
@@ -186,8 +371,16 @@ namespace JRunner
         {
             byte[] rxbuffer = new byte[1];
             int got = 0;
-            while (got < rxbuffer.Length)
-                got += serial.Read(rxbuffer, got, rxbuffer.Length - got);
+
+            try
+            {
+                while (got < rxbuffer.Length)
+                    got += serial.Read(rxbuffer, got, rxbuffer.Length - got);
+            }
+            catch (Exception ex)
+            {
+                if (variables.debugMode) Console.WriteLine($"PicoFlasher: RecvUInt8 failed ({ex.Message})");
+            }
 
             return rxbuffer[0];
         }
@@ -270,14 +463,16 @@ namespace JRunner
             return __res & __mask;
         }
 
-        public void getFlashConfig()
+        private bool getFlashConfigEmmc()
         {
+            bool bIsValidEmmcFlashConfig = false;
+
             SerialPort serial = OpenSerial();
 
             try
             {
                 if (serial == null)
-                    return;
+                    return false;
 
                 Console.WriteLine("Checking Console...");
                 CMD cmd = new CMD();
@@ -323,6 +518,8 @@ namespace JRunner
                 }
                 else if (emmc_det != 0)
                 {
+                    bIsValidEmmcFlashConfig = true;
+
                     Console.WriteLine("Corona: 4GB (eMMC connected)");
 
                     cmd.cmd = COMMANDS.EMMC_INIT;
@@ -458,6 +655,17 @@ namespace JRunner
                 else Console.WriteLine(ex.GetType());
                 Console.WriteLine("");
             }
+
+            return bIsValidEmmcFlashConfig;
+        }
+
+        public void printFlashConfig()
+        {
+            Thread getFlashConfigThread = new Thread(() =>
+            {
+                this.getFlashConfigEmmc();
+            });
+            getFlashConfigThread.Start();
         }
 
         private void ReadNand(int iterations, uint start = 0, uint end = 0)
@@ -763,7 +971,15 @@ namespace JRunner
 
         private void ReadEmmc(int iterations, uint start = 0, uint end = 0)
         {
-            getFlashConfig();
+            bool isValidEmmcFlashconfig = getFlashConfigEmmc();
+
+            if (!isValidEmmcFlashconfig)
+            {
+                if (DialogResult.No == MessageBox.Show("Unrecognized eMMC flashconfig.\n\nAre you sure you wish to continue with the read operation?", "PicoFlasher Warning", MessageBoxButtons.YesNo, MessageBoxIcon.Warning))
+                {
+                    return;
+                }
+            }
 
             Thread readerThread = new Thread(() =>
             {
@@ -911,7 +1127,15 @@ namespace JRunner
             if (string.IsNullOrWhiteSpace(variables.filename1)) return;
             if (!File.Exists(variables.filename1)) return;
 
-            getFlashConfig();
+            bool isValidEmmcFlashconfig = getFlashConfigEmmc();
+
+            if (!isValidEmmcFlashconfig)
+            {
+                if (DialogResult.No == MessageBox.Show("Unrecognized eMMC flashconfig.\n\nAre you sure you wish to continue with the write operation?", "PicoFlasher Warning", MessageBoxButtons.YesNo, MessageBoxIcon.Warning))
+                {
+                    return;
+                }
+            }
 
             Thread writerThread = new Thread(() =>
             {
@@ -1007,48 +1231,134 @@ namespace JRunner
 
         public void Read(int iterations, uint start = 0, uint end = 0)
         {
-            SerialPort serial = OpenSerial();
-            if (serial == null)
-                return;
+            Thread mainReadThread = new Thread(() =>
+            {
+                byte emmc_det = 0;
 
-            byte emmc_det = 0;
-            if (Version >= 3) {
-                CMD cmd = new CMD();
-                cmd.cmd = COMMANDS.EMMC_DETECT;
-                cmd.lba = 0;
-                SendCmd(serial, cmd);
-                emmc_det = RecvUInt8(serial);
-            }
+                Console.WriteLine("PicoFlasher: Beginning Read");
 
-            CloseSerial(serial);
+                SerialPort serial = OpenSerial();
 
-            if (emmc_det == 0)
-                ReadNand(iterations, start, end);
-            else
-                ReadEmmc(iterations, start, end);
+                if (serial == null)
+                {
+                    Console.WriteLine("PicoFlasher Error: OpenSerial returned null");
+                    return;
+                }
+
+                UInt32 flashconfig = getFlashConfig(serial);
+
+                if (flashconfig == 0x00000000)
+                {
+                    CloseSerial(serial);
+                    return;
+                }
+
+                if ((flashconfig & 0xF0000000) == 0xC0000000)
+                {
+                    if (variables.debugMode) Console.WriteLine("PicoFlasher: Flashconfig 0x" + flashconfig.ToString("X8"));
+
+                    if (Version >= 3)
+                    {
+                        for (int i = 0; i < 10; i++)
+                        {
+                            CMD cmd = new CMD();
+                            cmd.cmd = COMMANDS.EMMC_DETECT;
+                            cmd.lba = 0;
+                            SendCmd(serial, cmd);
+                            emmc_det = RecvUInt8(serial);
+
+                            if (emmc_det != 0)
+                            {
+                                if (variables.debugMode) Console.WriteLine("PicoFlasher: eMMC detected.");
+                                break;
+                            }
+
+                            if (variables.debugMode) Console.WriteLine("PicoFlasher: eMMC flashconfig, but eMMC was not detected. Retrying.");
+                        }
+                    }
+
+                    if (emmc_det == 0)
+                    {
+                        CloseSerial(serial);
+                        Console.WriteLine("PicoFlasher error: eMMC flashconfig, but eMMC was not detected.");
+                        return;
+                    }
+                }
+
+                CloseSerial(serial);
+
+                if (emmc_det == 0)
+                    ReadNand(iterations, start, end);
+                else
+                    ReadEmmc(iterations, start, end);
+            });
+            mainReadThread.Start();
         }
 
         public void Write(int fixEcc, uint start = 0, uint end = 0, bool isEccOrXell = false)
         {
-            SerialPort serial = OpenSerial();
-            if (serial == null)
-                return;
+            Thread mainWriteThread = new Thread(() =>
+            {
+                byte emmc_det = 0;
 
-            byte emmc_det = 0;
-            if (Version >= 3) {
-                CMD cmd = new CMD();
-                cmd.cmd = COMMANDS.EMMC_DETECT;
-                cmd.lba = 0;
-                SendCmd(serial, cmd);
-                emmc_det = RecvUInt8(serial);
-            }
+                Console.WriteLine("PicoFlasher: Beginning Write");
 
-            CloseSerial(serial);
+                SerialPort serial = OpenSerial();
 
-            if (emmc_det == 0)
-                WriteNand(fixEcc, start, end, isEccOrXell);
-            else
-                WriteEmmc(start, end, isEccOrXell);
+                if (serial == null)
+                {
+                    Console.WriteLine("PicoFlasher Error: OpenSerial returned null");
+                    return;
+                }
+
+                UInt32 flashconfig = getFlashConfig(serial);
+
+                if (flashconfig == 0x00000000)
+                {
+                    CloseSerial(serial);
+                    return;
+                }
+
+                if ((flashconfig & 0xF0000000) == 0xC0000000)
+                {
+                    if (variables.debugMode) Console.WriteLine("PicoFlasher: Flashconfig 0x" + flashconfig.ToString("X8"));
+
+                    if (Version >= 3)
+                    {
+                        for (int i = 0; i < 10; i++)
+                        {
+                            CMD cmd = new CMD();
+                            cmd.cmd = COMMANDS.EMMC_DETECT;
+                            cmd.lba = 0;
+                            SendCmd(serial, cmd);
+                            emmc_det = RecvUInt8(serial);
+
+                            if (emmc_det != 0)
+                            {
+                                if (variables.debugMode) Console.WriteLine("PicoFlasher: eMMC detected.");
+                                break;
+                            }
+
+                            if (variables.debugMode) Console.WriteLine("PicoFlasher: eMMC flashconfig, but eMMC was not detected. Retrying.");
+                        }
+                    }
+
+                    if (emmc_det == 0)
+                    {
+                        CloseSerial(serial);
+                        Console.WriteLine("PicoFlasher error: eMMC flashconfig, but eMMC was not detected.");
+                        return;
+                    }
+                }
+
+                CloseSerial(serial);
+
+                if (emmc_det == 0)
+                    WriteNand(fixEcc, start, end, isEccOrXell);
+                else
+                    WriteEmmc(start, end, isEccOrXell);
+            });
+            mainWriteThread.Start();
         }
 
         public int Open()
