@@ -3650,15 +3650,13 @@ namespace JRunner
             string contentDllPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Microsoft Xbox 360 SDK\\bin\\win32\\content.dll");
              
             // If we couldn't find content.dll from the default installation path, prompt the user
-            // for the path to "Microsoft Xbox 360 SDK\\bin\\win32\\content.dll"
             if (!File.Exists(contentDllPath))
             {
                 Console.WriteLine("Enable DevGL: SDK not found, manual selection required.");
 
                 OpenFileDialog sdkFileDialog = new OpenFileDialog();
-                sdkFileDialog.Title = "Select Xbox 360 SDK installer or content.dll";
-                sdkFileDialog.Filter = "SDK Files|content.dll;XDKSetupXenon*.exe";
-                sdkFileDialog.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
+                sdkFileDialog.Title = "Select DevGL Key, SDK Installer, or content.dll";
+                sdkFileDialog.Filter = "SDK Files|content.dll;XDKSetupXenon*.exe;SB_priv.bin;SB_prv.bin";
 
                 if (sdkFileDialog.ShowDialog() == DialogResult.OK)
                 {

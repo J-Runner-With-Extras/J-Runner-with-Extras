@@ -41,13 +41,22 @@ namespace JRunner.Classes
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
         };
 
-        // Hash of the DevGL key
+        // Hash of the DevGL key as contained within the SDK
         private static readonly byte[] SearchHash = new byte[]
         {
             0x57, 0xEE, 0x20, 0x83, 0xE6, 0x2C, 0xEC, 0x0C,
             0x3E, 0x1A, 0x97, 0xE3, 0x30, 0x91, 0xFC, 0x24,
             0x8C, 0x82, 0x6F, 0x46, 0xBB, 0x46, 0x5C, 0x91,
             0x42, 0x97, 0xB0, 0xF5, 0x60, 0x66, 0xF7, 0x64
+        };
+
+        // Hash of the DevGL key as needed by XeBuild
+        private static readonly byte[] DemangledHash = new byte[]
+        {
+            0xCC, 0xAA, 0x61, 0x54, 0x69, 0x64, 0xCE, 0xEA,
+            0xBE, 0x61, 0xA9, 0xDD, 0x37, 0x61, 0x26, 0x4E,
+            0xA0, 0x8C, 0xA8, 0x0F, 0x1A, 0xA6, 0xB6, 0x3A,
+            0xBA, 0x58, 0xDB, 0xB4, 0x75, 0x82, 0x58, 0x48
         };
 
         private const int SectionLength = 0x390;
@@ -167,6 +176,26 @@ namespace JRunner.Classes
         public static bool enableDevGL(string contentDllPath)
         {
             SHA256 sha256 = SHA256.Create();
+            string sbPrivBinPath = Path.Combine(variables.rootfolder, @"xebuild\common\" + "SB_priv.bin");
+
+            // Check and see if SB_priv.bin was provided
+            if (contentDllPath.EndsWith("bin") && (new FileInfo(contentDllPath).Length) == 0x390)
+            {
+                byte[] binData = File.ReadAllBytes(contentDllPath);
+                byte[] binHash = sha256.ComputeHash(binData);
+
+                if (binHash.SequenceEqual(DemangledHash))
+                {
+                    // User provided the actual SB_priv.bin. Copy it to the correct path
+                    File.Copy(contentDllPath, sbPrivBinPath, true);
+                    return true;
+                }
+                else
+                {
+                    Console.WriteLine("Invalid key: " + contentDllPath);
+                    return false;
+                }
+            }
 
             foreach (MatchResult key in FindSections(contentDllPath))
             {
@@ -181,8 +210,6 @@ namespace JRunner.Classes
 
                     // Demangle the key into the form that XeBuild expects
                     byte[] demangledKey = DemangleKey(key.Data);
-
-                    string sbPrivBinPath = Path.Combine(variables.rootfolder, @"xebuild\common\" + "SB_priv.bin");
 
                     // Write the file to the right directory such that DevGL will function correctly
                     File.WriteAllBytes(sbPrivBinPath, demangledKey);
