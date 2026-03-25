@@ -183,6 +183,7 @@ namespace JRunner
             this.jRPBLToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.updateJRPToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.keyDatabaseToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.enableDevGLToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.groupBox8.SuspendLayout();
             this.getCpuKeyMenu.SuspendLayout();
             this.showWorkingFolderMenu.SuspendLayout();
@@ -860,6 +861,7 @@ namespace JRunner
             this.convertToRGH3ToolStripMenuItem,
             this.checkSecdataToolStripMenuItem,
             this.CustomXeBuildMenuItem,
+            this.enableDevGLToolStripMenuItem,
             this.toolStripMenuItem5,
             this.hexEditorToolStripMenuItem,
             this.kVViewerToolStripMenuItem,
@@ -1499,6 +1501,13 @@ namespace JRunner
             this.keyDatabaseToolStripMenuItem.Text = "Key Database";
             this.keyDatabaseToolStripMenuItem.Click += new System.EventHandler(this.keyDatabaseToolStripMenuItem_Click);
             // 
+            // enableDevGLToolStripMenuItem
+            // 
+            this.enableDevGLToolStripMenuItem.Name = "enableDevGLToolStripMenuItem";
+            this.enableDevGLToolStripMenuItem.Size = new System.Drawing.Size(240, 22);
+            this.enableDevGLToolStripMenuItem.Text = "Enable DevGL";
+            this.enableDevGLToolStripMenuItem.Click += new System.EventHandler(this.enableDevGLToolStripMenuItem_Click);
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -1702,5 +1711,6 @@ namespace JRunner
         private ToolStripMenuItem injectRGH3CBXToolStripMenuItem;
         private ToolStripMenuItem linuxFeaturesToolStripMenuItem;
         private ToolStripMenuItem toggleDebugModeToolStripMenuItem;
+        private ToolStripMenuItem enableDevGLToolStripMenuItem;
     }
 }

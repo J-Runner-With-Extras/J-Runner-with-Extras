@@ -160,6 +160,7 @@
   <ItemGroup>
     <Compile Include="Classes\Backup.cs" />
     <Compile Include="Classes\CpuKeyGen.cs" />
+    <Compile Include="Classes\EnableDevGL.cs" />
     <Compile Include="Classes\Mtx-Usb.cs" />
     <Compile Include="Classes\NativeMethods.cs" />
     <Compile Include="Classes\PicoFlasher.cs" />
@@ -908,12 +909,8 @@
       <FodyPackage Include="$([System.IO.Directory]::GetDirectories('$(SolutionDir)packages', 'Fody.*'))" />
       <CosturaFodyPackage Include="$([System.IO.Directory]::GetDirectories('$(SolutionDir)packages', 'Costura.Fody.*'))" />
     </ItemGroup>
-    <Error
-      Condition="@(FodyPackage->Count()) == '0'"
-      Text="Fody is not installed — do not remove it. It is required to bundle dependencies into the EXE." />
-    <Error
-      Condition="@(CosturaFodyPackage->Count()) == '0'"
-      Text="Costura.Fody is not installed — do not remove it. It is required to bundle dependencies into the EXE." />
+    <Error Condition="@(FodyPackage-&gt;Count()) == '0'" Text="Fody is not installed — do not remove it. It is required to bundle dependencies into the EXE." />
+    <Error Condition="@(CosturaFodyPackage-&gt;Count()) == '0'" Text="Costura.Fody is not installed — do not remove it. It is required to bundle dependencies into the EXE." />
   </Target>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
