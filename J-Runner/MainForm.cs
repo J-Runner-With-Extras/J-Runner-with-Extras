@@ -3653,18 +3653,18 @@ namespace JRunner
             // for the path to "Microsoft Xbox 360 SDK\\bin\\win32\\content.dll"
             if (!File.Exists(contentDllPath))
             {
-                Console.WriteLine("Enable DevGL: SDK not found, manual selection of content.dll required.");
+                Console.WriteLine("Enable DevGL: SDK not found, manual selection required.");
 
                 OpenFileDialog sdkFileDialog = new OpenFileDialog();
-                sdkFileDialog.Title = "Select Microsoft Xbox 360 SDK\\bin\\win32\\content.dll";
-                sdkFileDialog.Filter = "Content DLL File (content.dll)|content.dll";
+                sdkFileDialog.Title = "Select Xbox 360 SDK installer or content.dll";
+                sdkFileDialog.Filter = "SDK Files|content.dll;XDKSetupXenon*.exe";
                 sdkFileDialog.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
 
                 if (sdkFileDialog.ShowDialog() == DialogResult.OK)
                 {
                     if (!File.Exists(sdkFileDialog.FileName))
                     {
-                        Console.WriteLine("Enable DevGL: content.dll not found.");
+                        Console.WriteLine("Enable DevGL: SDK files not found.");
                         return;
                     }
 
@@ -3679,6 +3679,23 @@ namespace JRunner
 
             // Theoretically we've got the path to the DLL
             if (variables.debugMode) Console.WriteLine($"Enable DevGL: DLL Path ({contentDllPath})");
+
+            if (contentDllPath.ToLower().EndsWith("exe"))
+            {
+                if (variables.debugMode) Console.WriteLine("Enable DevGL: exe selected, extraction required");
+
+                try
+                {
+                    contentDllPath = EnableDevGL.extractContentDllFileFromExe(contentDllPath, getCurrentWorkingFolder());
+                }
+                catch(Exception ex)
+                {
+                    if (variables.debugMode) Console.WriteLine("Enable DevGL Error: " + ex.Message);
+                    Console.WriteLine("Enable DevGL: Failed. Couldn't extract SDK installer.");
+                    return;
+                }
+            }
+
 
             try
             {

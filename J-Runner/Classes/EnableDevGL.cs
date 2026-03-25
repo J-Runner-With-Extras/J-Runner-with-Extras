@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data.Linq;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace JRunner.Classes
 {
@@ -138,6 +136,32 @@ namespace JRunner.Classes
             Buffer.BlockCopy(BitConverter.GetBytes(dword0), 0, result, 4, 4);
 
             return result;
+        }
+
+        public static string extractContentDllFileFromExe(string exePath, string workingFolder)
+        {
+            Process p = new Process();
+            ProcessStartInfo psi = new ProcessStartInfo();
+
+            psi.FileName = @"common\7z\7za.exe";
+            psi.UseShellExecute = false;
+            psi.Arguments = $"e -o\"{workingFolder}\\\" -y \"{exePath}\" XDK\\bin\\win32\\content.dll";
+            psi.CreateNoWindow = true;
+            p.StartInfo = psi;
+
+            if (variables.debugMode) Console.WriteLine($"Enable DevGL: 7-Zip command line ({psi.FileName} {psi.Arguments})");
+
+            p.Start();
+
+            p.WaitForExit();
+
+            if (p.ExitCode != 0)
+            {
+                if (variables.debugMode) Console.WriteLine($"Enable DevGL Error: 7-Zip failed with code {p.ExitCode}");
+                return "";
+            }
+
+            return Path.Combine(workingFolder,"content.dll");
         }
 
         public static bool enableDevGL(string contentDllPath)
