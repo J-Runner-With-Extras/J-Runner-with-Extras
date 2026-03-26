@@ -136,7 +136,7 @@ namespace JRunner
                         success.Play();
                     }
 
-                    if (mode == 1)
+                    if (mode == 1 || mode == 2)
                     {
                         Thread.Sleep(500);
                         MainForm.mainForm.afterWriteXeLLCleanup();
