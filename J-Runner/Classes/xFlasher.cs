@@ -621,7 +621,6 @@ namespace JRunner
             if (string.IsNullOrWhiteSpace(variables.filename1)) return;
             if (!File.Exists(variables.filename1)) return;
 
-
             if (Path.GetExtension(variables.filename1) == ".ecc") writeNand(16, variables.filename1, 1);
             else writeNand(16, variables.filename1, 2);
         }
@@ -856,7 +855,7 @@ namespace JRunner
                             success.Play();
                         }
 
-                        if (mode == 1)
+                        if (mode == 1 || mode == 2)
                         {
                             Thread.Sleep(500);
                             MainForm.mainForm.afterWriteXeLLCleanup();
