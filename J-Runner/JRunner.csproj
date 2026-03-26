@@ -908,26 +908,22 @@
       <FodyPackage Include="$([System.IO.Directory]::GetDirectories('$(SolutionDir)packages', 'Fody.*'))" />
       <CosturaFodyPackage Include="$([System.IO.Directory]::GetDirectories('$(SolutionDir)packages', 'Costura.Fody.*'))" />
     </ItemGroup>
-    <Error
-      Condition="@(FodyPackage->Count()) == '0'"
-      Text="Fody is not installed — do not remove it. It is required to bundle dependencies into the EXE." />
-    <Error
-      Condition="@(CosturaFodyPackage->Count()) == '0'"
-      Text="Costura.Fody is not installed — do not remove it. It is required to bundle dependencies into the EXE." />
+    <Error Condition="@(FodyPackage-&gt;Count()) == '0'" Text="Fody is not installed — do not remove it. It is required to bundle dependencies into the EXE." />
+    <Error Condition="@(CosturaFodyPackage-&gt;Count()) == '0'" Text="Costura.Fody is not installed — do not remove it. It is required to bundle dependencies into the EXE." />
   </Target>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('..\packages\Fody.6.9.3\build\Fody.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Fody.6.9.3\build\Fody.targets'))" />
     <Error Condition="!Exists('..\packages\Costura.Fody.6.0.0\build\Costura.Fody.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Costura.Fody.6.0.0\build\Costura.Fody.props'))" />
     <Error Condition="!Exists('..\packages\Costura.Fody.6.0.0\build\Costura.Fody.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Costura.Fody.6.0.0\build\Costura.Fody.targets'))" />
+    <Error Condition="!Exists('..\packages\Fody.6.9.3\build\Fody.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Fody.6.9.3\build\Fody.targets'))" />
   </Target>
   <PropertyGroup>
     <PreBuildEvent>"$(ProjectDir)UpdateBuildDatetime.exe" "$(ProjectDir)Resources\Build.txt"</PreBuildEvent>
   </PropertyGroup>
-  <Import Project="..\packages\Fody.6.9.3\build\Fody.targets" Condition="Exists('..\packages\Fody.6.9.3\build\Fody.targets')" />
   <Import Project="..\packages\Costura.Fody.6.0.0\build\Costura.Fody.targets" Condition="Exists('..\packages\Costura.Fody.6.0.0\build\Costura.Fody.targets')" />
+  <Import Project="..\packages\Fody.6.9.3\build\Fody.targets" Condition="Exists('..\packages\Fody.6.9.3\build\Fody.targets')" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
