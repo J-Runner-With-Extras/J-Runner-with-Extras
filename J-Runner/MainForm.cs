@@ -1,4 +1,5 @@
-﻿using JRunner.Forms;
+﻿using JRunner.Classes;
+using JRunner.Forms;
 using JRunner.Nand;
 using LibUsbDotNet.DeviceNotify;
 using Microsoft.Win32;
@@ -181,6 +182,8 @@ namespace JRunner
                 if (File.Exists(tempTimingPath)) File.Delete(tempTimingPath);
             }
             catch { }
+
+            DiscordRpc.SetIdle();
         }
 
         private void showApplication()
@@ -433,6 +436,8 @@ namespace JRunner
 
             savesettings();
             saveToLog(true);
+
+            DiscordRpc.Close();
         }
 
         private void saveToLog(bool bFormClosing)
@@ -4972,6 +4977,9 @@ namespace JRunner
                         case "AllowZeroPaired":
                             x.write(name, variables.allowZeroPaired.ToString());
                             break;
+                        case "DiscordRpc":
+                            x.write(name, variables.DiscordRpc.ToString());
+                            break;
                         default:
                             break;
                     }
@@ -5171,6 +5179,11 @@ namespace JRunner
                             bvalue = false;
                             if (!bool.TryParse(val, out bvalue)) bvalue = false;
                             variables.allowZeroPaired = bvalue;
+                            break;
+                        case "DiscordRpc":
+                            bvalue = false;
+                            if (!bool.TryParse(val, out bvalue)) bvalue = false;
+                            variables.DiscordRpc = bvalue;
                             break;
                         default:
                             break;

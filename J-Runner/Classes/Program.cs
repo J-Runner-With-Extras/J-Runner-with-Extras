@@ -1,4 +1,5 @@
-﻿using Microsoft.Win32;
+﻿using JRunner.Classes;
+using Microsoft.Win32;
 using System;
 using System.Diagnostics;
 using System.Drawing;
@@ -173,6 +174,8 @@ namespace JRunner
 
         public static void exit()
         {
+            DiscordRpc.Close();
+
             try
             {
                 mutex.ReleaseMutex();

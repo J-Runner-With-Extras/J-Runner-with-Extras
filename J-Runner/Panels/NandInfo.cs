@@ -191,6 +191,7 @@ namespace JRunner.Panels
 
                     string name = Nand.Nand.getConsoleName(nand, variables.flashconfig);
                     textBoxConsole.Text = name;
+                    Classes.DiscordRpc.SetPresence("Modding the xbeezy", name);
 
                     if (nand.si.smcver.Length > 0) textBoxSmcVer.Text = nand.si.smcver;
                     else textBoxSmcVer.Text = "";
