@@ -1,4 +1,5 @@
 ﻿using JRunner.Forms;
+using JRunner.Classes;
 using JRunner.Nand;
 using LibUsbDotNet.DeviceNotify;
 using Microsoft.Win32;
@@ -3630,6 +3631,91 @@ namespace JRunner
                 MessageBox.Show("No nand loaded in source", "Can't", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
+        }
+
+        private void enableDevGLToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            bool enableDevGlStatus = false;
+
+            // If we've already got SB_priv.bin, no need to try extracting it again
+            if (xPanel.canDevGL())
+            {
+                //enableDevGLToolStripMenuItem.Visible = false;
+                Console.WriteLine("DevGL already enabled.");
+                return;
+            }
+
+            // SB_priv.bin is contained within content.dll in the 360's SDK.
+            string contentDllPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Microsoft Xbox 360 SDK\\bin\\win32\\content.dll");
+             
+            // If we couldn't find content.dll from the default installation path, prompt the user
+            if (!File.Exists(contentDllPath))
+            {
+                Console.WriteLine("Enable DevGL: SDK not found, manual selection required.");
+
+                OpenFileDialog sdkFileDialog = new OpenFileDialog();
+                sdkFileDialog.Title = "Select DevGL Key, SDK Installer, or content.dll";
+                sdkFileDialog.Filter = "SDK Files|content.dll;XDKSetupXenon*.exe;SB_priv.bin;SB_prv.bin";
+
+                if (sdkFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    if (!File.Exists(sdkFileDialog.FileName))
+                    {
+                        Console.WriteLine("Enable DevGL: SDK files not found.");
+                        return;
+                    }
+
+                    contentDllPath = sdkFileDialog.FileName;
+                }
+                else
+                {
+                    Console.WriteLine("Enable DevGL: cancelled.");
+                    return;
+                }
+            }
+
+            // Theoretically we've got the path to the DLL
+            if (variables.debugMode) Console.WriteLine($"Enable DevGL: DLL Path ({contentDllPath})");
+
+            if (contentDllPath.ToLower().EndsWith("exe"))
+            {
+                if (variables.debugMode) Console.WriteLine("Enable DevGL: exe selected, extraction required");
+
+                try
+                {
+                    contentDllPath = EnableDevGL.extractContentDllFileFromExe(contentDllPath, getCurrentWorkingFolder());
+                }
+                catch(Exception ex)
+                {
+                    if (variables.debugMode) Console.WriteLine("Enable DevGL Error: " + ex.Message);
+                    Console.WriteLine("Enable DevGL: Failed. Couldn't extract SDK installer.");
+                    return;
+                }
+            }
+
+
+            try
+            {
+                enableDevGlStatus = EnableDevGL.enableDevGL(contentDllPath);
+            }
+            catch(Exception ex)
+            {
+                if(variables.debugMode) Console.WriteLine("Enable DevGL Error: " + ex.Message);
+            }
+
+            if (false == enableDevGlStatus)
+            {
+                Console.WriteLine("Enable DevGL: Failed. Check the SDK installation and try again.");
+                return;
+            }
+
+            Console.WriteLine("Enable DevGL: Success!");
+
+            // Ok, DevGL was successfully enabled. We'll re-init the NAND to refresh
+            // any UI elements that can now use DevGL
+            nand_init();
+
+            return;
         }
 
         private void kVViewerToolStripMenuItem_Click(object sender, EventArgs e)

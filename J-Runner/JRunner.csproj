@@ -160,6 +160,7 @@
   <ItemGroup>
     <Compile Include="Classes\Backup.cs" />
     <Compile Include="Classes\CpuKeyGen.cs" />
+    <Compile Include="Classes\EnableDevGL.cs" />
     <Compile Include="Classes\Mtx-Usb.cs" />
     <Compile Include="Classes\NativeMethods.cs" />
     <Compile Include="Classes\PicoFlasher.cs" />
