@@ -1069,7 +1069,11 @@ namespace JRunner
                             string time = $"{watch.Elapsed.TotalSeconds:F2} sec(s)";
                             Console.WriteLine("xFlasher: Flash Successful! Time Elapsed: {0}", time);
                         }
-                        else Console.WriteLine("xFlasher: Flash Failed!");
+                        else
+                        {
+                            Console.WriteLine("xFlasher: Flash Failed!");
+                            MainForm.mainForm.updateProgress(100);
+                        }
 
                         Console.WriteLine();
 
@@ -1078,7 +1082,11 @@ namespace JRunner
                             File.Delete(MainForm.tempTimingPath);
                         }
                     }
-                    else Console.WriteLine("xFlasher: Could not detect device");
+                    else
+                    {
+                        Console.WriteLine("xFlasher: Could not detect device");
+                        MainForm.mainForm.updateProgress(100);
+                    }
                 }
                 catch (Exception ex)
                 {
