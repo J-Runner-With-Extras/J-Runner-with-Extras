@@ -131,18 +131,17 @@ namespace JRunner.Classes
             byte[] result = new byte[input.Length];
             Buffer.BlockCopy(input, 0, result, 0, input.Length);
 
-            // Reverse every 8-byte chunk
-            for (int i = 0; i + 8 <= result.Length; i += 8)
+            // The structure of the key is two DWORDs at the beginning and then the rest of the
+            // key is QWORDs. We need to endian swap each individual DWORD/QWORD of the key
+            for (int i = 0; i < 8; i += 4)
+            {
+                Array.Reverse(result, i, 4);
+            }
+
+            for (int i = 8; i + 8 <= result.Length; i += 8)
             {
                 Array.Reverse(result, i, 8);
             }
-
-            // Swap the first two DWORDs (bytes 0-3 and bytes 4-7)
-            uint dword0 = BitConverter.ToUInt32(result, 0);
-            uint dword1 = BitConverter.ToUInt32(result, 4);
-
-            Buffer.BlockCopy(BitConverter.GetBytes(dword1), 0, result, 0, 4);
-            Buffer.BlockCopy(BitConverter.GetBytes(dword0), 0, result, 4, 4);
 
             return result;
         }
