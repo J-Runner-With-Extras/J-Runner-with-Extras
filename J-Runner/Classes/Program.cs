@@ -32,6 +32,12 @@ namespace JRunner
         [STAThread]
         static void Main(string[] args)
         {
+            // Hi there! If you're seeing this, you might be wondering why this here.
+            // Ever try untangling spaghetti? It would be easier to re-write J-Runner
+            // than try to sort out all the illegal cross-thread UI updates... without
+            // disabling this check, J-Runner breaks when run in the VS debugger
+            Control.CheckForIllegalCrossThreadCalls = false;
+
             AppDomain.CurrentDomain.UnhandledException += OnCurrentDomain_UnhandledException;
 
             Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);

@@ -55,9 +55,9 @@
             this.lblAddress.AutoSize = true;
             this.lblAddress.Location = new System.Drawing.Point(12, 9);
             this.lblAddress.Name = "lblAddress";
-            this.lblAddress.Size = new System.Drawing.Size(45, 13);
+            this.lblAddress.Size = new System.Drawing.Size(77, 13);
             this.lblAddress.TabIndex = 1;
-            this.lblAddress.Text = "Address";
+            this.lblAddress.Text = "Nand Address:";
             // 
             // btnLogicalToPhysical
             // 
@@ -84,9 +84,9 @@
             this.lblLogicalAddress.AutoSize = true;
             this.lblLogicalAddress.Location = new System.Drawing.Point(12, 129);
             this.lblLogicalAddress.Name = "lblLogicalAddress";
-            this.lblLogicalAddress.Size = new System.Drawing.Size(144, 13);
+            this.lblLogicalAddress.Size = new System.Drawing.Size(147, 13);
             this.lblLogicalAddress.TabIndex = 5;
-            this.lblLogicalAddress.Text = "Logical Address (No SPARE)";
+            this.lblLogicalAddress.Text = "Logical Address (No SPARE):";
             // 
             // txtLogicalAddress
             // 
@@ -102,9 +102,9 @@
             this.lblPhysicalAddress.AutoSize = true;
             this.lblPhysicalAddress.Location = new System.Drawing.Point(12, 168);
             this.lblPhysicalAddress.Name = "lblPhysicalAddress";
-            this.lblPhysicalAddress.Size = new System.Drawing.Size(148, 13);
+            this.lblPhysicalAddress.Size = new System.Drawing.Size(151, 13);
             this.lblPhysicalAddress.TabIndex = 7;
-            this.lblPhysicalAddress.Text = "Physical Address (w/ SPARE)";
+            this.lblPhysicalAddress.Text = "Physical Address (w/ SPARE):";
             // 
             // txtPhysicalAddress
             // 
@@ -120,9 +120,9 @@
             this.lblPageNumber.AutoSize = true;
             this.lblPageNumber.Location = new System.Drawing.Point(12, 209);
             this.lblPageNumber.Name = "lblPageNumber";
-            this.lblPageNumber.Size = new System.Drawing.Size(72, 13);
+            this.lblPageNumber.Size = new System.Drawing.Size(75, 13);
             this.lblPageNumber.TabIndex = 9;
-            this.lblPageNumber.Text = "Page Number";
+            this.lblPageNumber.Text = "Page Number:";
             // 
             // txtPageNumber
             // 
@@ -138,9 +138,9 @@
             this.lblOffsetInPage.AutoSize = true;
             this.lblOffsetInPage.Location = new System.Drawing.Point(12, 248);
             this.lblOffsetInPage.Name = "lblOffsetInPage";
-            this.lblOffsetInPage.Size = new System.Drawing.Size(73, 13);
+            this.lblOffsetInPage.Size = new System.Drawing.Size(66, 13);
             this.lblOffsetInPage.TabIndex = 11;
-            this.lblOffsetInPage.Text = "Offset in page";
+            this.lblOffsetInPage.Text = "Page Offset:";
             // 
             // txtOffsetInPage
             // 
@@ -173,7 +173,8 @@
             this.MaximizeBox = false;
             this.MinimizeBox = false;
             this.Name = "AddressCalculator";
-            this.Text = "NAND Address Calculator";
+            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
+            this.Text = "Address Calculator";
             this.ResumeLayout(false);
             this.PerformLayout();
 

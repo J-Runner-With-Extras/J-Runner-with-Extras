@@ -621,7 +621,6 @@ namespace JRunner
             if (string.IsNullOrWhiteSpace(variables.filename1)) return;
             if (!File.Exists(variables.filename1)) return;
 
-
             if (Path.GetExtension(variables.filename1) == ".ecc") writeNand(16, variables.filename1, 1);
             else writeNand(16, variables.filename1, 2);
         }
@@ -856,7 +855,7 @@ namespace JRunner
                             success.Play();
                         }
 
-                        if (mode == 1)
+                        if (mode == 1 || mode == 2)
                         {
                             Thread.Sleep(500);
                             MainForm.mainForm.afterWriteXeLLCleanup();
@@ -952,6 +951,13 @@ namespace JRunner
         // SVF Flashing
         public void flashSvf(string filename, string speed = "1M")
         {
+            string xsvfToolPath = @"common/xsvftool/x86/xsvftool-ftd2xx.exe";
+
+            if (Environment.Is64BitOperatingSystem)
+            {
+                xsvfToolPath = @"common/xsvftool/x64/xsvftool-ftd2xx.exe";
+            }
+
             if (inUse || waiting) return;
 
             if (Process.GetProcessesByName("xsvftool").Length > 0)
@@ -1006,7 +1012,7 @@ namespace JRunner
                     Console.WriteLine("xFlasher: Setting flash speed to {0}", speed);
 
                     Process psi = new Process();
-                    psi.StartInfo.FileName = @"common/xsvftool/xsvftool-ftd2xx_x86.exe";
+                    psi.StartInfo.FileName = xsvfToolPath;
                     psi.StartInfo.Arguments = "-l";
                     psi.StartInfo.CreateNoWindow = true;
                     psi.StartInfo.UseShellExecute = false;
@@ -1026,7 +1032,7 @@ namespace JRunner
                     {
                         Console.WriteLine($"xFlasher: {dev} detected");
                         psi = new Process();
-                        psi.StartInfo.FileName = @"common/xsvftool/xsvftool-ftd2xx_x86.exe";
+                        psi.StartInfo.FileName = xsvfToolPath;
                         psi.StartInfo.Arguments = "-j 0 -p -f " + speed + (xsvf ? " -x" : " -s") + " \"" + MainForm.tempTimingPath + "\"";
                         psi.StartInfo.CreateNoWindow = true;
                         psi.StartInfo.UseShellExecute = false;
@@ -1063,7 +1069,11 @@ namespace JRunner
                             string time = $"{watch.Elapsed.TotalSeconds:F2} sec(s)";
                             Console.WriteLine("xFlasher: Flash Successful! Time Elapsed: {0}", time);
                         }
-                        else Console.WriteLine("xFlasher: Flash Failed!");
+                        else
+                        {
+                            Console.WriteLine("xFlasher: Flash Failed!");
+                            MainForm.mainForm.updateProgress(100);
+                        }
 
                         Console.WriteLine();
 
@@ -1072,7 +1082,11 @@ namespace JRunner
                             File.Delete(MainForm.tempTimingPath);
                         }
                     }
-                    else Console.WriteLine("xFlasher: Could not detect device");
+                    else
+                    {
+                        Console.WriteLine("xFlasher: Could not detect device");
+                        MainForm.mainForm.updateProgress(100);
+                    }
                 }
                 catch (Exception ex)
                 {

@@ -13,4 +13,27 @@ namespace JRunner
         [DllImport("user32")]
         public static extern int RegisterWindowMessage(string message);
     }
+
+    internal class WineMethods
+    {
+        [DllImport("kernel32", SetLastError = true)]
+        private static extern IntPtr GetModuleHandle(string lpModuleName);
+
+        [DllImport("kernel32", SetLastError = true)]
+        private static extern IntPtr GetProcAddress(IntPtr hModule, string lpProcName);
+
+        public static bool IsWine()
+        {
+            try
+            {
+                IntPtr ntdll = GetModuleHandle("ntdll.dll");
+                if (ntdll == IntPtr.Zero) return false;
+
+                return GetProcAddress(ntdll, "wine_get_version") != IntPtr.Zero;
+            }
+            catch { }
+
+            return false;
+        }
+    }
 }

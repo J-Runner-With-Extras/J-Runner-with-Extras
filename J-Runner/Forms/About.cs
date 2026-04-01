@@ -9,18 +9,19 @@ namespace JRunner.Forms
     {
         static string[] contrib = { "15432: RGH3 Exploit",
                                     "Balika011: PicoFlasher Support",
+                                    "Cheez: DirtyPico Support",
                                     "DaCukiMonsta: Nand Info Improvements/Bugfixes",
                                     "DrSchottky, Visual Studio, proferabg: RGH2 to 3",
                                     "Eaton: XL USB and XL HDD Patches",
                                     "Element18592: xFlasher Hardware",
+                                    "Harley David-San:\n64MB DevGL Support, Bugfixes,\nQoL",
                                     "Josh/Octal450: J-Runner with Extras \nMain Development",
                                     "Mena:\nGeneral Dev, xFlasher Speedup,\nMatrix Hex Flashing, CPU Key Gen",
                                     "Nick Stefanou: Original J-Runner \nDevelopment and Software",
                                     "Orpheus: Updates to KV Info/Bugfixes",
                                     "SGCSam: 6717/9199 XeBuild Patches",
-                                    "wurthless-elektroniks: Hacked 7378 CB_B for Elpis+Samsung",
+                                    "Wurthless-elektroniks: Hacked 7378 CB_B for Elpis+Samsung",
                                     "Xvistaman2005: XDKbuild",
-                                    "Harley David-San:\n64mb DevGL support, bugfixes,\nQoL improvements"
         };
         static int contribloc = 0;
         [DllImport("Gdi32.dll", EntryPoint = "CreateRoundRectRgn")]

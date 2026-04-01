@@ -1,4 +1,5 @@
 ﻿using JRunner.Forms;
+using JRunner.Classes;
 using JRunner.Nand;
 using LibUsbDotNet.DeviceNotify;
 using Microsoft.Win32;
@@ -13,7 +14,6 @@ using System.Linq;
 using System.Management;
 using System.Media;
 using System.Reflection;
-using System.Security.Policy;
 using System.Security.Principal;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -41,6 +41,7 @@ namespace JRunner
             XFLASHER_SPI = 3,
             XFLASHER_EMMC = 4,
             PICOFLASHER = 5,
+            DIRTYPICO = 6,
         }
 
         public static TextWriter _writer = null;
@@ -50,6 +51,7 @@ namespace JRunner
         IP myIP = new IP();
         public static Nand.PrivateN nand = new Nand.PrivateN();
         public xFlasher xflasher = new xFlasher();
+        public DirtyPico dirtypico  = new DirtyPico();
         public PicoFlasher picoflasher = new PicoFlasher();
         public Mtx_Usb mtx_usb = new Mtx_Usb();
         public xdkbuild XDKbuild = new xdkbuild();
@@ -199,6 +201,36 @@ namespace JRunner
 
         public bool IsUsbDeviceConnected(string pid, string vid)
         {
+            if (WineMethods.IsWine())
+            {
+                string[] devices = Directory.GetDirectories("/sys/bus/usb/devices");
+
+                if (variables.debugMode) Console.WriteLine($"WINE USB: searching for device {vid} {pid}");
+
+                foreach (string dev in devices)
+                {
+                    try
+                    {
+                        string devVid = File.ReadAllText(Path.Combine(dev, "idVendor")).Trim().ToLower();
+                        string devPid = File.ReadAllText(Path.Combine(dev, "idProduct")).Trim().ToLower();
+
+                        if (devVid == vid.ToLower() && devPid == pid.ToLower())
+                        {
+                            // PicoFlasher is the only supported device on non-windows
+                            // Only return true for PicoFlasher unless we're in debug mode
+                            if ( variables.debugMode ||
+                                 (devVid == "600d" && devPid == "7001") )
+                            {
+                                return true;
+                            }
+                        }
+                    }
+                    catch { }
+                }
+
+                return false;
+            }
+
             using (var searcher = new ManagementObjectSearcher(@"Select * From Win32_USBControllerDevice"))
             {
                 using (var collection = searcher.Get())
@@ -247,6 +279,9 @@ namespace JRunner
 
         private void deviceinit()
         {
+            nTools.setImage(null);
+            device = DEVICE.NO_DEVICE;
+
             devNotifier = DeviceNotifier.OpenDeviceNotifier();
             devNotifier.OnDeviceNotify += onDevNotify;
 
@@ -259,6 +294,11 @@ namespace JRunner
                     nTools.setImage(Properties.Resources.picoflasher);
                     //PicoFlasherToolStripMenuItem.Visible = true;
                     device = DEVICE.PICOFLASHER;
+                }
+                else if (IsUsbDeviceConnected("C0CA", "1209")) // DirtyPico
+                {
+                    nTools.setImage(Properties.Resources.dirtypico);
+                    device = DEVICE.DIRTYPICO;
                 }
                 else if (IsUsbDeviceConnected("6010", "0403")) // xFlasher SPI
                 {
@@ -330,6 +370,12 @@ namespace JRunner
             Console.WriteLine("Session: {0:F}", DateTime.Now.ToString("MM/dd/yyyy H:mm:ss"));
             if (variables.version.Contains("Alpha") || variables.version.Contains("Beta")) Console.WriteLine("Version: {0}", variables.build);
             else Console.WriteLine("Version: {0}", variables.version);
+
+            if (WineMethods.IsWine())
+            {
+                Console.WriteLine("Running under WINE");
+                linuxFeaturesToolStripMenuItem.Visible = true;
+            }
 
             if (Upd.checkStatus == 0)
             {
@@ -498,7 +544,7 @@ namespace JRunner
         {
             if (device == DEVICE.PICOFLASHER)
             {
-                picoflasher.getFlashConfig();
+                picoflasher.printFlashConfig();
             }
             else if (device == DEVICE.XFLASHER_SPI)
             {
@@ -805,6 +851,10 @@ namespace JRunner
                         {
                             xflasher.flashSvf(filename);
                         }
+                        else if (device == DEVICE.DIRTYPICO)
+                        {
+                            dirtypico.flashSvf(filename);
+                        }
                         else if (device == DEVICE.XFLASHER_EMMC)
                         {
                             MessageBox.Show("Unable to program timing in eMMC mode\n\nPlease switch to SPI mode", "Can't", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -914,6 +964,8 @@ namespace JRunner
             if (filex == "") return;
             if (device == DEVICE.XFLASHER_SPI)
                 file = variables.rootfolder + @"\common\svf\" + filex + ".svf";
+            else if (device == DEVICE.DIRTYPICO)
+                file = variables.rootfolder + @"\common\svf\" + filex + ".svf";
             else
                 file = variables.rootfolder + @"\common\xsvf\" + filex + ".xsvf";
 
@@ -935,6 +987,10 @@ namespace JRunner
                     else if (device == DEVICE.XFLASHER_SPI)
                     {
                         xflasher.flashSvf(file);
+                    }
+                    else if (device == DEVICE.DIRTYPICO)
+                    {
+                        dirtypico.flashSvf(file);
                     }
                     else if (device == DEVICE.XFLASHER_EMMC)
                     {
@@ -3080,7 +3136,7 @@ namespace JRunner
         {
             if (string.IsNullOrEmpty(variables.filename1))
             {
-                MessageBox.Show("Select a file first.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("No nand loaded in source", "Can't", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
@@ -3121,13 +3177,19 @@ namespace JRunner
 
         private void mB64MBToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            if (string.IsNullOrEmpty(variables.filename1))
+            {
+                MessageBox.Show("No nand loaded in source", "Can't", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
             variables.filename1 = Nand.Nand.extend16mbTo64mb(variables.filename1);
             xPanel_updateSource(variables.filename1);
         }
         private void addressCalculatorToolStripMenuItem_Click(object sender, EventArgs e)
         {
             AddressCalculator formAC = new AddressCalculator();
-            formAC.Show();
+            formAC.ShowDialog();
         }
 
         private void extractFilesToolStripMenuItem_Click(object sender, EventArgs e)
@@ -3472,6 +3534,49 @@ namespace JRunner
             }
         }
 
+        private void injectRGH3CBXToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(variables.filename1))
+            {
+                MessageBox.Show("No nand loaded in source", "Can't", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            if (!Nand.Nand.VerifyKey(Oper.StringToByteArray(variables.cpukey)))
+            {
+                Console.WriteLine("Bad CPU Key");
+                return;
+            }
+
+            if (!nand.cpukeyverification(variables.cpukey))
+            {
+                Console.WriteLine("Wrong CPU Key");
+                return;
+            }
+
+            OpenFileDialog ofd = new OpenFileDialog();
+            ofd.Filter = "Glitch3 ECC (*.ecc)|*.ecc|All files (*.*)|*.*";
+            ofd.Title = "Select RGH1.3 or RGH3 ECC file";
+            ofd.InitialDirectory = variables.rootfolder;
+            ofd.RestoreDirectory = false;
+
+            if (ofd.ShowDialog() != DialogResult.OK)
+            {
+                return;
+            }
+
+            if (xPanel.getRbtnGlitch2mChecked())
+            {
+                // MFG loaders and by extension Glitch2m images encrypt the CB_B differently
+                // than retail CB_B, so we need to use a zero CPU key for invoking rgh3build
+                rgh3Build.injectECC(ofd.FileName, "00000000000000000000000000000000", false);
+            }
+            else
+            {
+                rgh3Build.injectECC(ofd.FileName, variables.cpukey, false);
+            }
+        }
+
         CustomXeBuild CX;
         private void CustomXeBuildMenuItem_Click(object sender, EventArgs e)
         {
@@ -3526,6 +3631,91 @@ namespace JRunner
                 MessageBox.Show("No nand loaded in source", "Can't", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
+        }
+
+        private void enableDevGLToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            bool enableDevGlStatus = false;
+
+            // If we've already got SB_priv.bin, no need to try extracting it again
+            if (xPanel.canDevGL())
+            {
+                //enableDevGLToolStripMenuItem.Visible = false;
+                Console.WriteLine("DevGL already enabled.");
+                return;
+            }
+
+            // SB_priv.bin is contained within content.dll in the 360's SDK.
+            string contentDllPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Microsoft Xbox 360 SDK\\bin\\win32\\content.dll");
+             
+            // If we couldn't find content.dll from the default installation path, prompt the user
+            if (!File.Exists(contentDllPath))
+            {
+                Console.WriteLine("Enable DevGL: SDK not found, manual selection required.");
+
+                OpenFileDialog sdkFileDialog = new OpenFileDialog();
+                sdkFileDialog.Title = "Select DevGL Key, SDK Installer, or content.dll";
+                sdkFileDialog.Filter = "SDK Files|content.dll;XDKSetupXenon*.exe;SB_priv.bin;SB_prv.bin";
+
+                if (sdkFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    if (!File.Exists(sdkFileDialog.FileName))
+                    {
+                        Console.WriteLine("Enable DevGL: SDK files not found.");
+                        return;
+                    }
+
+                    contentDllPath = sdkFileDialog.FileName;
+                }
+                else
+                {
+                    Console.WriteLine("Enable DevGL: cancelled.");
+                    return;
+                }
+            }
+
+            // Theoretically we've got the path to the DLL
+            if (variables.debugMode) Console.WriteLine($"Enable DevGL: DLL Path ({contentDllPath})");
+
+            if (contentDllPath.ToLower().EndsWith("exe"))
+            {
+                if (variables.debugMode) Console.WriteLine("Enable DevGL: exe selected, extraction required");
+
+                try
+                {
+                    contentDllPath = EnableDevGL.extractContentDllFileFromExe(contentDllPath, getCurrentWorkingFolder());
+                }
+                catch(Exception ex)
+                {
+                    if (variables.debugMode) Console.WriteLine("Enable DevGL Error: " + ex.Message);
+                    Console.WriteLine("Enable DevGL: Failed. Couldn't extract SDK installer.");
+                    return;
+                }
+            }
+
+
+            try
+            {
+                enableDevGlStatus = EnableDevGL.enableDevGL(contentDllPath);
+            }
+            catch(Exception ex)
+            {
+                if(variables.debugMode) Console.WriteLine("Enable DevGL Error: " + ex.Message);
+            }
+
+            if (false == enableDevGlStatus)
+            {
+                Console.WriteLine("Enable DevGL: Failed. Check the SDK installation and try again.");
+                return;
+            }
+
+            Console.WriteLine("Enable DevGL: Success!");
+
+            // Ok, DevGL was successfully enabled. We'll re-init the NAND to refresh
+            // any UI elements that can now use DevGL
+            nand_init();
+
+            return;
         }
 
         private void kVViewerToolStripMenuItem_Click(object sender, EventArgs e)
@@ -4576,6 +4766,10 @@ namespace JRunner
                 {
                     nTools.setImage(Properties.Resources.picoflasher);
                 }
+                else if (device == DEVICE.DIRTYPICO)
+                {
+                    nTools.setImage(Properties.Resources.dirtypico);
+                }
                 else
                 {
                     nTools.setImage(null);
@@ -4595,8 +4789,9 @@ namespace JRunner
         {
             try
             {
-                if (variables.debugMode) Console.WriteLine("DevNotify - {0}", e.Device.Name);
+                if (variables.debugMode) Console.WriteLine("DevNotify - {0}", e.Device != null ? e.Device.Name : "null");
                 if (variables.debugMode) Console.WriteLine("EventType - {0}", e.EventType);
+
                 if (e.EventType == EventType.DeviceArrival && e.Device != null)
                 {
                     if (e.Device.IdVendor == 0x600D && e.Device.IdProduct == 0x7001) // PicoFlasher
@@ -4604,6 +4799,11 @@ namespace JRunner
                         if (!DemoN.DemonDetected) nTools.setImage(Properties.Resources.picoflasher);
                         //PicoFlasherToolStripMenuItem.Visible = true;
                         device = DEVICE.PICOFLASHER;
+                    }
+                    else if (e.Device.IdVendor == 0x1209 && e.Device.IdProduct == 0xC0CA) // DirtyPico
+                    {
+                        nTools.setImage(Properties.Resources.dirtypico);
+                        device = DEVICE.DIRTYPICO;
                     }
                     else if (e.Device.IdVendor == 0x0403 && e.Device.IdProduct == 0x6010) // xFlasher SPI
                     {
@@ -4655,6 +4855,11 @@ namespace JRunner
                     {
                         if (!DemoN.DemonDetected) nTools.setImage(null);
                         //PicoFlasherToolStripMenuItem.Visible = false;
+                        device = DEVICE.NO_DEVICE;
+                    }
+                    else if (e.Device.IdVendor == 0x1209 && e.Device.IdProduct == 0xC0CA) // DirtyPico
+                    {
+                        if (!DemoN.DemonDetected) nTools.setImage(null);
                         device = DEVICE.NO_DEVICE;
                     }
                     else if (e.Device.IdVendor == 0x11d4 && e.Device.IdProduct == 0x8334)
@@ -5399,5 +5604,18 @@ namespace JRunner
 
         #endregion
 
+        private void toggleDebugModeToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (variables.debugMode)
+            {
+                Console.WriteLine("Debugging Off");
+                variables.debugMode = false;
+            }
+            else
+            {
+                Console.WriteLine("Debugger On");
+                variables.debugMode = true;
+            }
+        }
     }
 }

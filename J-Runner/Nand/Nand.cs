@@ -224,9 +224,8 @@ namespace JRunner.Nand
 
             // Early NAND images begin with 0x0F3F or 0x0F4F
             // Regular NAND images begin with 0xFF4F
-            if ( (data[0] == 0xFF && data[1] == 0x4F) ||
-                 (data[0] == 0x0F && data[1] == 0x3F) ||
-                 (data[0] == 0x0F && data[1] == 0x4F) )
+            if( (data[0] == 0xFF || data[0] == 0x0F) &&
+                (data[1] == 0x3F || data[1] == 0x4F) )
             {
                 unpack_base_image(data, bigblock);
 
@@ -406,7 +405,16 @@ namespace JRunner.Nand
                 // We're done scanning the first few blocks. Now we can figure out the CB_A/CB_X/CB_B situation
                 if (bl.CB_A > 0)
                 {
-                    cb_dec = Nand.decrypt_CB(CB_A);
+                    if (bl._2BL_magic == "S2")
+                    {
+                        // DD1 images use a different 1BL key than DD2+
+                        cb_dec = Nand.decrypt_S2(CB_A);
+                    }
+                    else
+                    {
+                        cb_dec = Nand.decrypt_CB(CB_A);
+                    }
+
                     if (variables.extractfiles) Oper.savefile(CB_A, "output\\" + bl._2BL_magic + "_A.bin");
                     if (variables.extractfiles) Oper.savefile(cb_dec, "output\\" + bl._2BL_magic + "_A_dec.bin");
 
@@ -475,12 +483,12 @@ namespace JRunner.Nand
                     }
                     else
                     {
-                        cd_dec = Nand.decrypt_CD(CD, cb_dec);
+                        cd_dec = Nand.decrypt_CD_cpukey(CD, cb_dec, Oper.StringToByteArray(variables.cpukey));
                         if (variables.extractfiles) Oper.savefile(cd_dec, "output\\" + bl._4BL_magic + "_dec.bin");
                     }
                 }
 
-                if (bl.CE > 0)
+                if (bl._5BL_magic != "")
                 {
                     if (variables.extractfiles) Oper.savefile(CE, "output\\" + blIdString + ".bin");
                     ce_dec = Nand.decrypt_CE(CE, cd_dec);
@@ -1688,11 +1696,11 @@ namespace JRunner.Nand
             }
         }
 
-        public static byte[] decrypt_CB(byte[] image)
+        public static byte[] decrypt_CB_internal(byte[] image, byte[] cpu1blKey)
         {
-            if (variables.debugMode) Console.WriteLine(" * decrypting CB...");
+
             byte[] message = Oper.returnportion(image, 0x10, 0x10);
-            byte[] RC4_key = Oper.HMAC_SHA1(secret_1bl, message);
+            byte[] RC4_key = Oper.HMAC_SHA1(cpu1blKey, message);
             byte[] imfordec = Oper.returnportion(image, 0x20, image.Length - 0x20);
             Oper.RC4_v(ref imfordec, Oper.returnportion(RC4_key, 0, 0x10));
             byte[] finalimage = new byte[image.Length];
@@ -1706,11 +1714,37 @@ namespace JRunner.Nand
             return finalimage;
         }
 
+        // CB, SB, effectively any 2BL that runs on DD2+ uses the same crypto 
+        public static byte[] decrypt_CB(byte[] image)
+        {
+            if (variables.debugMode) Console.WriteLine(" * decrypting CB...");
+            return decrypt_CB_internal(image, secret_1bl);
+        }
+
+        // "S2" is the 2BL that runs on DD1. Crypto is the same, except the 1BL
+        // key is all zeros
+        public static byte[] decrypt_S2(byte[] image)
+        {
+            if (variables.debugMode) Console.WriteLine(" * decrypting S2...");
+            return decrypt_CB_internal(image, keyZero);
+        }
+
         public static byte[] decrypt_CB_cpukey(byte[] CB_B, byte[] CB_A, byte[] cpukey)
         {
             byte[] secret = Oper.returnportion(CB_A, 0x10, 0x10);
             byte[] temp = Oper.returnportion(CB_B, 0x10, 0x10);
-            byte[] message = Oper.concatByteArrays(temp, cpukey, 0x10, 0x10);
+            byte[] message = { };
+
+            if (CB_A[0x7] != 0)
+            {
+                // The MFG flag is set. Decrypt the CB_B with the zero key instead
+                // of the CPU key that was passed in
+                message = Oper.concatByteArrays(temp, keyZero, 0x10, 0x10);
+            }
+            else
+            {
+                message = Oper.concatByteArrays(temp, cpukey, 0x10, 0x10);
+            }
 
             if ((Oper.ByteArrayToInt(Oper.returnportion(CB_A, 0x6, 2)) & 0x1000) != 0)
             {
@@ -1738,16 +1772,45 @@ namespace JRunner.Nand
 
         public static byte[] decrypt_CD(byte[] CD, byte[] CB_B)
         {
+            return decrypt_CD_cpukey(CD, CB_B, null);
+        }
+
+        public static byte[] decrypt_CD_cpukey(byte[] CD, byte[] CB_B, byte[] cpukey)
+        {
             byte[] secret = Oper.returnportion(CB_B, 0x10, 0x10);
             byte[] message = Oper.returnportion(CD, 0x10, 0x10);
-            byte[] RC4_key = Oper.HMAC_SHA1(secret, message);
 
-            //RC4_key = HMAC_SHA1(cpukey, returnportion(RC4_key,0, 0x10));
+            byte[] RC4_key = Oper.returnportion(Oper.HMAC_SHA1(secret, message), 0, 0x10);
+
             byte[] imfordec = Oper.returnportion(CD, 0x20, CD.Length - 0x20);
-            Oper.RC4_v(ref imfordec, Oper.returnportion(RC4_key, 0, 0x10));
+            Oper.RC4_v(ref imfordec, RC4_key);
 
+            // Check to see if we need decrypted the CD properly. If not, this is probably a
+            // non-zeropaired single cb image that needs a CPU key to decrypt the CD. Borrowed
+            // this check from the RGBuild image editor
+            if (!( (imfordec[0x20] == 0 && imfordec[0x21] == 0 && imfordec[0x22] == 0 && imfordec[0x23] == 0) ||
+                   (imfordec[0x210] == 0 && imfordec[0x211] == 0 && imfordec[0x212] == 0 && imfordec[0x213] == 0) ))
+            {
+                // We didn't decrypt the CD properly. Oops! We've got to try again with the CPU key if available
+                if (cpukey != null)
+                {
+                    if (variables.debugMode) Console.WriteLine("CD wasn't decrypted properly, trying again with the CPU key");
+
+                    // The nonce/message is the previously calculated RC4 key, the secret is the CPU key
+                    secret = cpukey;
+                    message = RC4_key;
+
+                    // Regenerate the decryption key
+                    RC4_key = Oper.returnportion(Oper.HMAC_SHA1(secret, message), 0, 0x10);
+
+                    // Let's try this again... hopefully it works this time
+                    imfordec = Oper.returnportion(CD, 0x20, CD.Length - 0x20);
+                    Oper.RC4_v(ref imfordec, RC4_key);
+                }
+            }
 
             byte[] finalimage = new byte[CD.Length];
+
             for (int i = 0; i < CD.Length; i++)
             {
                 if (i < 0x10) finalimage[i] = CD[i];
