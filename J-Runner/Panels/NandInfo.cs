@@ -159,7 +159,7 @@ namespace JRunner.Panels
                         textBox4BL.Text = "";
                     }
 
-                    if (nand.bl.CE > 0)
+                    if (nand.bl._5BL_magic != "")
                     {
                         label5bl.Text = nand.bl._5BL_magic;
                         textBox5BL.Text = nand.bl.CE.ToString();

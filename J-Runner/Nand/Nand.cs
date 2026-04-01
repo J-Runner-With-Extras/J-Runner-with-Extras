@@ -488,7 +488,7 @@ namespace JRunner.Nand
                     }
                 }
 
-                if (bl.CE > 0)
+                if (bl._5BL_magic != "")
                 {
                     if (variables.extractfiles) Oper.savefile(CE, "output\\" + blIdString + ".bin");
                     ce_dec = Nand.decrypt_CE(CE, cd_dec);
