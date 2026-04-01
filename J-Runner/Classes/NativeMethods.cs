@@ -16,15 +16,20 @@ namespace JRunner
 
     internal class WineMethods
     {
-        [DllImport("ntdll")]
-        public static extern IntPtr wine_get_version();
+        [DllImport("kernel32", SetLastError = true)]
+        private static extern IntPtr GetModuleHandle(string lpModuleName);
+
+        [DllImport("kernel32", SetLastError = true)]
+        private static extern IntPtr GetProcAddress(IntPtr hModule, string lpProcName);
 
         public static bool IsWine()
         {
             try
             {
-                IntPtr ptr = wine_get_version();
-                return true;
+                IntPtr ntdll = GetModuleHandle("ntdll.dll");
+                if (ntdll == IntPtr.Zero) return false;
+
+                return GetProcAddress(ntdll, "wine_get_version") != IntPtr.Zero;
             }
             catch { }
 
