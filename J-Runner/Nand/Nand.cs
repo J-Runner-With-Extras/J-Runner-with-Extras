@@ -1737,7 +1737,8 @@ namespace JRunner.Nand
 
             if (CB_A[0x7] != 0)
             {
-                // The MFG flag is set. Decrypt the CB_B with the 
+                // The MFG flag is set. Decrypt the CB_B with the zero key instead
+                // of the CPU key that was passed in
                 message = Oper.concatByteArrays(temp, keyZero, 0x10, 0x10);
             }
             else
