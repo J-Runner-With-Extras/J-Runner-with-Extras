@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Be.Windows.Forms;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -224,9 +225,8 @@ namespace JRunner.Nand
 
             // Early NAND images begin with 0x0F3F or 0x0F4F
             // Regular NAND images begin with 0xFF4F
-            if ( (data[0] == 0xFF && data[1] == 0x4F) ||
-                 (data[0] == 0x0F && data[1] == 0x3F) ||
-                 (data[0] == 0x0F && data[1] == 0x4F) )
+            if( (data[0] == 0xFF || data[0] == 0x0F) &&
+                (data[1] == 0x3F || data[1] == 0x4F) )
             {
                 unpack_base_image(data, bigblock);
 
@@ -406,7 +406,16 @@ namespace JRunner.Nand
                 // We're done scanning the first few blocks. Now we can figure out the CB_A/CB_X/CB_B situation
                 if (bl.CB_A > 0)
                 {
-                    cb_dec = Nand.decrypt_CB(CB_A);
+                    if (bl._2BL_magic == "S2")
+                    {
+                        // DD1 images use a different 1BL key than DD2+
+                        cb_dec = Nand.decrypt_S2(CB_A);
+                    }
+                    else
+                    {
+                        cb_dec = Nand.decrypt_CB(CB_A);
+                    }
+
                     if (variables.extractfiles) Oper.savefile(CB_A, "output\\" + bl._2BL_magic + "_A.bin");
                     if (variables.extractfiles) Oper.savefile(cb_dec, "output\\" + bl._2BL_magic + "_A_dec.bin");
 
@@ -475,6 +484,7 @@ namespace JRunner.Nand
                     }
                     else
                     {
+                        // TODO this DOES NOT work for single-CB NAND images
                         cd_dec = Nand.decrypt_CD(CD, cb_dec);
                         if (variables.extractfiles) Oper.savefile(cd_dec, "output\\" + bl._4BL_magic + "_dec.bin");
                     }
@@ -1688,11 +1698,11 @@ namespace JRunner.Nand
             }
         }
 
-        public static byte[] decrypt_CB(byte[] image)
+        public static byte[] decrypt_CB_internal(byte[] image, byte[] cpu1blKey)
         {
-            if (variables.debugMode) Console.WriteLine(" * decrypting CB...");
+
             byte[] message = Oper.returnportion(image, 0x10, 0x10);
-            byte[] RC4_key = Oper.HMAC_SHA1(secret_1bl, message);
+            byte[] RC4_key = Oper.HMAC_SHA1(cpu1blKey, message);
             byte[] imfordec = Oper.returnportion(image, 0x20, image.Length - 0x20);
             Oper.RC4_v(ref imfordec, Oper.returnportion(RC4_key, 0, 0x10));
             byte[] finalimage = new byte[image.Length];
@@ -1704,6 +1714,21 @@ namespace JRunner.Nand
             }
 
             return finalimage;
+        }
+
+        // CB, SB, effectively any 2BL that runs on DD2+ uses the same crypto 
+        public static byte[] decrypt_CB(byte[] image)
+        {
+            if (variables.debugMode) Console.WriteLine(" * decrypting CB...");
+            return decrypt_CB_internal(image, secret_1bl);
+        }
+
+        // "S2" is the 2BL that runs on DD1. Crypto is the same, except the 1BL
+        // key is all zeros
+        public static byte[] decrypt_S2(byte[] image)
+        {
+            if (variables.debugMode) Console.WriteLine(" * decrypting S2...");
+            return decrypt_CB_internal(image, keyZero);
         }
 
         public static byte[] decrypt_CB_cpukey(byte[] CB_B, byte[] CB_A, byte[] cpukey)
