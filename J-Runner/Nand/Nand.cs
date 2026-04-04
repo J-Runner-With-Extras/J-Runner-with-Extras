@@ -2438,7 +2438,9 @@ namespace JRunner.Nand
             }
 
             // smc check
-            int smctype = nand._smc[0x100] >> 4 & 15;
+            int smctype = 0;
+            if(nand._smc != null) smctype = nand._smc[0x100] >> 4 & 15;
+
             if (smctype < variables.console_types.Length && smctype >= 0)
             {
                 if (smctype == 1) // Xenon SMC doesn't work on any other consoles, so we need higher bias here for Xenon's with Falcon flash
