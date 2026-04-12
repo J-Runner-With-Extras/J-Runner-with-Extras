@@ -1000,7 +1000,7 @@ namespace JRunner.Classes
             // 2) Any type of RGH3 image
             // 3) DevGL images for console types 3 (64mb Xenon), 13 (64mb Zephyr), and 14 (64mb Falcon)
             //
-            if( (_xdkbuild && _ttype != variables.hacktypes.devgl) ||
+            if( (_xdkbuild && _ttype == variables.hacktypes.glitch2m) ||
                 _rgh3 ||
                 isDevglFor64MbConsoles() ||
                 isAffectedByXeBuildImageBug() )
@@ -1285,7 +1285,7 @@ namespace JRunner.Classes
                         MainForm.mainForm.XDKbuild.create(boardtype, true);
                         MainForm.mainForm.rgh3Build.create(_ctype.Text, "00000000000000000000000000000000", true);
                     }
-                    else if (_xdkbuild && _ttype != variables.hacktypes.devgl)
+                    else if (_xdkbuild && _ttype == variables.hacktypes.glitch2m)
                     {
                         MainForm.mainForm.XDKbuild.create(boardtype);
                     }
