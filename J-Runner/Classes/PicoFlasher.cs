@@ -84,7 +84,7 @@ namespace JRunner
                 // Determine the "linux path" to our helper script
                 psi.FileName = @"C:\windows\system32\winepath.exe";
                 psi.UseShellExecute = false;
-                psi.Arguments = "scripts/getWineComPorts.sh";
+                psi.Arguments = "common/scripts/getWineComPorts.sh";
                 psi.CreateNoWindow = true;
                 psi.RedirectStandardOutput = true;
                 p.StartInfo = psi;
