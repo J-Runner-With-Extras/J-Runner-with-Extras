@@ -3124,10 +3124,10 @@ namespace JRunner.Nand
         }
 
         /// <summary>
-        /// Fixes the patch slot size in NAND for Falcon DevGL and Glitch2m images. XeBuild has an apparent
-        /// bug where for Falcon board type only, the patch slot size is set to 0x00000000, rather than the
-        /// expected 0x00010000. This causes bootloader panics in the CB/CD. XDKBuild and dev images don't
-        /// use patch slots so the bug didn't really appear before now.
+        /// Fixes the various bugs that XeBuild has when generating images for XSB consoles
+        /// - For Falcon and Jasper XSB, the patch slot size is set to 0x00000000 rather than the
+        /// expected 0x00010000. This causes the 2BL and 4BL to panic.
+        /// - For Xenon, the KV offset is not set causing XeLL to be unable to show the DVD key, console serial, etc.
         /// </summary>
         /// <param name="flashFilePath">Flash image to be patched, result will be written back to the same file</param>
         public static void fixBuggyXeBuildImage(string flashFilePath)
@@ -3196,8 +3196,8 @@ namespace JRunner.Nand
                 nandPatchPages = unecc(nandPatchPages);
             }
 
-            // Set the patch slot size to 0x00010000, which is the same for all other
-            // image types and glitch2m/DevGL on other board types
+            // If the patch slot size is unset, set the patch slot size to 0x00010000
+            // which is the size for all common image types
             if( 0 == BitConverter.ToInt32(nandPatchPages.Skip(0x70).Take(0x4).ToArray(),0) )
             {
                 Console.WriteLine("Fixing patch slot size set to zero...");
@@ -3209,7 +3209,7 @@ namespace JRunner.Nand
             }
 
 
-            // Set the KV size to 0x00004000 (this is assuming a retail KV)
+            // If the KV size is unset, set the KV size to 0x00004000 (this is assuming a retail KV)
             if (0 == BitConverter.ToInt32(nandPatchPages.Skip(0x60).Take(0x4).ToArray(), 0))
             {
                 Console.WriteLine("Fixing KV size set to zero...");
