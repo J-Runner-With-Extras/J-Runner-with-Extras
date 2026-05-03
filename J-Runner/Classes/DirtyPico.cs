@@ -171,7 +171,34 @@ namespace JRunner
                             File.Delete(MainForm.tempTimingPath);
                         }
                     }
-                    else Console.WriteLine("DirtyPico: Could not detect device");
+                    else
+                    {
+                        if (psi.ExitCode == 0)
+                        {
+                            // the xsvftool call succeeded, but there were no suitable JTAG devices returned 
+                            Console.WriteLine("DirtyPico: Glitch Chip not detected");
+                        }
+                        else
+                        {
+                            // xsvftool returned an error when scanning for the glitch chip, rip
+                            Console.WriteLine($"DirtyPico: xsfvtool returned error {psi.ExitCode} when scanning for glitch chips");
+                        }
+
+                        // If JRunner is in debug mode, print the contents of stdout and stderr
+                        // from xsvftool to the console
+                        if (variables.debugMode)
+                        {
+                            Console.WriteLine(str);
+
+                            StreamReader rErr = psi.StandardError;
+                            string strErr = rErr.ReadToEnd().Replace("\n", "\r\n");
+                            rErr.Close();
+
+                            Console.WriteLine(strErr);
+                        }
+
+                        MainForm.mainForm.updateProgress(100);
+                    }
                 }
                 catch (Exception ex)
                 {
