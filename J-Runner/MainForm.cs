@@ -981,7 +981,7 @@ namespace JRunner
                 {
                     if (device == DEVICE.PICOFLASHER)
                     {
-                        MessageBox.Show("PicoFlasher can't to program timing", "Can't", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show("PicoFlasher can't program timing", "Can't", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         return;
                     }
                     else if (device == DEVICE.XFLASHER_SPI)
