@@ -159,7 +159,7 @@ namespace JRunner
             this.createSafeDualImageToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem11 = new System.Windows.Forms.ToolStripSeparator();
             this.patchKVToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.sMCConfigViewerToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
+            this.smcConfigViewerToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.changeLDVToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem9 = new System.Windows.Forms.ToolStripSeparator();
             this.nANDAlignmentToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -1266,7 +1266,7 @@ namespace JRunner
             this.createSafeDualImageToolStripMenuItem,
             this.toolStripMenuItem11,
             this.patchKVToolStripMenuItem,
-            this.sMCConfigViewerToolStripMenuItem1,
+            this.smcConfigViewerToolStripMenuItem,
             this.changeLDVToolStripMenuItem,
             this.toolStripMenuItem9,
             this.nANDAlignmentToolStripMenuItem,
@@ -1310,12 +1310,12 @@ namespace JRunner
             this.patchKVToolStripMenuItem.Text = "Patch Keyvault…";
             this.patchKVToolStripMenuItem.Click += new System.EventHandler(this.patchKVToolStripMenuItem_Click);
             // 
-            // sMCConfigViewerToolStripMenuItem1
+            // smcConfigViewerToolStripMenuItem
             // 
-            this.sMCConfigViewerToolStripMenuItem1.Name = "sMCConfigViewerToolStripMenuItem1";
-            this.sMCConfigViewerToolStripMenuItem1.Size = new System.Drawing.Size(213, 22);
-            this.sMCConfigViewerToolStripMenuItem1.Text = "Edit SMC Config…";
-            this.sMCConfigViewerToolStripMenuItem1.Click += new System.EventHandler(this.sMCConfigViewerToolStripMenuItem1_Click);
+            this.smcConfigViewerToolStripMenuItem.Name = "smcConfigViewerToolStripMenuItem";
+            this.smcConfigViewerToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
+            this.smcConfigViewerToolStripMenuItem.Text = "Edit SMC Config…";
+            this.smcConfigViewerToolStripMenuItem.Click += new System.EventHandler(this.smcConfigViewerToolStripMenuItem_Click);
             // 
             // changeLDVToolStripMenuItem
             // 
@@ -1648,7 +1648,7 @@ namespace JRunner
         private ToolStripMenuItem extractFilesToolStripMenuItem;
         private ToolStripMenuItem createDonorToolStripMenuItem;
         private ToolStripSeparator toolStripMenuItem9;
-        private ToolStripMenuItem sMCConfigViewerToolStripMenuItem1;
+        private ToolStripMenuItem smcConfigViewerToolStripMenuItem;
         private ToolStripMenuItem changeLDVToolStripMenuItem;
         private ToolStripMenuItem mTXUSBFirmwareUtilityToolStripMenuItem;
         private ToolStripMenuItem corona4GBToolStripMenuItem;
