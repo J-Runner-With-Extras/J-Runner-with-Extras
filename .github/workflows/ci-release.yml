@@ -1,0 +1,209 @@
+name: J-Runner release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-jrunner:
+    runs-on: windows-2025-vs2026
+
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
+    env:
+      projName: JRunner.sln
+      buildCfg: Release
+      net452SdkUrl: 'https://www.nuget.org/api/v2/package/Microsoft.NETFramework.ReferenceAssemblies.net452/1.0.3'
+      sdkSystemPath: 'C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework'
+
+    steps:
+      - name: Install .net framework 4.5.2 SDK
+        shell: pwsh
+        run: |
+          echo "Download ${env:net452SdkUrl}"
+          Invoke-WebRequest -Uri "${env:net452SdkUrl}" -OutFile "${env:temp}\net452sdk.zip"
+          echo "Unzip net452sdk.zip"
+          Expand-Archive -Force -LiteralPath "${env:temp}\net452sdk.zip" -DestinationPath "${env:temp}\net452sdk"
+          echo "Delete ${env:sdkSystemPath}\v4.5.2"
+          [IO.Directory]::Delete("${env:sdkSystemPath}\v4.5.2", $True)
+          echo "Move SDK to ${env:sdkSystemPath}\v4.5.2"
+          Move-Item -Force -LiteralPath "${env:temp}\net452sdk\build\.NETFramework\v4.5.2" -Destination "${env:sdkSystemPath}"
+
+      - name: Disable autocrlf for checkout actions
+        run: |-
+          # https://github.com/actions/checkout/issues/226
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Add msbuild
+        uses: microsoft/setup-msbuild@v3
+
+      - name: Restore packages
+        run: nuget restore ${env:projName}
+
+      - name: Resolve release version
+        id: version
+        shell: pwsh
+        run: |
+          $file = "J-Runner/Classes/variables.cs"
+          $line = Select-String -Path $file -Pattern '^\s*public\s+static\s+string\s+version\s*='
+
+          if (-not $line) {
+            Write-Error "Version not found in variables.cs"
+            exit 1
+          }
+
+          $version = ($line.Line -replace '.*version\s*=\s*"(.*)".*','$1').Trim() -replace '\s+','-'
+          Write-Host "Base version: $version"
+          $final = "V$version"
+          $short = git rev-parse --short HEAD
+          $branch = "${{ github.ref_name }}"
+
+          # Since I don’t have a complete picture of how the versioning process currently works,
+          # I’ve decided to use the short commit ID as a suffix for the release version and dev branch.
+          # This process could be improved by using automatic incrementing, tagging and committing
+          # changes of variables.cs file, but for now I’m leaving this open for discussion.
+          #
+          if ($branch -eq "dev") {
+            $final = "V$version-$short"
+          }
+
+          # if ($branch -eq "dev") {
+          #     echo "Fetching tags..."
+          #     git fetch --tags
+          #     $tags = git tag -l "V$version-r*"
+          #     if ($tags) {
+          #         $numbers = $tags | ForEach-Object {
+          #           if ($_ -match '-r(\d+)$') { [int]$Matches[1] }
+          #         }
+          #         $next = ($numbers | Measure-Object -Maximum).Maximum + 1
+          #     } else {
+          #       $next = 0
+          #     }
+          #     $final = "V$version-r$next"
+          # }
+
+          Write-Host "Final version: $final"
+          "version=$final" >> $env:GITHUB_OUTPUT
+
+      - name: Build J-Runner
+        run: msbuild ${env:projName} -p:Configuration=${env:buildCfg}
+
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: J-Runner-${{ steps.version.outputs.version }}
+          path: |
+            J-Runner/bin/Release/**
+
+      - name: Checkout extras files
+        uses: actions/checkout@v6
+        with:
+          repository: J-Runner-With-Extras/J-Runner-with-Extras-Files
+          path: extras
+
+      - name: Create release zip
+        shell: pwsh
+        run: |
+          Copy-Item `
+            -Force `
+            -Path "J-Runner/bin/Release/JRunner.exe" `
+            -Destination "extras/JRunner.exe"
+
+          $zip = "J-Runner-with-Extras.zip"
+          Compress-Archive `
+            -Path "extras/*" `
+            -DestinationPath $zip `
+            -Force
+
+      - name: Create GitHub release
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          gh release create $version `
+            J-Runner-with-Extras.zip `
+            --title "J-Runner with Extras $version" `
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  build-docker:
+    needs: build-jrunner
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Download release
+        shell: pwsh
+        run: |
+          $repo = "${{ github.repository }}"
+          $version = "${{ needs.build-jrunner.outputs.version }}"
+
+          $release = Invoke-RestMethod `
+            -Uri "https://api.github.com/repos/$repo/releases/tags/$version" `
+            -Headers @{ "User-Agent" = "GitHubActions" }
+
+          $asset = $release.assets |
+            Where-Object {
+              $_.name -like "*J-Runner*" -and
+              $_.name -like "*Extras*" -and
+              $_.name -like "*.zip"
+            } |
+            Select-Object -First 1
+
+          if (-not $asset) {
+            throw "J-Runner zip not found for release $version"
+          }
+
+          Write-Host "Downloading: $($asset.name)"
+
+          Invoke-WebRequest `
+            -Uri $asset.browser_download_url `
+            -OutFile "jr_release.zip"
+
+      - name: Extract release
+        shell: pwsh
+        run: |
+          Expand-Archive `
+            -Path "jr_release.zip" `
+            -DestinationPath "jr_release" `
+            -Force
+
+          # If release is in subfolder then move it into root.
+          $dirs  = Get-ChildItem "jr_release" -Directory
+          $files = Get-ChildItem "jr_release" -File
+          if ($dirs.Count -eq 1 -and $files.Count -eq 0) {
+              $inner = $dirs[0].FullName
+              Write-Host "Normalizing archive structure (moving contents of $inner)"
+              Get-ChildItem $inner | Move-Item -Destination "jr_release" -Force
+              Remove-Item $inner -Recurse -Force
+          }
+
+      - name: Login to ghcr
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push docker image
+        uses: docker/build-push-action@v7
+        env:
+          DOCKER_BUILD_RECORD_UPLOAD: false
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/j-runner:${{ needs.build-jrunner.outputs.version }}
+            ghcr.io/${{ github.repository_owner }}/j-runner:latest
