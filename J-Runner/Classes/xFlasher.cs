@@ -971,6 +971,8 @@ namespace JRunner
                 try
                 {
                     bool xsvf = false;
+                    bool bChipIsDetected = false;
+
                     if (!ready)
                     {
                         waiting = true;
@@ -1013,7 +1015,9 @@ namespace JRunner
 
                     Process psi = new Process();
                     psi.StartInfo.FileName = xsvfToolPath;
-                    psi.StartInfo.Arguments = "-l";
+
+                    // Ask xsvftool to scan the JTAG chain on channel 0, if a glitch chip is connected it should return something
+                    psi.StartInfo.Arguments = "-j 0 -c";
                     psi.StartInfo.CreateNoWindow = true;
                     psi.StartInfo.UseShellExecute = false;
                     psi.StartInfo.RedirectStandardOutput = true;
@@ -1027,10 +1031,27 @@ namespace JRunner
                     string str = rr.ReadToEnd().Replace("\n", "\r\n");
                     rr.Close();
                     inUse = false;
-                    Match dev = Regex.Match(str, @"Device\s+\d+\s+-\s+(.+)");
-                    if (dev.Groups.Count >= 2 && dev.Groups[1].Value != "")
+
+                    Match dev = Regex.Match(str, @"idcode=0x(?<idcode>[0-9A-Fa-f]+),\s*revision=0x(?<revision>[0-9A-Fa-f]+),\s*part=0x(?<part>[0-9A-Fa-f]+),\s*manufactor=0x(?<manufacturer>[0-9A-Fa-f]+)");
+
+                    if (dev.Success &&
+                        psi.ExitCode == 0)
                     {
-                        Console.WriteLine($"xFlasher: {dev} detected");
+                        try
+                        {
+                            // If xsvftool returned something, but that something was all zeros,
+                            // then something went wrong with the JTAG device or one wasn't attached
+                            if (Convert.ToInt32(dev.Groups["idcode"].Value, 16) != 0)
+                            {
+                                bChipIsDetected = true;
+                            }
+                        }
+                        catch { }
+                    }
+
+                    if (bChipIsDetected)
+                    {
+                        Console.WriteLine($"xFlasher: Detected chip ID: " + dev.Groups["idcode"].Value);
                         psi = new Process();
                         psi.StartInfo.FileName = xsvfToolPath;
                         psi.StartInfo.Arguments = "-j 0 -p -f " + speed + (xsvf ? " -x" : " -s") + " \"" + MainForm.tempTimingPath + "\"";
@@ -1084,7 +1105,30 @@ namespace JRunner
                     }
                     else
                     {
-                        Console.WriteLine("xFlasher: Could not detect device");
+                        if (psi.ExitCode == 0)
+                        {
+                            // the xsvftool call succeeded, but there were no suitable JTAG devices returned
+                            Console.WriteLine("xFlasher: Glitch Chip not detected");
+                        }
+                        else
+                        {
+                            // xsvftool returned an error when scanning for the glitch chip, rip
+                            Console.WriteLine($"xFlasher: xsfvtool returned error {psi.ExitCode} when scanning for glitch chips");
+                        }
+                        
+                        // If JRunner is in debug mode, print the contents of stdout and stderr
+                        // from xsvftool to the console
+                        if (variables.debugMode)
+                        {
+                            Console.WriteLine(str);
+
+                            StreamReader rErr = psi.StandardError;
+                            string strErr = rErr.ReadToEnd().Replace("\n", "\r\n");
+                            rErr.Close();
+
+                            Console.WriteLine(strErr);
+                        }
+
                         MainForm.mainForm.updateProgress(100);
                     }
                 }

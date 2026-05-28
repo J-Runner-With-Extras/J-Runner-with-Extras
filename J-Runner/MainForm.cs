@@ -981,7 +981,7 @@ namespace JRunner
                 {
                     if (device == DEVICE.PICOFLASHER)
                     {
-                        MessageBox.Show("PicoFlasher can't to program timing", "Can't", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show("PicoFlasher can't program timing", "Can't", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         return;
                     }
                     else if (device == DEVICE.XFLASHER_SPI)
@@ -3394,12 +3394,6 @@ namespace JRunner
             Nand.Nand.g3fix(variables.filename1, Oper.StringToByteArray(cpukey));
         }
 
-        private void sMCConfigViewerToolStripMenuItem1_Click(object sender, EventArgs e)
-        {
-            SMCConfigEditor smcedit = new SMCConfigEditor();
-            smcedit.ShowDialog();
-        }
-
         private void patchKVToolStripMenuItem_Click(object sender, EventArgs e)
         {
             openPatchKv();
@@ -3420,6 +3414,18 @@ namespace JRunner
                 patchform.ShowDialog();
             }
             else MessageBox.Show("Could not open KV for editing\n\nMake sure the correct CPU Key is entered", "Can't", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+
+        private void smcConfigViewerToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (!nand.ok)
+            {
+                MessageBox.Show("No nand loaded in source", "Can't", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            SMCConfigEditor smcedit = new SMCConfigEditor();
+            smcedit.ShowDialog();
         }
 
         private void changeLDVToolStripMenuItem_Click(object sender, EventArgs e)

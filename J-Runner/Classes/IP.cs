@@ -296,8 +296,38 @@ namespace JRunner
 
         public static string getGatewayIp()
         {
-            var host = Dns.GetHostEntry(Dns.GetHostName());
             string address;
+
+            // Get a list of network adapters on the system that meets the following requirements
+            // - Interface is up/connected
+            // - Interface is ethernet or WiFi
+            // - The interface doesn't contain "Virtual" in its name (avoids HyperV/VMware/VirtualBox vnet adapters)
+            var physicalAdapters = NetworkInterface.GetAllNetworkInterfaces()
+                .Where(ni =>
+                    ni.OperationalStatus == OperationalStatus.Up &&
+                    (ni.NetworkInterfaceType == NetworkInterfaceType.Ethernet ||
+                     ni.NetworkInterfaceType == NetworkInterfaceType.Wireless80211) &&
+                    !ni.Description.ToLower().Contains("virtual") &&
+                    !ni.Description.ToLower().Contains("vmware"))
+                .ToList();
+
+            // Loop through the list of adapters that was returned and validate the IP address
+            foreach (var adapter in physicalAdapters)
+            {
+                foreach (var addr in adapter.GetIPProperties().UnicastAddresses)
+                {
+                    // If the adapter has an InterNetwork IPv4 address, return it
+                    // (IPv6 = InterNetworkV6 would theoretically work but XeLL doesn't support IPv6)
+                    if (addr.Address.AddressFamily == AddressFamily.InterNetwork)
+                    {
+                        address = addr.Address.ToString();
+                        return address.Substring(0, address.LastIndexOf('.') + 1);
+                    }
+                }
+            }
+
+            // Do it the old way if we didn't find an adapter the new way
+            var host = Dns.GetHostEntry(Dns.GetHostName());
             foreach (var ip in host.AddressList)
             {
                 if (ip.AddressFamily == AddressFamily.InterNetwork)

@@ -329,6 +329,8 @@ namespace JRunner
 
         public static bool allsame(byte[] s, byte n)
         {
+            if( s == null ) return false;
+
             foreach (byte x in s)
             {
                 if (x != n) return false;

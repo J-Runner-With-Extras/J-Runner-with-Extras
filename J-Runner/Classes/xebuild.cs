@@ -993,14 +993,17 @@ namespace JRunner.Classes
 
         private bool postBuildActionsAreRequired()
         {
+            //
             // So far, the following image types require post-build actions
             // any others should be added here to prevent errors and file conflicts
             //
-            // 1) XDKBuild when the hack type is NOT DevGL
+            // 1) XDKBuild glitch2m images (we need to inject the SC)
             // 2) Any type of RGH3 image
             // 3) DevGL images for console types 3 (64mb Xenon), 13 (64mb Zephyr), and 14 (64mb Falcon)
+            // 4) Any image type affected by the XeBuild bug where the patch slot size or KV offset is unset
             //
-            if( (_xdkbuild && _ttype != variables.hacktypes.devgl) ||
+
+            if( (_xdkbuild && _ttype == variables.hacktypes.glitch2m) ||
                 _rgh3 ||
                 isDevglFor64MbConsoles() ||
                 isAffectedByXeBuildImageBug() )
@@ -1036,11 +1039,17 @@ namespace JRunner.Classes
 
         private bool isAffectedByXeBuildImageBug()
         {
-            // If we've selected the following options, we're building an image
-            // that is affected by a bug in XeBuild that doesn't set the patch slot
-            // size correctly and need to patch the resulting image.
-            if ( (_ttype == variables.hacktypes.retail || _ttype == variables.hacktypes.glitch2m || _ttype == variables.hacktypes.devgl) &&
-                 ( _ctype.ID == 2 || _ctype.ID == 3 || _ctype.ID == 8 ) )
+            // If we're building an image for one of the following console types,
+            // it is potentially affected by a bug in XeBuild that doesn't set the
+            // patch slot size and/or the KV offset and we need to patch the resulting image.
+
+            if ( _ctype.ID == 2  || // 16mb Falcon
+                 _ctype.ID == 3  || // 16mb Zephyr
+                 _ctype.ID == 5  || // 16mb Jasper XSB
+                 _ctype.ID == 7  || // 64mb Xenon
+                 _ctype.ID == 8  || // 16mb Xenon
+                 _ctype.ID == 13 || // 64mb Zephyr
+                 _ctype.ID == 14 )  // 64mb Falcon
             {
                 return true;
             }
@@ -1272,9 +1281,9 @@ namespace JRunner.Classes
                 //
                 if (success && postBuildActionsAreRequired())
                 {
-                    // For DevGL and Glitch2m, there is a bug in XeBuild that breaks falcon board types.
-                    // To fix the image, we need to set the DWORD at 0x70 in NAND (the patch slot address)
-                    // otherwise the CB/CD/CE patches won't be able to find the vfuses
+                    // There are bugs in XeBuild that break images generated for XSB consoles
+                    // - Patch slot size being unset results in XeLL but no dash
+                    // - KV offset being unset means XeLL won't show console details (DVD key, serial, etc.)
                     if(isAffectedByXeBuildImageBug())
                     {
                         Nand.Nand.fixBuggyXeBuildImage(Path.Combine(variables.xefolder, variables.updflash));
@@ -1285,7 +1294,7 @@ namespace JRunner.Classes
                         MainForm.mainForm.XDKbuild.create(boardtype, true);
                         MainForm.mainForm.rgh3Build.create(_ctype.Text, "00000000000000000000000000000000", true);
                     }
-                    else if (_xdkbuild && _ttype != variables.hacktypes.devgl)
+                    else if (_xdkbuild && _ttype == variables.hacktypes.glitch2m)
                     {
                         MainForm.mainForm.XDKbuild.create(boardtype);
                     }

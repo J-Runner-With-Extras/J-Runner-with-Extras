@@ -84,7 +84,7 @@ namespace JRunner
                 // Determine the "linux path" to our helper script
                 psi.FileName = @"C:\windows\system32\winepath.exe";
                 psi.UseShellExecute = false;
-                psi.Arguments = "scripts/getWineComPorts.sh";
+                psi.Arguments = "common/scripts/getWineComPorts.sh";
                 psi.CreateNoWindow = true;
                 psi.RedirectStandardOutput = true;
                 p.StartInfo = psi;
@@ -397,13 +397,11 @@ namespace JRunner
             UInt32 flashconfig = RecvUInt32(serial);
             string flashconfigStr = flashconfig.ToString("X8");
 
-            if (flashconfig != 0x00000000 && flashconfig != 0xFFFFFFFF) Console.WriteLine("Flash Config: 0x" + flashconfigStr);
+            Console.WriteLine("Flash Config: 0x" + flashconfigStr);
 
             if (flashconfig == 0x00000000 || flashconfig == 0xFFFFFFFF)
             {
-                Console.WriteLine("Console Not Found");
-                Console.WriteLine("");
-                return 0;
+                return flashconfig;
             }
 
             if (!variables.flashconfigs.Contains(flashconfigStr))
@@ -680,7 +678,8 @@ namespace JRunner
                         return;
 
                     uint flashconfig = getFlashConfig(serial);
-                    if (flashconfig == 0)
+
+                    if (flashconfig == 0x00000000 || flashconfig == 0xFFFFFFFF)
                     {
                         Console.WriteLine("Console Not Found");
                         Console.WriteLine("");
@@ -860,7 +859,8 @@ namespace JRunner
                         return;
 
                     uint flashconfig = getFlashConfig(serial);
-                    if (flashconfig == 0)
+
+                    if (flashconfig == 0x00000000 || flashconfig == 0xFFFFFFFF)
                     {
                         Console.WriteLine("Console Not Found");
                         Console.WriteLine("");
@@ -1247,16 +1247,11 @@ namespace JRunner
 
                 UInt32 flashconfig = getFlashConfig(serial);
 
-                if (flashconfig == 0x00000000)
+                // Old-school emmc picoflasher that uses the emmc header does a braindead
+                // thing where it returns flashconfig 0xFFFFFFFF instead of something useful
+                // such as the proper flashconfig for an emmc console 
+                if ((flashconfig & 0xF0000000) == 0xC0000000 || flashconfig == 0xFFFFFFFF)
                 {
-                    CloseSerial(serial);
-                    return;
-                }
-
-                if ((flashconfig & 0xF0000000) == 0xC0000000)
-                {
-                    if (variables.debugMode) Console.WriteLine("PicoFlasher: Flashconfig 0x" + flashconfig.ToString("X8"));
-
                     if (Version >= 3)
                     {
                         for (int i = 0; i < 10; i++)
@@ -1279,13 +1274,19 @@ namespace JRunner
 
                     if (emmc_det == 0)
                     {
-                        CloseSerial(serial);
-                        Console.WriteLine("PicoFlasher error: eMMC flashconfig, but eMMC was not detected.");
-                        return;
+                        if (variables.debugMode) Console.WriteLine("PicoFlasher error: eMMC flashconfig, but eMMC was not detected.");
                     }
                 }
 
                 CloseSerial(serial);
+
+                if (flashconfig == 0x00000000 ||
+                    (((flashconfig & 0xF0000000) == 0xC0000000 || flashconfig == 0xFFFFFFFF) && emmc_det == 0))
+                {
+                    Console.WriteLine("Console Not Found");
+                    Console.WriteLine("");
+                    return;
+                }
 
                 if (emmc_det == 0)
                     ReadNand(iterations, start, end);
@@ -1313,16 +1314,11 @@ namespace JRunner
 
                 UInt32 flashconfig = getFlashConfig(serial);
 
-                if (flashconfig == 0x00000000)
+                // Old-school emmc picoflasher that uses the emmc header does a braindead
+                // thing where it returns flashconfig 0xFFFFFFFF instead of something useful
+                // such as the proper flashconfig for an emmc console 
+                if ((flashconfig & 0xF0000000) == 0xC0000000 || flashconfig == 0xFFFFFFFF)
                 {
-                    CloseSerial(serial);
-                    return;
-                }
-
-                if ((flashconfig & 0xF0000000) == 0xC0000000)
-                {
-                    if (variables.debugMode) Console.WriteLine("PicoFlasher: Flashconfig 0x" + flashconfig.ToString("X8"));
-
                     if (Version >= 3)
                     {
                         for (int i = 0; i < 10; i++)
@@ -1345,13 +1341,19 @@ namespace JRunner
 
                     if (emmc_det == 0)
                     {
-                        CloseSerial(serial);
-                        Console.WriteLine("PicoFlasher error: eMMC flashconfig, but eMMC was not detected.");
-                        return;
+                        if (variables.debugMode) Console.WriteLine("PicoFlasher error: eMMC flashconfig, but eMMC was not detected.");
                     }
                 }
 
                 CloseSerial(serial);
+
+                if (flashconfig == 0x00000000 ||
+                    (((flashconfig & 0xF0000000) == 0xC0000000 || flashconfig == 0xFFFFFFFF) && emmc_det == 0))
+                {
+                    Console.WriteLine("Console Not Found");
+                    Console.WriteLine("");
+                    return;
+                }
 
                 if (emmc_det == 0)
                     WriteNand(fixEcc, start, end, isEccOrXell);
