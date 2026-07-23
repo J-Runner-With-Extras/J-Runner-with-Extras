@@ -655,6 +655,87 @@ namespace JRunner.Nand
                     if (temp_block_offset == block_offset_b) break;
                     if (block_offset_b > size) break;
                 }
+                if ((bl.CF_0 == 0 || bl.CG_0 == 0) && bl.CE > 0 && image.Length >= 0x68)
+                {
+                    int sysupdate_offset = Convert.ToInt32(Oper.ByteArrayToString(Oper.returnportion(image, 0x64, 4)), 16);
+                    if (sysupdate_offset > 0 && sysupdate_offset < image.Length - 0x10)
+                    {
+                        if (variables.debugMode) Console.WriteLine("Fallback: Checking SysUpdate header offset 0x{0:X}", sysupdate_offset);
+                        int fb_offset = sysupdate_offset;
+                        int fb_patch = 0;
+                        for (int fb_block = 0; fb_block < 10; fb_block++)
+                        {
+                            if (fb_offset + 0x10 >= image.Length || fb_offset < 0) break;
+                            byte fb_block_id = image[fb_offset + 1];
+                            byte[] fb_build_b = new byte[2], fb_size_b = new byte[4];
+                            Buffer.BlockCopy(image, fb_offset + 2, fb_build_b, 0, 2);
+                            Buffer.BlockCopy(image, fb_offset + 12, fb_size_b, 0, 4);
+                            int fb_block_size = Convert.ToInt32(Oper.ByteArrayToString(fb_size_b), 16);
+                            int fb_block_build = Convert.ToInt32(Oper.ByteArrayToString(fb_build_b), 16);
+                            fb_block_size += 0xF;
+                            fb_block_size &= ~0xF;
+                            int fb_id = fb_block_id & 0xF;
+                            if (fb_block_size > image.Length || fb_block_size == 0) break;
+                            byte[] fb_data = new byte[fb_block_size];
+                            if (fb_offset + fb_block_size <= image.Length)
+                            {
+                                Buffer.BlockCopy(image, fb_offset, fb_data, 0, fb_block_size);
+                            }
+
+                            if (fb_id == 6 || fb_id == 7)
+                            {
+                                if (fb_id == 6)
+                                {
+                                    if (fb_patch == 0)
+                                    {
+                                        CF0 = Nand.decrypt_CF(fb_data);
+                                        bl.CF_0 = fb_block_build;
+                                        uf.ldv_p0 = Nand.decrypt_CF(fb_data)[0x21F];
+                                        byte[] temppd = Oper.returnportion(Nand.decrypt_CF(fb_data), 0x21C, 3);
+                                        Array.Reverse(temppd);
+                                        uf.pd_0 = "0x" + Oper.ByteArrayToString(temppd);
+                                    }
+                                    else
+                                    {
+                                        CF1 = Nand.decrypt_CF(fb_data);
+                                        bl.CF_1 = fb_block_build;
+                                        uf.ldv_p1 = Nand.decrypt_CF(fb_data)[0x21F];
+                                        byte[] temppd = Oper.returnportion(Nand.decrypt_CF(fb_data), 0x21C, 3);
+                                        Array.Reverse(temppd);
+                                        uf.pd_1 = "0x" + Oper.ByteArrayToString(temppd);
+                                    }
+                                    if (variables.extractfiles)
+                                    {
+                                        Oper.savefile(fb_data, "output\\CF" + fb_patch + ".bin");
+                                        Oper.savefile(Nand.decrypt_CF(fb_data), "output\\CF" + fb_patch + "_dec.bin");
+                                    }
+                                }
+                                else if (fb_id == 7)
+                                {
+                                    if (variables.extractfiles)
+                                    {
+                                        Oper.savefile(fb_data, "output\\CG" + fb_patch + ".bin");
+                                        Oper.savefile(Nand.decrypt_CG(fb_data, fb_patch == 0 ? CF0 : CF1), "output\\CG" + fb_patch + "_dec.bin");
+                                    }
+                                    if (fb_patch == 0)
+                                    {
+                                        bl.CG_0 = fb_block_build;
+                                        fb_patch = 1;
+                                    }
+                                    else
+                                    {
+                                        bl.CG_1 = fb_block_build;
+                                        break;
+                                    }
+                                }
+                            }
+                            int temp_fb_offset = fb_offset;
+                            fb_offset += fb_block_size;
+                            if (temp_fb_offset == fb_offset) break;
+                            if (fb_offset > size) break;
+                        }
+                    }
+                }
             }
             catch (System.OverflowException) { return; }
             catch (Exception ex) { if (variables.debugMode) Console.WriteLine(ex.ToString()); }
