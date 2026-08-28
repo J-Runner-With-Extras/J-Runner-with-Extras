@@ -2984,9 +2984,8 @@ namespace JRunner.Nand
                                   0x100000,   // XeLL-Only Image (Main XeLL)
                                   0xC0000,    // XeLL-Only Image (Backup XeLL)
                                   0xE0000,    // Unknown, but listed in libxenon updxell function
-                                  0xF0000,    // XeLL in the flashfs of XDKBuild and RGLoader images
-                                  0xF4000,    // XeLL in the flashfs of 64mb Devkit images
-                                  0xB80000 }; // XeLL in the flashfs of BB Jasper and BB Trinity XDKBuild images
+                                  0xB80000,   // XeLL in the flashfs of BB Jasper and BB Trinity XDKBuild images
+                                  0x0 };      // Special indicator: check for XeLL after the second patch slot
 
             int blockType = 0;
             bool flashHasEcc = false;
@@ -3048,8 +3047,27 @@ namespace JRunner.Nand
             }
 
             // Determine where in the world XeLL lives in this image
-            foreach (int testXellOffset in xellOffsets)
+            foreach (int listXellOffset in xellOffsets)
             {
+                int testXellOffset = listXellOffset;
+                
+                if (testXellOffset == 0)
+                {
+                    int patchSlotOffset = BitConverter.ToInt32(flashData.Skip(0x64).Take(4).Reverse().ToArray(), 0);
+                    int patchSlotCount = BitConverter.ToInt16(flashData.Skip(0x68).Take(2).Reverse().ToArray(), 0);
+                    int patchSlotSize = BitConverter.ToInt32(flashData.Skip(0x70).Take(4).Reverse().ToArray(), 0);
+
+                    // XeBuild has a bug where the patch slot size is set to zero for
+                    // Falcon/Zephyr/Xenon DevGL and Glitch2m images. In this case, use
+                    // the expected patch slot size of 0x10000 bytes.
+                    if (patchSlotSize == 0)
+                    {
+                        patchSlotSize = 0x10000;
+                    }
+
+                    testXellOffset = patchSlotOffset + (patchSlotSize * patchSlotCount);
+                }
+
                 if(flashHasEcc)
                 {
                     // Calculate WHERE in the physical image we should be able to find XeLL,
@@ -3070,7 +3088,7 @@ namespace JRunner.Nand
                 if (Oper.ByteArrayCompare(flashData, Oper.StringToByteArray("48000020480000EC4800000048000000"), xellOffsetPhys, 0, 0x10))
                 {
                     xellOffset = testXellOffset;
-                    Console.WriteLine("XeLL found at offset 0x" + xellOffset.ToString("x"));
+                    Console.WriteLine("XeLL found at offset 0x" + xellOffset.ToString("X"));
 
                     if (0 != xellOffsetInPage)
                     {
