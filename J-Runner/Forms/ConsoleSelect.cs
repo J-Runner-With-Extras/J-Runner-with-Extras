@@ -36,6 +36,9 @@ namespace JRunner
             btnCorona.DialogResult = DialogResult.OK;
             btnCoronaBb.DialogResult = DialogResult.OK;
             btnCorona4g.DialogResult = DialogResult.OK;
+            btnWinchester.DialogResult = DialogResult.OK;
+            btnWinchester4g.DialogResult = DialogResult.OK;
+            btnWinchesterBb.DialogResult = DialogResult.OK;
         }
 
         protected override bool ProcessDialogKey(Keys keyData)
@@ -135,6 +138,18 @@ namespace JRunner
             {
                 hresult = variables.ctypes[14];
             }
+            else if (type == "winchester")
+            {
+                hresult = variables.ctypes[15];
+            }
+            else if (type == "winchester4g")
+            {
+                hresult = variables.ctypes[16];
+            }
+            else if (type == "winchesterbb")
+            {
+                hresult = variables.ctypes[17];
+            }
             else hresult = variables.ctypes[0];
 
             return hresult;
@@ -232,17 +247,35 @@ namespace JRunner
             setType();
         }
 
+        private void btnWinchester_Click(object sender, EventArgs e)
+        {
+            type = "winchester";
+            setType();
+        }
+
+        private void btnWinchesterBb_Click(object sender, EventArgs e)
+        {
+            type = "winchesterbb";
+            setType();
+        }
+
+        private void btnWinchester4g_Click(object sender, EventArgs e)
+        {
+            type = "winchester4g";
+            setType();
+        }
+
         private void advancedChk_CheckedChanged(object sender, EventArgs e)
         {
             float dpi = Program.getScalingFactor();
             if (advancedChk.Checked)
             {
-                this.Height += Convert.ToInt32(163 * dpi);
+                this.Height += Convert.ToInt32(250 * dpi);
                 AdvancedBox.Visible = true;
             }
             else
             {
-                this.Height -= Convert.ToInt32(163 * dpi);
+                this.Height -= Convert.ToInt32(250 * dpi);
                 AdvancedBox.Visible = false;
             }
         }

@@ -572,13 +572,6 @@ namespace JRunner.Panels
             }
             else chkUsbdSec.Checked = chkUsbdSec.Enabled = false;
 
-            if (File.Exists(Path.Combine(variables.updatepath, comboDash.SelectedValue + @"\bin\hddssauth.bin")))
-            {
-                if (rbtnRetail.Checked) chkHddSsAuth.Checked = chkHddSsAuth.Enabled = false;
-                else chkHddSsAuth.Enabled = true;
-            }
-            else chkHddSsAuth.Checked = chkHddSsAuth.Enabled = false;
-
             checkDashAndConsoleSpecificPatches(variables.boardtype);
         }
 
@@ -1021,12 +1014,6 @@ namespace JRunner.Panels
             else Console.WriteLine("Corona Key Fix deselected");
         }
 
-        private void chkHddSsAuth_CheckedChanged(object sender, EventArgs e)
-        {
-            if (chkHddSsAuth.Checked) Console.WriteLine("HddSsAuth selected");
-            else Console.WriteLine("HddSsAuth deselected");
-        }
-
         private void btnGetMB_Click(object sender, EventArgs e)
         {
             if ((ModifierKeys & Keys.Shift) == Keys.Shift && MainForm.mainForm.device == MainForm.DEVICE.XFLASHER_SPI) MainForm.mainForm.xflasher.getConsoleCb();
@@ -1340,7 +1327,7 @@ namespace JRunner.Panels
             xe.loadvariables(nand._cpukey, (variables.hacktypes)variables.ttyp, variables.dashversion,
                              variables.ctype, patches, nand, chkXeSettings.Checked, checkDLPatches.Checked,
                              chkLaunch.Checked, chkAudClamp.Checked, chkRJtag.Checked, chkCleanSMC.Checked, chkCR4.Checked, chkSMCP.Checked, chkRgh3.Checked, chkBigffs.Checked,
-                             chk0Fuse.Checked, chkXdkBuild.Checked, chkXLUsb.Checked, chkXLHdd.Checked, chkXLBoth.Checked, chkUsbdSec.Checked, chkCoronaKeyFix.Checked, chkHddSsAuth.Checked, fullDataClean);
+                             chk0Fuse.Checked, chkXdkBuild.Checked, chkXLUsb.Checked, chkXLHdd.Checked, chkXLBoth.Checked, chkUsbdSec.Checked, chkCoronaKeyFix.Checked, fullDataClean);
 
             string ini = (variables.launchpath + @"\" + variables.dashversion + @"\_" + variables.ttyp + ".ini");
 
@@ -1492,7 +1479,7 @@ namespace JRunner.Panels
                             chkLaunch.Checked, chkAudClamp.Checked, chkRJtag.Checked, chkCleanSMC.Checked,
                             chkCR4.Checked, chkSMCP.Checked, chkRgh3.Checked, chkBigffs.Checked, chk0Fuse.Checked,
                             chkXdkBuild.Checked, chkXLUsb.Checked, chkXLHdd.Checked, chkXLBoth.Checked, chkUsbdSec.Checked,
-                            chkCoronaKeyFix.Checked, chkHddSsAuth.Checked, fullDataClean);
+                            chkCoronaKeyFix.Checked, fullDataClean);
                         goto Start;
                     }
                 case Classes.xebuild.XebuildError.none:

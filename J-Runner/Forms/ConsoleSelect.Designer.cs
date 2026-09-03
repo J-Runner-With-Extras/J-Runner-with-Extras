@@ -41,6 +41,9 @@ namespace JRunner
             this.btnCorona = new System.Windows.Forms.Button();
             this.btnTrinity = new System.Windows.Forms.Button();
             this.AdvancedBox = new System.Windows.Forms.GroupBox();
+            this.btnWinchester4g = new System.Windows.Forms.Button();
+            this.btnWinchesterBb = new System.Windows.Forms.Button();
+            this.btnWinchester = new System.Windows.Forms.Button();
             this.btnFalcon64 = new System.Windows.Forms.Button();
             this.btnZephyr64 = new System.Windows.Forms.Button();
             this.btnXenon64 = new System.Windows.Forms.Button();
@@ -159,6 +162,9 @@ namespace JRunner
             // 
             // AdvancedBox
             // 
+            this.AdvancedBox.Controls.Add(this.btnWinchester4g);
+            this.AdvancedBox.Controls.Add(this.btnWinchesterBb);
+            this.AdvancedBox.Controls.Add(this.btnWinchester);
             this.AdvancedBox.Controls.Add(this.btnFalcon64);
             this.AdvancedBox.Controls.Add(this.btnZephyr64);
             this.AdvancedBox.Controls.Add(this.btnXenon64);
@@ -167,10 +173,40 @@ namespace JRunner
             this.AdvancedBox.Controls.Add(this.btnJasperXsb);
             this.AdvancedBox.Location = new System.Drawing.Point(13, 259);
             this.AdvancedBox.Name = "AdvancedBox";
-            this.AdvancedBox.Size = new System.Drawing.Size(222, 183);
+            this.AdvancedBox.Size = new System.Drawing.Size(222, 265);
             this.AdvancedBox.TabIndex = 7;
             this.AdvancedBox.TabStop = false;
             this.AdvancedBox.Visible = false;
+            // 
+            // btnWinchester4g
+            // 
+            this.btnWinchester4g.Location = new System.Drawing.Point(6, 207);
+            this.btnWinchester4g.Name = "btnWinchester4g";
+            this.btnWinchester4g.Size = new System.Drawing.Size(210, 23);
+            this.btnWinchester4g.TabIndex = 7;
+            this.btnWinchester4g.Text = "Winchester 4GB";
+            this.btnWinchester4g.UseVisualStyleBackColor = true;
+            this.btnWinchester4g.Click += new System.EventHandler(this.btnWinchester4g_Click);
+            // 
+            // btnWinchesterBb
+            // 
+            this.btnWinchesterBb.Location = new System.Drawing.Point(6, 234);
+            this.btnWinchesterBb.Name = "btnWinchesterBb";
+            this.btnWinchesterBb.Size = new System.Drawing.Size(210, 23);
+            this.btnWinchesterBb.TabIndex = 6;
+            this.btnWinchesterBb.Text = "Winchester BB";
+            this.btnWinchesterBb.UseVisualStyleBackColor = true;
+            this.btnWinchesterBb.Click += new System.EventHandler(this.btnWinchesterBb_Click);
+            // 
+            // btnWinchester
+            // 
+            this.btnWinchester.Location = new System.Drawing.Point(6, 180);
+            this.btnWinchester.Name = "btnWinchester";
+            this.btnWinchester.Size = new System.Drawing.Size(210, 23);
+            this.btnWinchester.TabIndex = 3;
+            this.btnWinchester.Text = "Winchester 16MB";
+            this.btnWinchester.UseVisualStyleBackColor = true;
+            this.btnWinchester.Click += new System.EventHandler(this.btnWinchester_Click);
             // 
             // btnFalcon64
             // 
@@ -288,5 +324,8 @@ namespace JRunner
         private System.Windows.Forms.Button btnFalcon64;
         private System.Windows.Forms.Button btnZephyr64;
         private System.Windows.Forms.Button btnXenon64;
+        private System.Windows.Forms.Button btnWinchesterBb;
+        private System.Windows.Forms.Button btnWinchester;
+        private System.Windows.Forms.Button btnWinchester4g;
     }
 }

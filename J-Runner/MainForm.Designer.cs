@@ -1422,6 +1422,7 @@ namespace JRunner
             this.customizeThemeToolStripMenuItem.Size = new System.Drawing.Size(170, 22);
             this.customizeThemeToolStripMenuItem.Text = "Customize Theme";
             this.customizeThemeToolStripMenuItem.Click += new System.EventHandler(this.customizeThemeToolStripMenuItem_Click);
+            this.customizeThemeToolStripMenuItem.Visible = false;
             // 
             // settingsToolStripMenuItem
             // 

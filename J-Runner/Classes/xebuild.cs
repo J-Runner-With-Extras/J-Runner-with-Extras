@@ -50,7 +50,6 @@ namespace JRunner.Classes
         private bool _xlboth;
         private bool _usbdsec;
         private bool _coronakeyfix;
-        private bool _hddssauth;
         private Nand.PrivateN _nand;
         private List<string> _patches;
 
@@ -472,7 +471,7 @@ namespace JRunner.Classes
             Nand.Nand.zeroPairDevkitSb(Path.Combine(variables.xefolder, variables.updflash), true);
         }
 
-        public void loadvariables(string cpukey, variables.hacktypes ttype, string dash, consoles ctype, List<string> patches, Nand.PrivateN nand, bool altoptions, bool DLpatches, bool includeLaunch, bool audclamp, bool rjtag, bool cleansmc, bool cr4, bool smcp, bool rgh3, bool bigffs, bool zfuse, bool xdkbuild, bool xlusb, bool xlhdd, bool xlboth, bool usbdsec, bool coronakeyfix, bool hddssauth, bool fullDataClean)
+        public void loadvariables(string cpukey, variables.hacktypes ttype, string dash, consoles ctype, List<string> patches, Nand.PrivateN nand, bool altoptions, bool DLpatches, bool includeLaunch, bool audclamp, bool rjtag, bool cleansmc, bool cr4, bool smcp, bool rgh3, bool bigffs, bool zfuse, bool xdkbuild, bool xlusb, bool xlhdd, bool xlboth, bool usbdsec, bool coronakeyfix, bool fullDataClean)
         {
             this._cpukey = cpukey;
             this._ttype = ttype;
@@ -497,7 +496,6 @@ namespace JRunner.Classes
             this._xlboth = xlboth;
             this._usbdsec = usbdsec;
             this._coronakeyfix = coronakeyfix;
-            this._hddssauth = hddssauth;
             this._fullDataClean = fullDataClean;
         }
 
@@ -1201,7 +1199,6 @@ namespace JRunner.Classes
 
             if (_usbdsec) arguments += " -a usbdsec";
             if (_coronakeyfix) arguments += " -a corona_key_fix";
-            if (_hddssauth) arguments += " -a hddssauth";
 
             foreach (String patch in _patches)
             {
