@@ -165,6 +165,7 @@
     <Compile Include="Classes\NativeMethods.cs" />
     <Compile Include="Classes\PicoFlasher.cs" />
     <Compile Include="Classes\RC4.cs" />
+    <Compile Include="Classes\SfcxConfig.cs" />
     <Compile Include="Classes\RGH2to3.cs" />
     <Compile Include="Classes\rgh3build.cs" />
     <Compile Include="Classes\UI.cs">
@@ -520,6 +521,7 @@
       <DependentUpon>PatchKV.cs</DependentUpon>
     </Compile>
     <Compile Include="Nand\BadBlock.cs" />
+    <Compile Include="Nand\Nand1GbConverter.cs" />
     <Compile Include="Nand\Nand.cs" />
     <Compile Include="Functions\parse_ini.cs" />
     <Compile Include="Classes\Program.cs" />

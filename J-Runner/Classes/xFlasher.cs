@@ -153,27 +153,23 @@ namespace JRunner
                     return 1;
                 }
 
-                if (flashconf == "C0462002")
+                SfcxConfig config;
+                if (!SfcxConfig.TryParse(flashconf, out config)) config = SfcxConfig.Decode(0);
+
+                if (config.IsEmmc)
                 {
                     Console.WriteLine("Corona: 4GB");
 
 
                 }
-                else if (result == -4)
+                else if (result == -4 && !config.IsSupported)
                 {
                     Console.WriteLine("xFlasher: Unknown Nand");
 
                     return 1;
                 }
-                else if (flashconf == "00023010") Console.WriteLine("Jasper, Trinity: 16MB");
-                else if (flashconf == "00043000") Console.WriteLine("Corona: 16MB");
-                else if (flashconf == "008A3020") Console.WriteLine("Jasper, Trinity: 256MB");
-                else if (flashconf == "00AA3020") Console.WriteLine("Jasper, Trinity: 512MB");
-                else if (flashconf == "008C3020") Console.WriteLine("Corona: 256MB");
-                else if (flashconf == "00AC3020") Console.WriteLine("Corona: 512MB");
-                else if (flashconf == "01198010") Console.WriteLine("Xenon, Zephyr, Falcon: 16MB");
-                else if (flashconf == "01198030") Console.WriteLine("Xenon, Zephyr, Falcon: 64MB");
-                else Console.WriteLine("Unrecongized Flash Config");
+                else if (config.IsSupported) Console.WriteLine(config.Description);
+                else Console.WriteLine("Unsupported SFCX Flash Config");
 
                 Console.WriteLine("");
                 return 0;
@@ -317,29 +313,18 @@ namespace JRunner
 
                         if (size == 0) // Auto Detect Dump Size From Board
                         {
-                            if (flashconf == "00023010" || flashconf == "00043000" || flashconf == "01198010")
+                            SfcxConfig config;
+                            if (SfcxConfig.TryParse(flashconf, out config) && config.IsSupported)
                             {
-                                size = 16;
+                                if (config.HasMemoryUnit)
+                                {
+                                    int selectionGroup = config.SelectionGroup;
+                                    MainForm.mainForm.BeginInvoke((Action)(() => MainForm.mainForm.xFlasherNandSelShow(1, selectionGroup)));
+                                    return;
+                                }
+                                size = config.TotalSizeMb;
                             }
-                            else if (flashconf == "01198030")
-                            {
-                                size = 64;
-                            }
-                            else if (flashconf == "C0462002")
-                            {
-
-                            }
-                            else if (flashconf == "008A3020" || flashconf == "008C3020")
-                            {
-                                MainForm.mainForm.BeginInvoke((Action)(() => MainForm.mainForm.xFlasherNandSelShow(1, 2))); // Ask BB
-                                return;
-                            }
-                            else if (flashconf == "00AA3020" || flashconf == "00AC3020")
-                            {
-                                MainForm.mainForm.BeginInvoke((Action)(() => MainForm.mainForm.xFlasherNandSelShow(1, 3))); // Ask BB
-                                return;
-                            }
-                            else
+                            else if (config == null || !config.IsEmmc)
                             {
                                 MainForm.mainForm.BeginInvoke((Action)(() => MainForm.mainForm.xFlasherNandSelShow(1))); // Ask
                                 return;
@@ -385,7 +370,9 @@ namespace JRunner
                         Console.WriteLine("xFlasher: Reading Nand to {0}", variables.filename);
 
                         int result = -1;
-                        if (flashconf != "C0462002")
+                        SfcxConfig operationConfig;
+                        SfcxConfig.TryParse(flashconf, out operationConfig);
+                        if (operationConfig == null || !operationConfig.IsEmmc)
                         {
                             Thread blocksThread = new Thread(() =>
                             {
@@ -636,6 +623,11 @@ namespace JRunner
                 variables.nandsizex = Nandsize.S64;
                 writeNand(64, variables.filename1);
             }
+            else if (len == 1107296256)
+            {
+                variables.nandsizex = Nandsize.S1024;
+                writeNand(1024, variables.filename1);
+            }
             else if (len == 553648128)
             {
                 variables.nandsizex = Nandsize.S512;
@@ -697,7 +689,9 @@ namespace JRunner
                     {
                         return;
                     }
-                    if (flashconf == "C0462002")
+                    SfcxConfig config;
+                    if (!SfcxConfig.TryParse(flashconf, out config)) config = SfcxConfig.Decode(0);
+                    if (config.IsEmmc)
                     {
                         if (mode == 0)
                         {
@@ -710,47 +704,13 @@ namespace JRunner
                     }
                     if (mode == 0 && filename != "erase" && !skipboardcheck)
                     {
-                        if (flashconf == "00023010" || flashconf == "00043000" || flashconf == "01198010")
+                        if (config.IsSupported)
                         {
-                            if (size != 16)
+                            int systemSize = config.SystemSizeMb;
+                            int fullSize = config.TotalSizeMb;
+                            if (size != systemSize && size != fullSize)
                             {
-                                if (DialogResult.No == MessageBox.Show("You are attempting to write a " + size + "MB nand to a board with a 16MB flash config.\n\nAre you sure that you want to do that?", "Steep Hill Ahead", MessageBoxButtons.YesNo, MessageBoxIcon.Warning))
-                                {
-                                    Console.WriteLine("xFlasher: Cancelled");
-                                    Console.WriteLine("");
-                                    return;
-                                }
-                            }
-                        }
-                        else if (flashconf == "01198030")
-                        {
-                            if (size != 64)
-                            {
-                                if (DialogResult.No == MessageBox.Show("You are attempting to write a " + size + "MB nand to a board with a 64MB flash config.\n\nAre you sure that you want to do that?", "Steep Hill Ahead", MessageBoxButtons.YesNo, MessageBoxIcon.Warning))
-                                {
-                                    Console.WriteLine("xFlasher: Cancelled");
-                                    Console.WriteLine("");
-                                    return;
-                                }
-                            }
-                        }
-                        else if (flashconf == "008A3020" || flashconf == "008C3020")
-                        {
-                            if (size == 16 || size == 512)
-                            {
-                                if (DialogResult.No == MessageBox.Show("You are attempting to write a " + size + "MB nand to a board with a 64/256MB flash config.\n\nAre you sure that you want to do that?", "Steep Hill Ahead", MessageBoxButtons.YesNo, MessageBoxIcon.Warning))
-                                {
-                                    Console.WriteLine("xFlasher: Cancelled");
-                                    Console.WriteLine("");
-                                    return;
-                                }
-                            }
-                        }
-                        else if (flashconf == "00AA3020" || flashconf == "00AC3020")
-                        {
-                            if (size == 16 || size == 256)
-                            {
-                                if (DialogResult.No == MessageBox.Show("You are attempting to write a " + size + "MB nand to a board with a 64/512MB flash config.\n\nAre you sure that you want to do that?", "Steep Hill Ahead", MessageBoxButtons.YesNo, MessageBoxIcon.Warning))
+                                if (DialogResult.No == MessageBox.Show("You are attempting to write a " + size + "MB image to a board whose flash configuration decodes as " + config.Description + ".\n\nExpected " + systemSize + "MB" + (fullSize != systemSize ? " or " + fullSize + "MB" : "") + ". Continue anyway?", "Steep Hill Ahead", MessageBoxButtons.YesNo, MessageBoxIcon.Warning))
                                 {
                                     Console.WriteLine("xFlasher: Cancelled");
                                     Console.WriteLine("");
@@ -780,7 +740,7 @@ namespace JRunner
                         MainForm.mainForm.xFlasherBusy(2);
                         Console.WriteLine("xFlasher: Writing {0} to Nand", Path.GetFileName(filename));
                     }
-                    if (flashconf != "C0462002")
+                    if (!config.IsEmmc)
                     {
                         Thread blocksThread = new Thread(() =>
                         {

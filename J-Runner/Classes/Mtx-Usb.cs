@@ -56,6 +56,11 @@ namespace JRunner
                 MessageBox.Show("Unable to write eMMC type image with an SPI tool\n\nPlease use an eMMC tool", "Can't", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
+            else if (len == 1107296256)
+            {
+                variables.nandsizex = Nandsize.S1024;
+                writeNand(1024, variables.filename1);
+            }
             else if (len == 553648128)
             {
                 variables.nandsizex = Nandsize.S512;

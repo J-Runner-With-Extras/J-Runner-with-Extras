@@ -165,7 +165,7 @@ namespace JRunner.Nand
         public Useful uf;
         public string _cpukey = "", _filename;
         private int _currentFS = 0;
-        public bool noecc = false, bigblock = false, bigflash = false;
+        public bool noecc = false, bigblock = false, bigblock1gb = false, bigflash = false;
         public byte[] _rawkv, _smc, _smc_config;
         public List<int> bad_blocks = new List<int>(), remapped_blocks = new List<int>();
         private List<FSFile> Files = new List<FSFile>();
@@ -175,7 +175,7 @@ namespace JRunner.Nand
             _cpukey = "";
             _filename = "";
             _currentFS = 0;
-            ok = noecc = bigblock = bigflash = false;
+            ok = noecc = bigblock = bigblock1gb = bigflash = false;
             bad_blocks = new List<int>();
             remapped_blocks = new List<int>();
             Files = new List<FSFile>();
@@ -204,9 +204,11 @@ namespace JRunner.Nand
             FileInfo f = new FileInfo(filename);
             long s1 = f.Length;
             if (s1 == 0x40000) return;
+            BadBlock.NandGeometry nandGeometry = BadBlock.GetGeometry(filename);
+            bigblock1gb = nandGeometry.PagesPerBlock == 512;
             byte[] data = BadBlock.find_bad_blocks_X(filename, 0x50);
             //
-            if (s1 >= 0x4200000 && s1 <= 0x21000000)
+            if (s1 >= 0x4200000 && s1 <= 0x42000000)
             {
                 bigflash = true;
                 if (data[0x205] == 0xFF) bigblock = false;
@@ -753,8 +755,8 @@ namespace JRunner.Nand
             }
             else
             {
-                smc_config_offset = 0x3D5C000;
-                smc_config_length = 0x21000 * 4;
+                smc_config_offset = bigblock1gb ? 0x3CD8000 : 0x3D5C000;
+                smc_config_length = (bigblock1gb ? 0x42000 : 0x21000) * 4;
                 _smc_config = new byte[smc_config_length];
             }
             if (noecc)
@@ -787,21 +789,10 @@ namespace JRunner.Nand
             bad_blocks = new List<int>();
             long imgsize = 0;
             byte[] image;
-            int blocksize, reservedoffset;
             bool bad_block_in_xell = false;
-
-            if (bigblock)
-            {
-                image = Oper.openfile(_filename, ref imgsize, 0x4200000);
-                blocksize = 0x21000;
-                reservedoffset = 0x1E0;
-            }
-            else
-            {
-                image = Oper.openfile(_filename, ref imgsize, 0);
-                blocksize = 0x4200;
-                reservedoffset = 0x3E0;
-            }
+            BadBlock.NandGeometry geometry = BadBlock.GetGeometry(_filename);
+            image = Oper.openfile(_filename, ref imgsize, geometry.IsBigBlock ? 0x4200000 : 0);
+            int blocksize = geometry.BlockSize;
 
             if (image[0x205] != 0xFF && image[0x415] != 0xFF && image[0x200] != 0xFF) return;
 
@@ -812,12 +803,12 @@ namespace JRunner.Nand
             {
                 byte[] block = new byte[blocksize];
                 Buffer.BlockCopy(image, counter * blocksize, block, 0, blocksize);
-                if (JRunner.Nand.BadBlock.checkifbadblock(block, counter, bigblock, true))
+                if (JRunner.Nand.BadBlock.checkifbadblock(block, counter, geometry, true))
                 {
                     bad_blocks.Add(counter);
                     if (counter < 0x50) bad_block_in_xell = true;
                 }
-                if (bad_blocks.Count >= 0x20)
+                if (bad_blocks.Count >= geometry.ReserveCount)
                 {
                     bad_blocks = new List<int>();
                     return;
@@ -831,16 +822,13 @@ namespace JRunner.Nand
                 return;
             }
 
-            int reserveblockpos;
-            if (blocksize == 0x4200) reserveblockpos = 0x3FF;
-            else reserveblockpos = 0x1FF;
-
-            int reservestartpos = reserveblockpos - 0x20;
-            byte[] reserved = Oper.returnportion(image, reservedoffset * blocksize, 0x20 * blocksize);
+            byte[] reserved = Oper.returnportion(image,
+                geometry.ReserveStart * blocksize,
+                geometry.ReserveCount * blocksize);
             if (variables.debugMode) Oper.savefile(reserved, "reservedarea.bin");
             image = null;
 
-            remapped_blocks = JRunner.Nand.BadBlock.checkifremapped(reserved, bad_blocks, bigblock, true);
+            remapped_blocks = JRunner.Nand.BadBlock.checkifremapped(reserved, bad_blocks, geometry, true);
 
             return;
         }
@@ -849,7 +837,7 @@ namespace JRunner.Nand
             //long size = 0;
             //byte[] searched = Oper.openfile(_filename, ref size, 0x4200000);
             //byte[] searched = BadBlock.find_bad_blocks_X(_filename, 0x400);
-            byte[] searched = BadBlock.openRemappedImage(_filename, 0x4200000, bad_blocks, remapped_blocks, bigblock, !noecc);
+            byte[] searched = BadBlock.openRemappedImage(_filename, 0x4200000, bad_blocks, remapped_blocks, !noecc);
             System.Text.ASCIIEncoding ASCII = new System.Text.ASCIIEncoding();
             byte[] find = ASCII.GetBytes(file);
             int start = 0;
@@ -965,8 +953,8 @@ namespace JRunner.Nand
             if (variables.debugMode) Console.WriteLine("bigblock: {0}", bigblock);
             if (bigblock)
             {
-                blocksize = 0x21000;
-                fullsize = 0x200;
+                blocksize = bigblock1gb ? 0x42000 : 0x21000;
+                fullsize = bigblock1gb ? 0x100 : 0x200;
                 block_type = 0x2C;
             }
             else
@@ -1027,7 +1015,7 @@ namespace JRunner.Nand
             }
             else if (bigblock)
             {
-                blocksize = 0x21000;
+                blocksize = bigblock1gb ? 0x42000 : 0x21000;
                 pagesize = 0x210;
             }
             else
@@ -1093,16 +1081,16 @@ namespace JRunner.Nand
 
         private int getBlockOffset(int blockoffset, byte[] sparedata)
         {
-            int smallblocksInBigBlocks = 8;
-            int blocksInNand = 0x200;
-            int remapReserveSize = 0x20;
+            int smallblocksInBigBlocks = bigblock1gb ? 16 : 8;
+            int blocksInNand = bigblock1gb ? 0x100 : 0x200;
+            int remapReserveSize = bigblock1gb ? 0x10 : 0x20;
             int sizeOfFlashFileSystem = sparedata[8];
             int blocksReservedConfigInfo = sparedata[9];
 
             int totalSize = blocksInNand * (smallblocksInBigBlocks);
             int endOfConfigArea = totalSize - (remapReserveSize * smallblocksInBigBlocks);
             int endOfFileSystem = endOfConfigArea - (blocksReservedConfigInfo * smallblocksInBigBlocks);
-            int startOfFileSystem = endOfFileSystem - (sizeOfFlashFileSystem << 5);
+            int startOfFileSystem = endOfFileSystem - (sizeOfFlashFileSystem * 4 * smallblocksInBigBlocks);
 
 
             return ((startOfFileSystem * 0x4200) + (blockoffset * 0x4200));
@@ -1110,7 +1098,7 @@ namespace JRunner.Nand
         public byte[] exctractFSfile(string file)
         {
             //long size = 0;
-            byte[] image = BadBlock.openRemappedImage(_filename, 0x4200000, bad_blocks, remapped_blocks, bigblock, !noecc);
+            byte[] image = BadBlock.openRemappedImage(_filename, 0x4200000, bad_blocks, remapped_blocks, !noecc);
             //byte[] image = Oper.openfile(_filename, ref size, 0x4200000);
             if (noecc) getFS1(ref image);
             else getFS(ref image);
@@ -1514,6 +1502,13 @@ namespace JRunner.Nand
 
         public static int getcb_build(byte[] image)
         {
+            bool isSb;
+            return getcb_build(image, out isSb);
+        }
+
+        public static int getcb_build(byte[] image, out bool isSb)
+        {
+            isSb = false;
             if (variables.extractfiles) Oper.savefile(image, "conf.bin");
             if (variables.debugMode) Console.WriteLine("Getting CB");
             int counter;
@@ -1531,6 +1526,7 @@ namespace JRunner.Nand
             int block_build = 0;
             byte[] block_build_b = new byte[2], block_size_b = new byte[4], SMC;
             int block_offset_b = (Convert.ToInt32(Oper.ByteArrayToString(Oper.returnportion(image, 0x8, 4)), 16));
+            isSb = image[block_offset_b] == 0x53 && image[block_offset_b + 1] == 0x42;
             block_id = image[block_offset_b + 1];
             block_build_b = Oper.returnportion(image, block_offset_b + 2, 2);
             int id = block_id & 0xF;
@@ -2486,40 +2482,42 @@ namespace JRunner.Nand
             // Flash config check
             if (!string.IsNullOrWhiteSpace(flashconfig))
             {
-                if (flashconfig == "008A3020" || flashconfig == "00AA3020")
+                SfcxConfig config;
+                if (!SfcxConfig.TryParse(flashconfig, out config)) config = SfcxConfig.Decode(0);
+                if (config.ControllerType == SfcxControllerType.Psb && config.IsBigBlock)
                 {
                     cons[6]++;
                     cons[12]++;
                 }
-                else if (flashconfig == "008C3020" || flashconfig == "00AC3020")
+                else if (config.ControllerType == SfcxControllerType.Ksb && config.IsBigBlock)
                 {
                     cons[9]++;
                     cons[17]++;
                 }
-                else if (flashconfig == "C0462002")
+                else if (config.IsEmmc)
                 {
                     cons[11]++;
                     cons[16]++;
                 }
-                else if (flashconfig == "01198010")
+                else if (config.ControllerType == SfcxControllerType.Xsb && config.TotalSizeMb != 64)
                 {
                     cons[2]++;
                     cons[3]++;
                     cons[5]++;
                     cons[8]++;
                 }
-                else if (flashconfig == "01198030")
+                else if (config.ControllerType == SfcxControllerType.Xsb && config.TotalSizeMb == 64)
                 {
                     cons[7]++;
                     cons[13]++;
                     cons[14]++;
                 }
-                else if (flashconfig == "00023010")
+                else if (config.ControllerType == SfcxControllerType.Psb)
                 {
                     cons[1]++;
                     cons[4]++;
                 }
-                else if (flashconfig == "00043000")
+                else if (config.ControllerType == SfcxControllerType.Ksb)
                 {
                     cons[10]++;
                     cons[15]++;
@@ -2543,7 +2541,7 @@ namespace JRunner.Nand
                     cons[10]++;
                     cons[15]++;
                 }
-                else if (length == 69206016 || length == 276824064 || length == 553648128)
+                else if (length == 69206016 || length == 276824064 || length == 553648128 || length == 1107296256)
                 {
                     cons[6] += 2;
                     cons[7] += 2;
@@ -2570,7 +2568,7 @@ namespace JRunner.Nand
             {
                 //IMAGE_LAYOUT_0: XSB
                 //IMAGE_LAYOUT_1: PSB/KSB 16MB
-                //IMAGE_LAYOUT_2: PSB/KSB 256/512MB
+                //IMAGE_LAYOUT_2: PSB/KSB 256/512/1024MB
                 int layout = -1;
                 List<int> layouts = new List<int>();
                 byte[] file = BadBlock.find_bad_blocks_X(nand._filename, 50);

@@ -59,7 +59,11 @@ namespace JRunner
         /// <summary>
         /// 512MB
         /// </summary>
-        S512 = 0x8000
+        S512 = 0x8000,
+        /// <summary>
+        /// 1024MB
+        /// </summary>
+        S1024 = 0x10000
     }
 
     class variables
@@ -254,7 +258,6 @@ namespace JRunner
         };
 
         public static string[] console_types = { "none/unk", "Xenon", "Zephyr", "Falcon", "Jasper", "Trinity", "Corona", "Winchester" };
-        public static string[] flashconfigs = new string[] { "00023010", "00043000", "01198010", "01198030", "008A3020", "00AA3020", "008C3020", "00AC3020", "C0462002" };
         public static bool fulldump = false, read1p28mb = false, nandabort = false;
         public static int smcmbtype = 0x0;
         public static string flashconfig = "";

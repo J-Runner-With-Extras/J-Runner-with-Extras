@@ -60,6 +60,13 @@ namespace JRunner.Forms
 
             if (bb == 3) btn256.Enabled = false;
             else btn256.Enabled = true;
+
+            if (bb == 4)
+            {
+                btn256.Enabled = false;
+                btn512.Text = "1024MB (Full)";
+            }
+            else btn512.Text = "512MB (Full)";
         }
     }
 }

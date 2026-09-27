@@ -36,6 +36,7 @@ namespace JRunner.Forms
             this.BigBlockGroup = new System.Windows.Forms.GroupBox();
             this.btn512 = new System.Windows.Forms.Button();
             this.btn256 = new System.Windows.Forms.Button();
+            this.btn1024 = new System.Windows.Forms.Button();
             this.SmallBlockGroup.SuspendLayout();
             this.BigBlockGroup.SuspendLayout();
             this.SuspendLayout();
@@ -72,21 +73,22 @@ namespace JRunner.Forms
             // 
             // BigBlockGroup
             // 
+            this.BigBlockGroup.Controls.Add(this.btn1024);
             this.BigBlockGroup.Controls.Add(this.btn512);
             this.BigBlockGroup.Controls.Add(this.btn256);
             this.BigBlockGroup.Controls.Add(this.btn64);
             this.BigBlockGroup.Location = new System.Drawing.Point(106, 11);
             this.BigBlockGroup.Name = "BigBlockGroup";
-            this.BigBlockGroup.Size = new System.Drawing.Size(284, 46);
+            this.BigBlockGroup.Size = new System.Drawing.Size(238, 77);
             this.BigBlockGroup.TabIndex = 3;
             this.BigBlockGroup.TabStop = false;
             this.BigBlockGroup.Text = "Big Block - Only 64MB Needed";
             // 
             // btn512
             // 
-            this.btn512.Location = new System.Drawing.Point(203, 16);
+            this.btn512.Location = new System.Drawing.Point(6, 45);
             this.btn512.Name = "btn512";
-            this.btn512.Size = new System.Drawing.Size(75, 23);
+            this.btn512.Size = new System.Drawing.Size(110, 23);
             this.btn512.TabIndex = 3;
             this.btn512.Text = "512MB (Full)";
             this.btn512.UseVisualStyleBackColor = true;
@@ -96,17 +98,27 @@ namespace JRunner.Forms
             // 
             this.btn256.Location = new System.Drawing.Point(122, 16);
             this.btn256.Name = "btn256";
-            this.btn256.Size = new System.Drawing.Size(75, 23);
+            this.btn256.Size = new System.Drawing.Size(110, 23);
             this.btn256.TabIndex = 2;
             this.btn256.Text = "256MB (Full)";
             this.btn256.UseVisualStyleBackColor = true;
             this.btn256.Click += new System.EventHandler(this.btn256_Click);
             // 
+            // btn1024
+            //
+            this.btn1024.Location = new System.Drawing.Point(122, 45);
+            this.btn1024.Name = "btn1024";
+            this.btn1024.Size = new System.Drawing.Size(110, 23);
+            this.btn1024.TabIndex = 4;
+            this.btn1024.Text = "1024MB (Full)";
+            this.btn1024.UseVisualStyleBackColor = true;
+            this.btn1024.Click += new System.EventHandler(this.btn1024_Click);
+            //
             // xFlasherNandSel
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(403, 69);
+            this.ClientSize = new System.Drawing.Size(354, 97);
             this.Controls.Add(this.BigBlockGroup);
             this.Controls.Add(this.SmallBlockGroup);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
@@ -130,5 +142,6 @@ namespace JRunner.Forms
         private System.Windows.Forms.GroupBox BigBlockGroup;
         private System.Windows.Forms.Button btn512;
         private System.Windows.Forms.Button btn256;
+        private System.Windows.Forms.Button btn1024;
     }
 }

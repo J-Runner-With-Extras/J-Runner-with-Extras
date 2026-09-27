@@ -119,6 +119,7 @@ namespace JRunner
             this.generateCpuKeyToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
             this.experimentalToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.convertNandTo1GbToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.g3fixToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.zeroPairSbToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.injectGlitch3ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -965,6 +966,7 @@ namespace JRunner
             // experimentalToolStripMenuItem
             // 
             this.experimentalToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.convertNandTo1GbToolStripMenuItem,
             this.g3fixToolStripMenuItem,
             this.zeroPairSbToolStripMenuItem,
             this.injectGlitch3ToolStripMenuItem,
@@ -972,6 +974,14 @@ namespace JRunner
             this.experimentalToolStripMenuItem.Name = "experimentalToolStripMenuItem";
             this.experimentalToolStripMenuItem.Size = new System.Drawing.Size(241, 22);
             this.experimentalToolStripMenuItem.Text = "Experimental Features";
+            this.experimentalToolStripMenuItem.DropDownOpening += new System.EventHandler(this.experimentalToolStripMenuItem_DropDownOpening);
+            //
+            // convertNandTo1GbToolStripMenuItem
+            //
+            this.convertNandTo1GbToolStripMenuItem.Name = "convertNandTo1GbToolStripMenuItem";
+            this.convertNandTo1GbToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
+            this.convertNandTo1GbToolStripMenuItem.Text = "Convert BB Nand to 1GB";
+            this.convertNandTo1GbToolStripMenuItem.Click += new System.EventHandler(this.convertNandTo1GbToolStripMenuItem_Click);
             // 
             // g3fixToolStripMenuItem
             // 
@@ -1704,6 +1714,7 @@ namespace JRunner
         private ToolStripMenuItem injectXeLLToolStripMenuItem;
         private ToolStripSeparator toolStripSeparator1;
         private ToolStripMenuItem experimentalToolStripMenuItem;
+        private ToolStripMenuItem convertNandTo1GbToolStripMenuItem;
         private ToolStripMenuItem g3fixToolStripMenuItem;
         private ToolStripMenuItem zeroPairSbToolStripMenuItem;
         private ToolStripMenuItem injectGlitch3ToolStripMenuItem;
