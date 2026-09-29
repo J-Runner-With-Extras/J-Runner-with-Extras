@@ -18,7 +18,7 @@ namespace JRunner.Forms
         }
 
         private readonly Action<string> loadCallback;
-        private readonly string detectedConsoleType;
+        private string detectedConsoleType;
         private NandImageInfo inputInfo;
         private bool working;
         private bool changingManualConsoleType;
@@ -202,8 +202,18 @@ namespace JRunner.Forms
             try
             {
                 inputInfo = NandImageConverter.Detect(inputPath.Text);
-                detected.Text = "Detected: " + inputInfo.Description + String.Format("  [0x{0:X} bytes]", inputInfo.FileLength);
-                status.Text = "Input detected successfully.";
+                string imageConsole = DetectConsoleFromImage(inputPath.Text);
+                if (!String.IsNullOrEmpty(imageConsole))
+                {
+                    detectedConsoleType = imageConsole;
+                    if (!manualConsoleType.Checked) RestoreDetectedConsoleType();
+                }
+                detected.Text = "Detected: " + inputInfo.Description +
+                    String.Format("  [0x{0:X} bytes]", inputInfo.FileLength) +
+                    (String.IsNullOrEmpty(imageConsole) ? String.Empty : "  [Console: " + imageConsole + "]");
+                status.Text = String.IsNullOrEmpty(imageConsole)
+                    ? "Input format detected; console type could not be determined from the image."
+                    : "Input format and console type detected successfully.";
                 PopulateTargets(preferFlashConfig);
                 if (String.IsNullOrWhiteSpace(outputPath.Text))
                     outputPath.Text = Path.Combine(Path.GetDirectoryName(inputPath.Text), SuggestedOutputName());
@@ -213,6 +223,22 @@ namespace JRunner.Forms
                 inputInfo = null;
                 detected.Text = "Detection failed: " + ex.Message;
                 status.Text = "Select a supported NAND image.";
+            }
+        }
+
+        private static string DetectConsoleFromImage(string path)
+        {
+            try
+            {
+                PrivateN image = new PrivateN(path);
+                if (!image.ok) return String.Empty;
+
+                return NormalizeConsole(JRunner.Nand.Nand.getConsole(image, String.Empty).Text);
+            }
+            catch (Exception ex)
+            {
+                if (variables.debugMode) Console.WriteLine(ex.ToString());
+                return String.Empty;
             }
         }
 
