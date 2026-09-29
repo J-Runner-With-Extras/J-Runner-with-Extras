@@ -3524,167 +3524,21 @@ namespace JRunner
             
         }
 
-        private bool canConvertSelectedBbNandTo1Gb(out string reason)
-        {
-            if (string.IsNullOrWhiteSpace(variables.filename1) || !File.Exists(variables.filename1))
-            {
-                reason = "No NAND is loaded in Source File.";
-                return false;
-            }
-
-            long sourceLength = new FileInfo(variables.filename1).Length;
-            if (sourceLength == 0x42000000L)
-            {
-                reason = "The selected NAND is already a full 1 GB image.";
-                return false;
-            }
-            if (sourceLength != 0x4200000L && sourceLength != 0x10800000L && sourceLength != 0x21000000L)
-            {
-                reason = "The source must be a raw 64, 256, or 512 MB NAND image.";
-                return false;
-            }
-
-            BadBlock.NandGeometry geometry;
-            try
-            {
-                geometry = BadBlock.GetGeometry(variables.filename1);
-            }
-            catch (Exception ex)
-            {
-                if (variables.debugMode) Console.WriteLine(ex.ToString());
-                reason = "The selected NAND geometry could not be detected.";
-                return false;
-            }
-            if (geometry.PagesPerBlock == 512)
-            {
-                reason = "The selected NAND already uses 1 GB geometry.";
-                return false;
-            }
-            if (geometry.PagesPerBlock != 256)
-            {
-                reason = "Only PSB/KSB 256/512 MB big-block NAND images can be converted.";
-                return false;
-            }
-
-            if (nand == null || !nand.ok || String.IsNullOrWhiteSpace(nand._filename) ||
-                !String.Equals(Path.GetFullPath(nand._filename), Path.GetFullPath(variables.filename1), StringComparison.OrdinalIgnoreCase))
-            {
-                reason = "The selected NAND is still initializing or could not be parsed.";
-                return false;
-            }
-            if (!nand.bigblock)
-            {
-                reason = "The selected NAND is not a big-block NAND image.";
-                return false;
-            }
-            if (nand.bigblock1gb)
-            {
-                reason = "The selected NAND already uses 1 GB geometry.";
-                return false;
-            }
-
-            reason = null;
-            return true;
-        }
-
         private void experimentalToolStripMenuItem_DropDownOpening(object sender, EventArgs e)
         {
-            string reason;
-            convertNandTo1GbToolStripMenuItem.Enabled = canConvertSelectedBbNandTo1Gb(out reason);
-            convertNandTo1GbToolStripMenuItem.ToolTipText = reason ??
-                "Convert the selected 256/512 MB big-block NAND to a 64 MB image using 1 GB geometry.";
+            convertNandToolStripMenuItem.Enabled = true;
+            convertNandToolStripMenuItem.ToolTipText =
+                "Open the console-aware NAND image converter.";
         }
 
-        private void convertNandTo1GbToolStripMenuItem_Click(object sender, EventArgs e)
+        private void convertNandToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            string reason;
-            if (!canConvertSelectedBbNandTo1Gb(out reason))
-            {
-                MessageBox.Show(reason, "Can't Convert", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-
-            string sourcePath = Path.GetFullPath(variables.filename1);
-            SaveFileDialog sfd = new SaveFileDialog();
-            sfd.Filter = "NAND images (*.bin)|*.bin|All files (*.*)|*.*";
-            sfd.Title = "Experimental: Convert NAND to 1GB";
-            sfd.FileName = Path.GetFileNameWithoutExtension(sourcePath) + "_1GB.bin";
-            sfd.InitialDirectory = Path.GetDirectoryName(sourcePath);
-            sfd.OverwritePrompt = true;
-            sfd.RestoreDirectory = true;
-            if (sfd.ShowDialog() != DialogResult.OK) return;
-
-            string outputPath = Path.GetFullPath(sfd.FileName);
-            if (String.Equals(sourcePath, outputPath, StringComparison.OrdinalIgnoreCase))
-            {
-                MessageBox.Show("Choose a new output file. The source image will not be overwritten.",
-                    "Can't Convert", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-
-            if (MessageBox.Show(
-                "This experimental converter changes 256/512 MB big-block geometry to 1 GB, relocates the filesystem and configuration blocks, and creates a new 64 MB system-area image.\n\nContinue?",
-                "Experimental 1GB Conversion", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
-                return;
-
-            convertNandTo1GbToolStripMenuItem.Enabled = false;
-            Console.WriteLine("\nExperimental 1GB NAND conversion started");
-            Console.WriteLine("Input:  {0}", sourcePath);
-            Console.WriteLine("Output: {0}", outputPath);
-
-            Thread worker = new Thread(delegate()
-            {
-                try
-                {
-                    int lastProgress = -10;
-                    Nand1GbConversionReport report = Nand1GbConverter.Convert(sourcePath, outputPath, delegate(int percent)
-                    {
-                        if (percent >= lastProgress + 10 || percent == 100)
-                        {
-                            lastProgress = percent;
-                            Console.WriteLine("1GB conversion: {0}%", percent);
-                        }
-                    });
-
-                    Console.WriteLine("Source ECC: {0} valid, {1} invalid/noncanonical",
-                        report.SourceValidEccPages, report.SourceInvalidEccPages);
-                    Console.WriteLine("Source bad blocks: {0}", report.SourceBadBlocks.Length == 0
-                        ? "none" : String.Join(", ", report.SourceBadBlocks.Select(block => "0x" + block.ToString("X"))));
-                    Console.WriteLine("Applied source remaps: {0}", report.AppliedRemaps.Count == 0
-                        ? "none" : String.Join(", ", report.AppliedRemaps.Select(remap =>
-                            "0x" + remap.Key.ToString("X") + "<-0x" + remap.Value.ToString("X"))));
-                    Console.WriteLine("Bad blocks without remaps: {0}", report.BadBlocksWithoutRemaps.Length == 0
-                        ? "none" : String.Join(", ", report.BadBlocksWithoutRemaps.Select(block => "0x" + block.ToString("X"))));
-                    Console.WriteLine("Translated filesystem metadata pages: {0}", report.TranslatedFileSystemMetadataPages);
-                    Console.WriteLine("Header: size 0x{0:X}->0x{1:X}, sysupdate 0x{2:X}->0x{3:X}, filesystem block 0x{4:X}->0x{5:X}",
-                        report.OldHeaderSize, report.NewHeaderSize, report.OldSysUpdateAddress,
-                        report.NewSysUpdateAddress, report.OldFileSystemBlockSize, report.NewFileSystemBlockSize);
-                    Console.WriteLine("Output size: 0x{0:X}", new FileInfo(outputPath).Length);
-                    Console.WriteLine("Output ECC failures: {0}", report.OutputInvalidEccPages);
-                    Console.WriteLine("Experimental 1GB NAND conversion completed\n");
-
-                    BeginInvoke((Action)delegate
-                    {
-                        xPanel_updateSource(outputPath);
-                        convertNandTo1GbToolStripMenuItem.Enabled = false;
-                        MessageBox.Show("1GB-geometry NAND image created and loaded into Source File:\n\n" + outputPath,
-                            "Conversion Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    });
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine("1GB NAND conversion failed: {0}", ex.Message);
-                    BeginInvoke((Action)delegate
-                    {
-                        string failureReason;
-                        convertNandTo1GbToolStripMenuItem.Enabled = canConvertSelectedBbNandTo1Gb(out failureReason);
-                        MessageBox.Show(ex.Message, "1GB Conversion Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    });
-                }
-            });
-            worker.IsBackground = true;
-            worker.Name = "NAND 1GB Converter";
-            worker.Start();
+            string initialInput = File.Exists(variables.filename1) ? variables.filename1 : String.Empty;
+            string detectedConsole = variables.ctype.ID >= 0
+                ? variables.ctype.Text
+                : variables.boardtype;
+            using (NandConverter converter = new NandConverter(initialInput, detectedConsole, xPanel_updateSource))
+                converter.ShowDialog(this);
         }
 
         private void injectGlitch3ToolStripMenuItem_Click(object sender, EventArgs e)

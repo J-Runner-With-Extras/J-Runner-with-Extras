@@ -137,12 +137,28 @@ namespace JRunner.Nand
         string filename;
         int length;
         int block;
+        bool mobile;
+        int rawPage;
+        int version;
 
         public FSFile(string filename, int block, int length)
         {
             this.filename = filename;
             this.block = block;
             this.length = length;
+            this.mobile = false;
+            this.rawPage = -1;
+            this.version = 0;
+        }
+
+        internal FSFile(string filename, int rawPage, int length, int version, bool mobile)
+        {
+            this.filename = filename;
+            this.block = rawPage / 0x20;
+            this.length = length;
+            this.mobile = mobile;
+            this.rawPage = rawPage;
+            this.version = version;
         }
 
         public FSFile()
@@ -150,11 +166,25 @@ namespace JRunner.Nand
             this.filename = "";
             this.block = 0;
             this.length = 0;
+            this.mobile = false;
+            this.rawPage = -1;
+            this.version = 0;
         }
 
         public string getFilename() { return filename; }
         public int getLength() { return length; }
         public int getBlock() { return block; }
+
+        public string Filename { get { return filename; } }
+        public int Length { get { return length; } }
+        public int StartBlock { get { return block; } }
+        public bool IsMobile { get { return mobile; } }
+        public int StartPage { get { return rawPage; } }
+        public int Version { get { return version; } }
+        public string StartLocation
+        {
+            get { return mobile ? "Page 0x" + rawPage.ToString("X") : "Block 0x" + block.ToString("X"); }
+        }
     }
     public class PrivateN
     {
@@ -165,6 +195,7 @@ namespace JRunner.Nand
         public Useful uf;
         public string _cpukey = "", _filename;
         private int _currentFS = 0;
+        private bool _mobileFilesScanned = false;
         public bool noecc = false, bigblock = false, bigblock1gb = false, bigflash = false;
         public byte[] _rawkv, _smc, _smc_config;
         public List<int> bad_blocks = new List<int>(), remapped_blocks = new List<int>();
@@ -175,6 +206,7 @@ namespace JRunner.Nand
             _cpukey = "";
             _filename = "";
             _currentFS = 0;
+            _mobileFilesScanned = false;
             ok = noecc = bigblock = bigblock1gb = bigflash = false;
             bad_blocks = new List<int>();
             remapped_blocks = new List<int>();
@@ -942,87 +974,44 @@ namespace JRunner.Nand
         private void getFS(ref byte[] image)
         {
             if (_currentFS != 0) return;
-            byte[] fsSequence = new byte[4];
-            byte blocktype;
-            int position;
-
-            int blocksize;
-            int fullsize;
-            int block_type;
-
             if (variables.debugMode) Console.WriteLine("bigblock: {0}", bigblock);
-            if (bigblock)
-            {
-                blocksize = bigblock1gb ? 0x42000 : 0x21000;
-                fullsize = bigblock1gb ? 0x100 : 0x200;
-                block_type = 0x2C;
-            }
-            else
-            {
-                blocksize = 0x4200;
-                fullsize = 0x3ff;
-                block_type = 0x30;
-            }
-
-
-
+            int blockType = bigblock ? 0x2C : 0x30;
+            int logicalBlockSize = 0x4200;
+            int logicalBlockCount = image.Length / logicalBlockSize;
             int newfilesystem = 0;
-            for (int i = 0; i < fullsize; i++)
+            for (int block = 0; block < logicalBlockCount; block++)
             {
-                for (int j = 0; j < 0x20; j++)
-                {
-                    position = (blocksize * i) + 0x200 + (j * 0x210);
-                    blocktype = image[position + 0xC];
-                    int fsseq;
-                    if (bigblock)
-                    {
-                        fsSequence[1] = image[position + 3];
-                        fsSequence[2] = image[position + 4];
-                        fsSequence[3] = image[position + 5];
-                        fsseq = (fsSequence[2] << 8) | (fsSequence[3]);
-                    }
-                    else
-                    {
-                        fsSequence[0] = image[position + 0];
-                        fsSequence[1] = image[position + 3];
-                        fsSequence[2] = image[position + 4];
-                        fsSequence[3] = image[position + 6];
-                        fsseq = (fsSequence[2] << 16) + (fsSequence[1] << 8) + fsSequence[0];
-                    }
+                int position = block * logicalBlockSize + 0x200;
+                int type = image[position + 0xC] & 0x3F;
+                if (type != blockType) continue;
 
-                    if (fsseq != 0 && (blocktype & 0x3F) == block_type)
-                    {
-                        if (variables.debugMode) Console.WriteLine(fsseq);
-                        if (fsseq > newfilesystem)
-                        {
-                            newfilesystem = fsseq;
-                            _currentFS = i;
-                        }
-                        break;
-                    }
+                int fsseq;
+                if (bigblock)
+                {
+                    fsseq = (image[position + 4] << 8) | image[position + 5];
+                }
+                else
+                {
+                    fsseq = (image[position + 4] << 16) |
+                        (image[position + 3] << 8) | image[position];
+                }
+
+                if (fsseq != 0 && fsseq > newfilesystem)
+                {
+                    if (variables.debugMode) Console.WriteLine(fsseq);
+                    newfilesystem = fsseq;
+                    // Track the root in the filesystem's native 16 KiB units.
+                    // Type 2 and Type 3 erase blocks contain 8 and 16 of these
+                    // units respectively, so a physical erase-block index loses
+                    // the root's position inside the block.
+                    _currentFS = block;
                 }
             }
-            return;
         }
         private void getFileList(ref byte[] image)
         {
-            int blocksize = 0;
-            int pagesize = 0;
-            if (noecc)
-            {
-                blocksize = 0x4000;
-                pagesize = 0x200;
-            }
-            else if (bigblock)
-            {
-                blocksize = bigblock1gb ? 0x42000 : 0x21000;
-                pagesize = 0x210;
-            }
-            else
-            {
-                blocksize = 0x4200;
-                pagesize = 0x210;
-            }
+            int blocksize = noecc ? 0x4000 : 0x4200;
+            int pagesize = noecc ? 0x200 : 0x210;
 
             if (Files.Count != 0 || _currentFS == 0) return;
             int startpage = (_currentFS * blocksize) / pagesize;
@@ -1065,18 +1054,82 @@ namespace JRunner.Nand
                         length = Oper.ByteArrayToInt(len);
                         block = Oper.ByteArrayToInt(blok);
 
-                        if (bigblock)
-                        {
-                            byte[] sparedata = new byte[0x10];
-                            Buffer.BlockCopy(image, ((page * pagesize) + 0x200), sparedata, 0, 0x10);
-                            block = getBlockOffset(block, sparedata);
-                        }
                     }
                     catch (Exception ex) { if (variables.debugMode) Console.WriteLine(ex.ToString()); }
 
                     if (image[(page * pagesize) + (i * 0x10)] != 0x05) { Files.Add(new FSFile(filename, block, length)); }
                 }
             }
+        }
+
+        private static int getMobileSequence(byte[] image, int spareOffset, bool bigBlock)
+        {
+            if (bigBlock)
+                return (image[spareOffset + 3] << 16) |
+                    (image[spareOffset + 4] << 8) | image[spareOffset + 5];
+
+            return (image[spareOffset + 6] << 24) |
+                (image[spareOffset + 4] << 16) |
+                (image[spareOffset + 3] << 8) | image[spareOffset + 2];
+        }
+
+        private void getMobileFileList(ref byte[] image)
+        {
+            if (_mobileFilesScanned || noecc) return;
+            _mobileFilesScanned = true;
+
+            const int rawPageSize = 0x210;
+            int rawPageCount = image.Length / rawPageSize;
+            int rawSectorsPerPhysicalPage = bigblock ? 4 : 1;
+            Dictionary<int, FSFile> newest = new Dictionary<int, FSFile>();
+            Dictionary<int, int> newestFreePages = new Dictionary<int, int>();
+
+            for (int rawPage = 0; rawPage < rawPageCount; rawPage += rawSectorsPerPhysicalPage)
+            {
+                int spareOffset = rawPage * rawPageSize + 0x200;
+                int type = image[spareOffset + 0xC] & 0x3F;
+                if (type < 0x31 || type > 0x39) continue;
+
+                // Big-block spare names these bytes FsSize1/FsSize0.  The low
+                // byte is stored first (for example 50 02 means 0x250 bytes).
+                int length = (image[spareOffset + 8] << 8) | image[spareOffset + 7];
+                if (length <= 0) continue;
+                int sequence = getMobileSequence(image, spareOffset, bigblock);
+                int freePages = image[spareOffset + 9];
+                int requiredRawPages = (length + 0x1FF) / 0x200;
+                if (rawPage + requiredRawPages > rawPageCount) continue;
+
+                bool valid = true;
+                for (int page = 0; page < requiredRawPages; page++)
+                {
+                    int candidateSpare = (rawPage + page) * rawPageSize + 0x200;
+                    if ((image[candidateSpare + 0xC] & 0x3F) != type ||
+                        getMobileSequence(image, candidateSpare, bigblock) != sequence ||
+                        ((image[candidateSpare + 8] << 8) | image[candidateSpare + 7]) != length)
+                    {
+                        valid = false;
+                        break;
+                    }
+                }
+                if (!valid) continue;
+
+                FSFile current;
+                int currentFreePages;
+                bool replace = !newest.TryGetValue(type, out current) ||
+                    sequence > current.Version ||
+                    (sequence == current.Version &&
+                        (!newestFreePages.TryGetValue(type, out currentFreePages) ||
+                         freePages < currentFreePages ||
+                         (freePages == currentFreePages && rawPage > current.StartPage)));
+                if (!replace) continue;
+
+                string name = "Mobile" + (char)('B' + type - 0x31) + ".dat";
+                newest[type] = new FSFile(name, rawPage, length, sequence, true);
+                newestFreePages[type] = freePages;
+            }
+
+            foreach (KeyValuePair<int, FSFile> mobile in newest.OrderBy(item => item.Key))
+                Files.Add(mobile.Value);
         }
 
         private int getBlockOffset(int blockoffset, byte[] sparedata)
@@ -1095,46 +1148,174 @@ namespace JRunner.Nand
 
             return ((startOfFileSystem * 0x4200) + (blockoffset * 0x4200));
         }
-        public byte[] exctractFSfile(string file)
+        private byte[] openFileSystemImage()
         {
-            //long size = 0;
             byte[] image = BadBlock.openRemappedImage(_filename, 0x4200000, bad_blocks, remapped_blocks, !noecc);
-            //byte[] image = Oper.openfile(_filename, ref size, 0x4200000);
+            if (image == null || image.Length == 0)
+                throw new InvalidDataException("The NAND image could not be opened.");
             if (noecc) getFS1(ref image);
             else getFS(ref image);
+            if (_currentFS == 0)
+                throw new InvalidDataException("No valid filesystem root was found in the NAND image.");
             getFileList(ref image);
-            FSFile fil = new FSFile();
-            foreach (FSFile f in Files)
+            getMobileFileList(ref image);
+            return image;
+        }
+
+        private int[] getFileSystemBlockMap(byte[] image)
+        {
+            int blocksize = noecc ? 0x4000 : 0x4200;
+            int pagesize = noecc ? 0x200 : 0x210;
+            int rootOffset = checked(_currentFS * blocksize);
+            if (rootOffset < 0 || rootOffset + 0x20 * pagesize > image.Length)
+                throw new InvalidDataException("The active filesystem root falls outside the NAND image.");
+
+            int[] map = new int[0x1000];
+            int mapIndex = 0;
+            for (int page = 0; page < 0x20; page += 2)
             {
-                if (file == f.getFilename())
+                int pageOffset = rootOffset + page * pagesize;
+                for (int item = 0; item < 0x100; item++)
                 {
-                    fil = f;
-                    break;
+                    int entry = pageOffset + item * 2;
+                    map[mapIndex++] = (image[entry] << 8) | image[entry + 1];
                 }
             }
-            if (string.IsNullOrEmpty(fil.getFilename())) return null;
-            if (variables.debugMode) Console.WriteLine("{0:X} : {1:X}", fil.getBlock(), fil.getLength());
-            byte[] searched = new byte[fil.getLength()];
+            return map;
+        }
 
+        private int getBigBlockFileSystemRawStart(byte[] image)
+        {
+            int blocksize = 0x4200;
+            int rootOffset = checked(_currentFS * blocksize);
+            for (int page = 0; page < 0x20; page++)
+            {
+                int spareOffset = rootOffset + page * 0x210 + 0x200;
+                if (spareOffset + 0x10 > image.Length) break;
+                byte[] sparedata = new byte[0x10];
+                Buffer.BlockCopy(image, spareOffset, sparedata, 0, sparedata.Length);
+                if (sparedata[8] != 0xFF && sparedata[9] != 0xFF)
+                    return getBlockOffset(0, sparedata);
+            }
+            throw new InvalidDataException("The big-block filesystem geometry metadata is missing.");
+        }
+
+        private byte[] readFileSystemBlock(byte[] image, int block, int bigBlockFsStart)
+        {
+            if (block < 0 || block >= 0x1000)
+                throw new InvalidDataException(String.Format("Filesystem block 0x{0:X} is invalid.", block));
             if (noecc)
             {
-                byte[] res = new byte[fil.getLength()];
-                Buffer.BlockCopy(image, fil.getBlock() * 0x4000, res, 0, fil.getLength());
-                searched = res;
+                int offset = checked(block * 0x4000);
+                if (offset + 0x4000 > image.Length)
+                    throw new InvalidDataException(String.Format("Filesystem block 0x{0:X} falls outside the NAND image.", block));
+                byte[] result = new byte[0x4000];
+                Buffer.BlockCopy(image, offset, result, 0, result.Length);
+                return result;
             }
-            else
-            {
 
-                searched = Nand.unecc(Oper.returnportion(image, bigblock ? fil.getBlock() : fil.getBlock() * 0x4200, (fil.getLength() / 0x200) * 0x210));
-                //int counter;
-                //byte[] res = { };
-                //for (counter = fil.getBlock() * 0x4200; counter < fil.getBlock() * 0x4200 + fil.getLength(); counter += 0x210)
-                //{
-                //    res = Oper.concatByteArrays(res, Oper.returnportion(image, counter, 0x200), res.Length, 0x200);
-                //}
-                //searched = res;
+            int rawOffset = bigblock
+                ? checked(bigBlockFsStart + block * 0x4200)
+                : checked(block * 0x4200);
+            if (rawOffset < 0 || rawOffset + 0x4200 > image.Length)
+                throw new InvalidDataException(String.Format("Filesystem block 0x{0:X} falls outside the NAND image.", block));
+            byte[] data = new byte[0x4000];
+            for (int page = 0; page < 0x20; page++)
+                Buffer.BlockCopy(image, rawOffset + page * 0x210, data, page * 0x200, 0x200);
+            return data;
+        }
+
+        private byte[] extractFileSystemFile(byte[] image, int[] blockMap, FSFile file)
+        {
+            if (file.IsMobile)
+            {
+                byte[] mobileData = new byte[file.getLength()];
+                int copiedMobile = 0;
+                int rawPage = file.StartPage;
+                while (copiedMobile < mobileData.Length)
+                {
+                    int rawOffset = checked(rawPage * 0x210);
+                    if (rawOffset < 0 || rawOffset + 0x200 > image.Length)
+                        throw new InvalidDataException(String.Format(
+                            "The data for {0} falls outside the NAND image.", file.getFilename()));
+                    int count = Math.Min(0x200, mobileData.Length - copiedMobile);
+                    Buffer.BlockCopy(image, rawOffset, mobileData, copiedMobile, count);
+                    copiedMobile += count;
+                    rawPage++;
+                }
+                return mobileData;
             }
-            return searched;
+
+            byte[] result = new byte[file.getLength()];
+            if (result.Length == 0) return result;
+
+            int block = file.getBlock();
+            int copied = 0;
+            int bigBlockFsStart = bigblock ? getBigBlockFileSystemRawStart(image) : 0;
+            HashSet<int> visited = new HashSet<int>();
+            while (copied < result.Length)
+            {
+                if (block < 0 || block >= blockMap.Length || !visited.Add(block))
+                    throw new InvalidDataException(String.Format(
+                        "The block chain for {0} is invalid at block 0x{1:X}.", file.getFilename(), block));
+                byte[] blockData = readFileSystemBlock(image, block, bigBlockFsStart);
+                int count = Math.Min(blockData.Length, result.Length - copied);
+                Buffer.BlockCopy(blockData, 0, result, copied, count);
+                copied += count;
+                if (copied >= result.Length) break;
+
+                int next = blockMap[block] & 0x1FFF;
+                if (next >= 0x1FF0)
+                    throw new InvalidDataException(String.Format(
+                        "The block chain for {0} ends before its directory length.", file.getFilename()));
+                block = next;
+            }
+            return result;
+        }
+
+        public IList<FSFile> GetFileSystemFiles()
+        {
+            openFileSystemImage();
+            List<FSFile> result = new List<FSFile>();
+            foreach (FSFile file in Files)
+            {
+                if (file.IsMobile)
+                    result.Add(new FSFile(file.Filename, file.StartPage, file.Length, file.Version, true));
+                else
+                    result.Add(new FSFile(file.getFilename(), file.getBlock(), file.getLength()));
+            }
+            return result.AsReadOnly();
+        }
+
+        public IDictionary<string, byte[]> ExtractFileSystemFiles(IEnumerable<string> filenames)
+        {
+            if (filenames == null) throw new ArgumentNullException("filenames");
+            byte[] image = openFileSystemImage();
+            int[] blockMap = getFileSystemBlockMap(image);
+            Dictionary<string, byte[]> result = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
+            foreach (string filename in filenames)
+            {
+                FSFile file = Files.Find(delegate(FSFile item)
+                {
+                    return String.Equals(item.getFilename(), filename, StringComparison.OrdinalIgnoreCase);
+                });
+                if (file == null) continue;
+                result[file.getFilename()] = extractFileSystemFile(image, blockMap, file);
+            }
+            return result;
+        }
+
+        public byte[] ExtractFileSystemFile(string file)
+        {
+            IDictionary<string, byte[]> files = ExtractFileSystemFiles(new string[] { file });
+            byte[] result;
+            return files.TryGetValue(file, out result) ? result : null;
+        }
+
+        // Preserve the original public method name for existing callers.
+        public byte[] exctractFSfile(string file)
+        {
+            return ExtractFileSystemFile(file);
         }
 
     }
@@ -4717,14 +4898,21 @@ namespace JRunner.Nand
         }
         public static byte[] addecc_v2(byte[] image,bool addecc,int blockstart,int layout)
         {
-            return addecc_v2_internal(image, addecc, blockstart, layout, null);
+            return addecc_v2_internal(image, addecc, blockstart, layout, 0, null);
+        }
+
+        public static byte[] addecc_v2(byte[] image, bool addecc, int blockstart, int layout,
+            int pagesPerBlock)
+        {
+            return addecc_v2_internal(image, addecc, blockstart, layout, pagesPerBlock, null);
         }
 
         public static byte[] addecc_v2(byte[] image,bool addecc,int blockstart,int layout,IProgress<int> progress)
         {
-            return addecc_v2_internal(image, addecc, blockstart, layout, progress);
+            return addecc_v2_internal(image, addecc, blockstart, layout, 0, progress);
         }
-        public static byte[] addecc_v2_internal(byte[] image, bool addecc, int blockstart, int layout, IProgress<int> progress)
+        public static byte[] addecc_v2_internal(byte[] image, bool addecc, int blockstart, int layout,
+            int pagesPerBlock, IProgress<int> progress)
         {
             if (variables.extractfiles)
                 Oper.savefile(image, "test.bin");
@@ -4787,9 +4975,12 @@ namespace JRunner.Nand
                         sparedata[2] = (byte)(((i / 32) + blockNumberBase) / 0x100);
                         break;
                     case 2:
+                        int largePagesPerBlock = pagesPerBlock > 0 ? pagesPerBlock : 0x100;
                         sparedata[0] = 0xFF;
-                        sparedata[1] = (byte)(((i / 0x100) + (blockstart / 0x21000)) & 0xFF);
-                        sparedata[2] = (byte)((((i / 0x100) + (blockstart / 0x21000)) & 0xFF00) >> 8);
+                        int largeBlock = (i / largePagesPerBlock) +
+                            (blockstart / (largePagesPerBlock * pageWithSpareSize));
+                        sparedata[1] = (byte)(largeBlock & 0xFF);
+                        sparedata[2] = (byte)((largeBlock >> 8) & 0xFF);
                         break;
                 }
 

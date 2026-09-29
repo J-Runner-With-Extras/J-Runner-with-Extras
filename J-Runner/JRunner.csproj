@@ -187,6 +187,12 @@
     <Compile Include="Forms\About.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Forms\NandConverter.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\NandConverter.Designer.cs">
+      <DependentUpon>NandConverter.cs</DependentUpon>
+    </Compile>
     <Compile Include="Forms\About.Designer.cs">
       <DependentUpon>About.cs</DependentUpon>
     </Compile>
@@ -521,7 +527,7 @@
       <DependentUpon>PatchKV.cs</DependentUpon>
     </Compile>
     <Compile Include="Nand\BadBlock.cs" />
-    <Compile Include="Nand\Nand1GbConverter.cs" />
+    <Compile Include="Nand\NandImageConverter.cs" />
     <Compile Include="Nand\Nand.cs" />
     <Compile Include="Functions\parse_ini.cs" />
     <Compile Include="Classes\Program.cs" />

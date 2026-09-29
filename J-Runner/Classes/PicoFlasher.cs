@@ -966,7 +966,8 @@ namespace JRunner
                             break;
 
                         if (fixEcc == 1)
-                            read = JRunner.Nand.Nand.addecc_v2(read, false, (int)(j * 0x4200), layout);
+                            read = JRunner.Nand.Nand.addecc_v2(read, false, (int)(j * 0x4200), layout,
+                                config.IsSupported ? (int)config.PagesPerBlock : 0);
 
                         for (uint k = 0; k < read.Length / 0x210; k++)
                         {

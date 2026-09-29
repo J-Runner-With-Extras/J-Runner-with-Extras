@@ -78,7 +78,8 @@ namespace JRunner.Nand
             return false;
         }
 
-        private static int DetectPagesPerBlock(long sourceLength, byte[] header, Func<bool> has1024MbMarker)
+        private static int DetectPagesPerBlock(long sourceLength, byte[] header,
+            Func<bool> has1024MbMarker, bool useConnectedFlashConfig)
         {
             if (sourceLength == Full1024MbRawLength) return 512;
             if (sourceLength == Full256MbRawLength || sourceLength == Full512MbRawLength) return 256;
@@ -87,7 +88,7 @@ namespace JRunner.Nand
             if (has1024MbMarker != null && has1024MbMarker()) return 512;
 
             SfcxConfig config;
-            if (sourceLength == SystemRawLength &&
+            if (useConnectedFlashConfig && sourceLength == SystemRawLength &&
                 SfcxConfig.TryParse(variables.flashconfig, out config) &&
                 config.IsSupported && config.TotalSizeMb == 1024)
                 return (int)config.PagesPerBlock;
@@ -96,6 +97,11 @@ namespace JRunner.Nand
         }
 
         internal static NandGeometry GetGeometry(string filename)
+        {
+            return GetGeometry(filename, true);
+        }
+
+        internal static NandGeometry GetGeometry(string filename, bool useConnectedFlashConfig)
         {
             if (String.IsNullOrEmpty(filename) || !File.Exists(filename))
                 return GeometryFromPages(32);
@@ -113,7 +119,8 @@ namespace JRunner.Nand
                 }
             }
 
-            int pagesPerBlock = DetectPagesPerBlock(file.Length, header, () => FileHas1024MbGeometryMarker(filename));
+            int pagesPerBlock = DetectPagesPerBlock(file.Length, header,
+                () => FileHas1024MbGeometryMarker(filename), useConnectedFlashConfig);
             return GeometryFromPages(pagesPerBlock);
         }
 
@@ -125,7 +132,8 @@ namespace JRunner.Nand
             int pagesPerBlock = DetectPagesPerBlock(
                 image.Length,
                 image,
-                () => Has1024MbGeometryMarker(image, Math.Min(image.Length, SystemRawLength)));
+                () => Has1024MbGeometryMarker(image, Math.Min(image.Length, SystemRawLength)),
+                true);
             return GeometryFromPages(pagesPerBlock);
         }
 
