@@ -1720,7 +1720,12 @@ namespace JRunner
                         variables.filename2 = "";
                     }
                 }
-                catch (Exception ex) { Console.WriteLine(ex.InnerException.ToString()); }
+                catch (Exception ex)
+                {
+                    // If the inner exception is NULL, print the base exception
+                    string msg = ex.InnerException != null ? ex.InnerException.ToString() : ex.GetBaseException().ToString();
+                    Console.WriteLine(msg);
+                }
             }
         }
 
