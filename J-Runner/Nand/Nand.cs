@@ -1502,6 +1502,96 @@ namespace JRunner.Nand
             return;
         }
 
+        public static void zeroKV(string flashFilePath)
+        {
+            byte[] flashFileData = File.ReadAllBytes(flashFilePath);
+            bool flashHasEcc = false;
+            int blockType = 0;
+
+            int flashKvSize = BitConverter.ToInt32(flashFileData.Skip(0x60).Take(0x4).Reverse().ToArray(), 0);
+            int flashKvOffset = BitConverter.ToInt32(flashFileData.Skip(0x6c).Take(0x4).Reverse().ToArray(), 0);
+
+            if (flashKvOffset % 0x200 != 0)
+            {
+                Console.WriteLine("Error: KV is not stored on a page boundary. NAND image may be corrupt.");
+                return;
+            }
+
+            // Determine whether this image has ECC
+            if (flashFileData.Length == 17301504 || flashFileData.Length == 69206016)
+            {
+                flashHasEcc = true;
+            }
+            else if (flashFileData.Length == 50331648)
+            {
+                flashHasEcc = false;
+            }
+            else
+            {
+                Console.WriteLine("Couldn't zero KV: Invalid flash image size");
+                return;
+            }
+
+            if (flashHasEcc)
+            {
+                // If the flash has ECC data, determine the block type so ECC data can be recalculated
+                byte[] sparedata = flashFileData.Skip(0x4400).Take(0x10).ToArray();
+
+                // Block Types
+                // 0 = Small block NAND (XSB)
+                // 1 = Small block NAND on BB controller (PSB/KSB)
+                // 2 = Big block NAND on BB controller (PSB/KSB)
+                blockType = identifylayout(sparedata);
+            }
+
+            // 0x4000 is assumed when the image doesn't declare a KV size
+            int kvSize = flashKvSize;
+            if (kvSize == 0)
+            {
+                Console.WriteLine("Warning: KV size set to 0 in this flash image. Assuming 0x4000.");
+                kvSize = 0x4000;
+            }
+            else if (kvSize % 0x200 != 0)
+            {
+                Console.WriteLine("Error: KV size of 0x{0:X} bytes isn't page aligned. NAND image may be corrupt.", kvSize);
+                return;
+            }
+
+            if (flashHasEcc)
+            {
+                int flashKvOffsetPhys = (flashKvOffset / 0x200) * 0x210;
+
+                // Regenerate the ECC of the wiped pages so they stay readable,
+                // the data itself is left as plain zeros
+                byte[] kvzeroed = addecc_v2(new byte[kvSize], true, flashKvOffsetPhys, blockType);
+
+                Buffer.BlockCopy(kvzeroed, 0, flashFileData, flashKvOffsetPhys, kvzeroed.Length);
+            }
+            else
+            {
+                Array.Clear(flashFileData, flashKvOffset, kvSize);
+            }
+
+            // Clear the KV size and KV offset in the first page of NAND
+            Array.Clear(flashFileData, 0x60, 0x4);
+            Array.Clear(flashFileData, 0x6c, 0x4);
+
+            // Re-calculate the ECC data if needed for the flash image.
+            if (flashHasEcc)
+            {
+                byte[] firstpage = Oper.returnportion(flashFileData, 0, 0x200);
+
+                firstpage = addecc_v2(firstpage, true, 0, blockType);
+
+                Buffer.BlockCopy(firstpage, 0, flashFileData, 0, firstpage.Length);
+            }
+
+            File.WriteAllBytes(flashFilePath, flashFileData);
+
+            Console.WriteLine("Success!");
+            return;
+        }
+
         #endregion
 
 
