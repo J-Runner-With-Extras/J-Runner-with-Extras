@@ -974,10 +974,9 @@ namespace JRunner
             this.experimentalToolStripMenuItem.Name = "experimentalToolStripMenuItem";
             this.experimentalToolStripMenuItem.Size = new System.Drawing.Size(241, 22);
             this.experimentalToolStripMenuItem.Text = "Experimental Features";
-            this.experimentalToolStripMenuItem.DropDownOpening += new System.EventHandler(this.experimentalToolStripMenuItem_DropDownOpening);
-            //
+            // 
             // convertNandToolStripMenuItem
-            //
+            // 
             this.convertNandToolStripMenuItem.Name = "convertNandToolStripMenuItem";
             this.convertNandToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
             this.convertNandToolStripMenuItem.Text = "NAND Image Converter...";

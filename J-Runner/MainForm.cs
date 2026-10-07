@@ -3524,13 +3524,6 @@ namespace JRunner
             
         }
 
-        private void experimentalToolStripMenuItem_DropDownOpening(object sender, EventArgs e)
-        {
-            convertNandToolStripMenuItem.Enabled = true;
-            convertNandToolStripMenuItem.ToolTipText =
-                "Open the console-aware NAND image converter.";
-        }
-
         private void convertNandToolStripMenuItem_Click(object sender, EventArgs e)
         {
             string initialInput = File.Exists(variables.filename1) ? variables.filename1 : String.Empty;

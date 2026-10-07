@@ -14,6 +14,28 @@ namespace JRunner.Panels
         public NandInfo()
         {
             InitializeComponent();
+            setFilesystemAndMobileTabsVisible(false);
+            variables.OnDebugModeChanged += (oldVal, newVal) => 
+            {
+                setFilesystemAndMobileTabsVisible(newVal);
+            };
+        }
+
+        private void setFilesystemAndMobileTabsVisible(bool visible) 
+        {
+            if (!visible) 
+            {
+                tabControl1.TabPages.Remove(tabPageFilesystem);
+                tabControl1.TabPages.Remove(tabPageMobile);
+            } 
+            else 
+            {
+                if (!tabControl1.TabPages.Contains(tabPageFilesystem))
+                    tabControl1.TabPages.Insert(2, tabPageFilesystem);
+
+                if (!tabControl1.TabPages.Contains(tabPageMobile))
+                    tabControl1.TabPages.Insert(3, tabPageMobile);
+            }
         }
 
         public NandInfo(Nand.PrivateN Nand)

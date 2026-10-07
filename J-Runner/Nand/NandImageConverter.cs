@@ -612,7 +612,8 @@ namespace JRunner.Nand
                 for (int item = 0; item < DataSize / 0x20; item++)
                 {
                     int entryOffset = pageOffset + item * 0x20;
-                    if (image[entryOffset] == 0) continue;
+                    if (image[entryOffset] == 0 ||
+                        FSFile.IsDeletedDirectoryEntry(image[entryOffset])) continue;
                     byte[] rawEntry = Slice(image, entryOffset, 0x20);
                     int nameLength = 0;
                     while (nameLength < 0x16 && rawEntry[nameLength] != 0) nameLength++;

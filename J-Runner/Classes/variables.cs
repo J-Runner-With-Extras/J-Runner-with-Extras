@@ -119,7 +119,21 @@ namespace JRunner
         /// App settings
         /// </summary>
         public static bool logtofile = true;
-        public static bool debugMode = false;
+        public static Action<bool, bool> OnDebugModeChanged;
+        private static bool _debugMode = false;
+        public static bool debugMode
+        {
+            get => _debugMode;
+            set 
+            {
+                if(_debugMode != value) 
+                {
+                    bool oldValue = _debugMode;
+                    _debugMode = value;
+                    OnDebugModeChanged?.Invoke(oldValue, _debugMode);
+                }
+            }
+        }
         public static bool generate = false;
         public static bool checkfiles = true, deletefiles = false, extractfiles = false, devkitnotdevgl = false;
         public static string preferredDash = latest_dashboard.ToString();

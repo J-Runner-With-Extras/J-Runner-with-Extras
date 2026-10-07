@@ -141,6 +141,24 @@ namespace JRunner.Nand
         int rawPage;
         int version;
 
+        private static bool IsMobileFileName(string name)
+        {
+            if (String.IsNullOrEmpty(name) || name.Length != 11 ||
+                !name.StartsWith("Mobile", StringComparison.OrdinalIgnoreCase) ||
+                !name.EndsWith(".dat", StringComparison.OrdinalIgnoreCase))
+                return false;
+            char letter = Char.ToUpperInvariant(name[6]);
+            return letter >= 'B' && letter <= 'J';
+        }
+
+        internal static bool IsDeletedDirectoryEntry(byte firstByte)
+        {
+            // Xbox flash-directory tombstones use 0x05.  Accept 0xE5 as well
+            // so a conventional deleted-entry marker is never exposed as a
+            // live file by imported/repacked images.
+            return firstByte == 0x05 || firstByte == 0xE5;
+        }
+
         public FSFile(string filename, int block, int length)
         {
             this.filename = filename;
@@ -178,12 +196,13 @@ namespace JRunner.Nand
         public string Filename { get { return filename; } }
         public int Length { get { return length; } }
         public int StartBlock { get { return block; } }
-        public bool IsMobile { get { return mobile; } }
+        public bool IsMobile { get { return mobile || IsMobileFileName(filename); } }
+        internal bool IsRawMobile { get { return mobile && rawPage >= 0; } }
         public int StartPage { get { return rawPage; } }
         public int Version { get { return version; } }
         public string StartLocation
         {
-            get { return mobile ? "Page 0x" + rawPage.ToString("X") : "Block 0x" + block.ToString("X"); }
+            get { return IsRawMobile ? "Page 0x" + rawPage.ToString("X") : "Block 0x" + block.ToString("X"); }
         }
     }
     public class PrivateN
@@ -195,6 +214,7 @@ namespace JRunner.Nand
         public Useful uf;
         public string _cpukey = "", _filename;
         private int _currentFS = 0;
+        private int _currentEmmcAnchor = 0;
         private bool _mobileFilesScanned = false;
         public bool noecc = false, bigblock = false, bigblock1gb = false, bigflash = false;
         public byte[] _rawkv, _smc, _smc_config;
@@ -206,6 +226,7 @@ namespace JRunner.Nand
             _cpukey = "";
             _filename = "";
             _currentFS = 0;
+            _currentEmmcAnchor = 0;
             _mobileFilesScanned = false;
             ok = noecc = bigblock = bigblock1gb = bigflash = false;
             bad_blocks = new List<int>();
@@ -964,10 +985,15 @@ namespace JRunner.Nand
             {
                 version = anchor1[0x1B];
                 _currentFS = Oper.ByteArrayToInt(Oper.returnportion(anchor1, 0x1C, 2));
+                _currentEmmcAnchor = 0x2FE8000;
             }
             if (Oper.ByteArrayCompare(hash2, Oper.returnportion(anchor2, 0, 0x14)))
             {
-                if (version < anchor2[0x1B]) _currentFS = Oper.ByteArrayToInt(Oper.returnportion(anchor2, 0x1C, 2));
+                if (_currentEmmcAnchor == 0 || version < anchor2[0x1B])
+                {
+                    _currentFS = Oper.ByteArrayToInt(Oper.returnportion(anchor2, 0x1C, 2));
+                    _currentEmmcAnchor = 0x2FEC000;
+                }
             }
         }
 
@@ -978,22 +1004,67 @@ namespace JRunner.Nand
             int blockType = bigblock ? 0x2C : 0x30;
             int logicalBlockSize = 0x4200;
             int logicalBlockCount = image.Length / logicalBlockSize;
-            int newfilesystem = 0;
+            int smallLayout = -1;
+            if (!bigblock)
+            {
+                int layout0Matches = 0;
+                int layout1Matches = 0;
+                for (int candidate = 0; candidate < logicalBlockCount; candidate++)
+                {
+                    int spareOffset = candidate * logicalBlockSize + 0x200;
+                    if ((image[spareOffset + 0xC] & 0x3F) != blockType) continue;
+
+                    // Layout 0 stores the 12-bit block ID in bytes 0/1;
+                    // layout 1 stores it in bytes 1/2.  Comparing both forms
+                    // with the physical root block disambiguates layouts even
+                    // when their changing sequence bytes make identifylayout()
+                    // ambiguous.
+                    int layout0Block = ((image[spareOffset + 1] & 0x0F) << 8) |
+                        image[spareOffset];
+                    int layout1Block = ((image[spareOffset + 2] & 0x0F) << 8) |
+                        image[spareOffset + 1];
+                    if (layout0Block == candidate) layout0Matches++;
+                    if (layout1Block == candidate) layout1Matches++;
+                }
+                if (layout0Matches != 0 || layout1Matches != 0)
+                    smallLayout = layout1Matches > layout0Matches ? 1 : 0;
+            }
+            long newfilesystem = -1;
             for (int block = 0; block < logicalBlockCount; block++)
             {
                 int position = block * logicalBlockSize + 0x200;
                 int type = image[position + 0xC] & 0x3F;
                 if (type != blockType) continue;
 
-                int fsseq;
-                if (bigblock)
+                byte[] spare = new byte[0x10];
+                Buffer.BlockCopy(image, position, spare, 0, spare.Length);
+                // Physical big-block images are always layout 2.  Its byte 5 is
+                // part of the changing sequence, so identifylayout() cannot be
+                // used reliably on an arbitrary filesystem-root page.
+                int layout = bigblock ? 2 :
+                    (smallLayout >= 0 ? smallLayout : Nand.identifylayout(spare));
+                long fsseq;
+                if (layout == 0)
                 {
-                    fsseq = (image[position + 4] << 8) | image[position + 5];
+                    // IMAGE_LAYOUT_0 (XSB): sequence bytes are 2,3,4,6.
+                    fsseq = ((long)image[position + 6] << 24) |
+                        ((long)image[position + 4] << 16) |
+                        ((long)image[position + 3] << 8) | image[position + 2];
+                }
+                else if (layout == 1)
+                {
+                    // IMAGE_LAYOUT_1 (PSB/KSB big-on-small): sequence bytes are
+                    // 0,3,4,6; bytes 1/2 contain the block ID.
+                    fsseq = ((long)image[position + 6] << 24) |
+                        ((long)image[position + 4] << 16) |
+                        ((long)image[position + 3] << 8) | image[position];
                 }
                 else
                 {
-                    fsseq = (image[position + 4] << 16) |
-                        (image[position + 3] << 8) | image[position];
+                    // IMAGE_LAYOUT_2 (PSB/KSB big-block): sequence is stored
+                    // most-significant byte first in bytes 3,4,5.
+                    fsseq = ((long)image[position + 3] << 16) |
+                        ((long)image[position + 4] << 8) | image[position + 5];
                 }
 
                 if (fsseq != 0 && fsseq > newfilesystem)
@@ -1032,11 +1103,15 @@ namespace JRunner.Nand
                 int entrycount = 0x20;
                 for (int i = 0; i < entrycount; i += 2)
                 {
+                    int entryOffset = (page * pagesize) + (i * 0x10);
+                    if (FSFile.IsDeletedDirectoryEntry(image[entryOffset]))
+                        continue;
+
                     byte[] name = new byte[0x16];
                     byte[] len = new byte[0x4];
                     byte[] blok = new byte[0x2];
 
-                    Buffer.BlockCopy(image, (page * pagesize) + (i * 0x10), name, 0, 0x16);
+                    Buffer.BlockCopy(image, entryOffset, name, 0, 0x16);
 
                     string filename = Encoding.ASCII.GetString(name).Trim('\0');
                     if (string.IsNullOrEmpty(filename))
@@ -1048,8 +1123,8 @@ namespace JRunner.Nand
                     int block = 0;
                     try
                     {
-                        Buffer.BlockCopy(image, (page * pagesize) + (i * 0x10) + 0x18, len, 0, 0x4);
-                        Buffer.BlockCopy(image, (page * pagesize) + (i * 0x10) + 0x16, blok, 0, 0x2);
+                        Buffer.BlockCopy(image, entryOffset + 0x18, len, 0, 0x4);
+                        Buffer.BlockCopy(image, entryOffset + 0x16, blok, 0, 0x2);
 
                         length = Oper.ByteArrayToInt(len);
                         block = Oper.ByteArrayToInt(blok);
@@ -1057,7 +1132,7 @@ namespace JRunner.Nand
                     }
                     catch (Exception ex) { if (variables.debugMode) Console.WriteLine(ex.ToString()); }
 
-                    if (image[(page * pagesize) + (i * 0x10)] != 0x05) { Files.Add(new FSFile(filename, block, length)); }
+                    Files.Add(new FSFile(filename, block, length));
                 }
             }
         }
@@ -1075,8 +1150,34 @@ namespace JRunner.Nand
 
         private void getMobileFileList(ref byte[] image)
         {
-            if (_mobileFilesScanned || noecc) return;
+            if (_mobileFilesScanned) return;
             _mobileFilesScanned = true;
+
+            if (noecc)
+            {
+                // Corona eMMC has no spare/ECC records.  Its active anchor keeps
+                // MobileB.dat-MobileJ.dat as block/short-length pairs at 0x20.
+                // A zero short length means the mobile occupies one full 16 KiB
+                // filesystem block.
+                if (_currentEmmcAnchor <= 0 || _currentEmmcAnchor + 0x44 > image.Length)
+                    return;
+                for (int index = 0; index < 9; index++)
+                {
+                    int entry = _currentEmmcAnchor + 0x20 + index * 4;
+                    int block = (image[entry] << 8) | image[entry + 1];
+                    if (block == 0 || block >= 0x1000) continue;
+                    int length = (image[entry + 2] << 8) | image[entry + 3];
+                    if (length == 0) length = 0x4000;
+                    string name = "Mobile" + (char)('B' + index) + ".dat";
+                    if (!Files.Exists(delegate(FSFile file)
+                    {
+                        return String.Equals(file.getFilename(), name,
+                            StringComparison.OrdinalIgnoreCase);
+                    }))
+                        Files.Add(new FSFile(name, block, length));
+                }
+                return;
+            }
 
             const int rawPageSize = 0x210;
             int rawPageCount = image.Length / rawPageSize;
@@ -1227,7 +1328,7 @@ namespace JRunner.Nand
 
         private byte[] extractFileSystemFile(byte[] image, int[] blockMap, FSFile file)
         {
-            if (file.IsMobile)
+            if (file.IsRawMobile)
             {
                 byte[] mobileData = new byte[file.getLength()];
                 int copiedMobile = 0;
@@ -1279,7 +1380,7 @@ namespace JRunner.Nand
             List<FSFile> result = new List<FSFile>();
             foreach (FSFile file in Files)
             {
-                if (file.IsMobile)
+                if (file.IsRawMobile)
                     result.Add(new FSFile(file.Filename, file.StartPage, file.Length, file.Version, true));
                 else
                     result.Add(new FSFile(file.getFilename(), file.getBlock(), file.getLength()));
