@@ -1181,15 +1181,19 @@ namespace JRunner.Nand
 
             const int rawPageSize = 0x210;
             int rawPageCount = image.Length / rawPageSize;
-            int rawSectorsPerPhysicalPage = bigblock ? 4 : 1;
             Dictionary<int, FSFile> newest = new Dictionary<int, FSFile>();
             Dictionary<int, int> newestFreePages = new Dictionary<int, int>();
 
-            for (int rawPage = 0; rawPage < rawPageCount; rawPage += rawSectorsPerPhysicalPage)
+            // Mobile records can begin on any 0x200-byte sector, including a
+            // nonzero sector inside a physical big-block page.  Scan every raw
+            // sector and let sequence/free-page ordering select the live copy.
+            for (int rawPage = 0; rawPage < rawPageCount; rawPage++)
             {
                 int spareOffset = rawPage * rawPageSize + 0x200;
                 int type = image[spareOffset + 0xC] & 0x3F;
-                if (type < 0x31 || type > 0x39) continue;
+                int firstMobileType = bigblock ? 0x2D : 0x31;
+                int lastMobileType = firstMobileType + 8;
+                if (type < firstMobileType || type > lastMobileType) continue;
 
                 // Big-block spare names these bytes FsSize1/FsSize0.  The low
                 // byte is stored first (for example 50 02 means 0x250 bytes).
@@ -1224,7 +1228,7 @@ namespace JRunner.Nand
                          (freePages == currentFreePages && rawPage > current.StartPage)));
                 if (!replace) continue;
 
-                string name = "Mobile" + (char)('B' + type - 0x31) + ".dat";
+                string name = "Mobile" + (char)('B' + type - firstMobileType) + ".dat";
                 newest[type] = new FSFile(name, rawPage, length, sequence, true);
                 newestFreePages[type] = freePages;
             }

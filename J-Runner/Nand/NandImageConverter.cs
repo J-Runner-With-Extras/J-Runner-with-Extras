@@ -455,6 +455,7 @@ namespace JRunner.Nand
             public int StartBlock;
             public int Length;
             public byte[] Data;
+            public bool AnchorOnly;
         }
 
         private sealed class FlashFileSystem
@@ -465,6 +466,14 @@ namespace JRunner.Nand
             public readonly List<FlashFileEntry> Files = new List<FlashFileEntry>();
         }
 
+        private sealed class RawAnchorCandidate
+        {
+            public int Page;
+            public int Sequence;
+            public int FreePages;
+            public FlashFileEntry File;
+        }
+
         private static void ConvertEmmcToBigOnSmall(string input, string output, int targetDataSize,
             Action<int> progress)
         {
@@ -473,8 +482,10 @@ namespace JRunner.Nand
                 throw new InvalidDataException("The eMMC input is not a complete 48 MB system partition.");
 
             int anchorVersion;
-            int rootBlock = ReadEmmcRoot(sourceData, out anchorVersion);
+            int anchorOffset;
+            int rootBlock = ReadEmmcRoot(sourceData, out anchorVersion, out anchorOffset);
             FlashFileSystem fileSystem = ReadFileSystem(sourceData, rootBlock, anchorVersion);
+            ReadEmmcAnchorFiles(sourceData, anchorOffset, fileSystem);
             ExtractFilePayloads(sourceData, fileSystem);
             Report(progress, 20);
 
@@ -509,6 +520,7 @@ namespace JRunner.Nand
             int sequence;
             int rootBlock = FindLatestBosFileSystemRoot(sourceSpare, out sequence);
             FlashFileSystem fileSystem = ReadFileSystem(sourceData, rootBlock, sequence);
+            ReadBosAnchorFiles(sourceData, sourceSpare, fileSystem);
             ExtractFilePayloads(sourceData, fileSystem);
             Report(progress, 30);
 
@@ -556,7 +568,7 @@ namespace JRunner.Nand
             return data;
         }
 
-        private static int ReadEmmcRoot(byte[] image, out int version)
+        private static int ReadEmmcRoot(byte[] image, out int version, out int anchorOffset)
         {
             int root1, version1, root2, version2;
             bool valid1 = ReadEmmcAnchor(image, EmmcAnchor1Offset, out root1, out version1);
@@ -566,10 +578,136 @@ namespace JRunner.Nand
             if (valid2 && (!valid1 || version2 > version1))
             {
                 version = version2;
+                anchorOffset = EmmcAnchor2Offset;
                 return root2;
             }
             version = version1;
+            anchorOffset = EmmcAnchor1Offset;
             return root1;
+        }
+
+        private static void ReadEmmcAnchorFiles(byte[] image, int anchorOffset,
+            FlashFileSystem fileSystem)
+        {
+            string[] names = new string[11];
+            for (int i = 0; i < 9; i++) names[i] = "Mobile" + (char)('B' + i) + ".dat";
+            names[9] = "Statistics.settings";
+            names[10] = "Manufacturing.data";
+
+            for (int i = 0; i < names.Length; i++)
+            {
+                int entryOffset = anchorOffset + 0x20 + i * 4;
+                int start = ReadUInt16BigEndian(image, entryOffset);
+                if (start <= 0 || start >= fileSystem.BlockMap.Length ||
+                    start * SmallBlockDataSize >= image.Length) continue;
+                int length = ReadUInt16BigEndian(image, entryOffset + 2);
+                if (length == 0) length = SmallBlockDataSize;
+                if (fileSystem.Files.Exists(delegate(FlashFileEntry item)
+                {
+                    return String.Equals(item.Name, names[i], StringComparison.OrdinalIgnoreCase);
+                })) continue;
+
+                byte[] directoryEntry = new byte[0x20];
+                byte[] encodedName = Encoding.ASCII.GetBytes(names[i]);
+                Buffer.BlockCopy(encodedName, 0, directoryEntry, 0,
+                    Math.Min(encodedName.Length, 0x16));
+                WriteUInt16BigEndian(directoryEntry, 0x16, start);
+                WriteUInt32BigEndian(directoryEntry, 0x18, (uint)length);
+                fileSystem.Files.Add(new FlashFileEntry
+                {
+                    DirectoryEntry = directoryEntry,
+                    Name = names[i],
+                    StartBlock = start,
+                    Length = length,
+                    AnchorOnly = true
+                });
+            }
+        }
+
+        private static void ReadBosAnchorFiles(byte[] data, byte[] spare,
+            FlashFileSystem fileSystem)
+        {
+            int pageCount = Math.Min(data.Length / DataSize, spare.Length / SpareSize);
+            Dictionary<int, RawAnchorCandidate> newest =
+                new Dictionary<int, RawAnchorCandidate>();
+            for (int page = 0; page < pageCount; page++)
+            {
+                int metadata = page * SpareSize;
+                int type = spare[metadata + 0xC] & 0x3F;
+                if (type < 0x31 || type > 0x3B) continue;
+                int length = (spare[metadata + 8] << 8) | spare[metadata + 7];
+                if (length <= 0) continue;
+                int requiredPages = (length + DataSize - 1) / DataSize;
+                if (page + requiredPages > pageCount) continue;
+                int sequence = (spare[metadata + 6] << 24) |
+                    (spare[metadata + 4] << 16) |
+                    (spare[metadata + 3] << 8) | spare[metadata];
+                bool valid = true;
+                for (int item = 0; item < requiredPages; item++)
+                {
+                    int candidate = (page + item) * SpareSize;
+                    int candidateSequence = (spare[candidate + 6] << 24) |
+                        (spare[candidate + 4] << 16) |
+                        (spare[candidate + 3] << 8) | spare[candidate];
+                    if ((spare[candidate + 0xC] & 0x3F) != type ||
+                        ((spare[candidate + 8] << 8) | spare[candidate + 7]) != length ||
+                        candidateSequence != sequence)
+                    {
+                        valid = false;
+                        break;
+                    }
+                }
+                if (!valid) continue;
+
+                int freePages = spare[metadata + 9];
+                RawAnchorCandidate current;
+                if (newest.TryGetValue(type, out current) &&
+                    (sequence < current.Sequence ||
+                     (sequence == current.Sequence && freePages > current.FreePages) ||
+                     (sequence == current.Sequence && freePages == current.FreePages &&
+                      page <= current.Page))) continue;
+
+                string name;
+                if (type <= 0x39)
+                    name = "Mobile" + (char)('B' + type - 0x31) + ".dat";
+                else if (type == 0x3A)
+                    name = "Statistics.settings";
+                else
+                    name = "Manufacturing.data";
+                byte[] directoryEntry = new byte[0x20];
+                byte[] encodedName = Encoding.ASCII.GetBytes(name);
+                Buffer.BlockCopy(encodedName, 0, directoryEntry, 0,
+                    Math.Min(encodedName.Length, 0x16));
+                WriteUInt16BigEndian(directoryEntry, 0x16, page / 32);
+                WriteUInt32BigEndian(directoryEntry, 0x18, (uint)length);
+                byte[] payload = new byte[length];
+                Buffer.BlockCopy(data, page * DataSize, payload, 0, length);
+                newest[type] = new RawAnchorCandidate
+                {
+                    Page = page,
+                    Sequence = sequence,
+                    FreePages = freePages,
+                    File = new FlashFileEntry
+                    {
+                        DirectoryEntry = directoryEntry,
+                        Name = name,
+                        StartBlock = page / 32,
+                        Length = length,
+                        Data = payload,
+                        AnchorOnly = true
+                    }
+                };
+            }
+
+            foreach (KeyValuePair<int, RawAnchorCandidate> item in newest.OrderBy(pair => pair.Key))
+            {
+                if (!fileSystem.Files.Exists(delegate(FlashFileEntry file)
+                {
+                    return String.Equals(file.Name, item.Value.File.Name,
+                        StringComparison.OrdinalIgnoreCase);
+                }))
+                    fileSystem.Files.Add(item.Value.File);
+            }
         }
 
         private static bool ReadEmmcAnchor(byte[] image, int offset, out int root, out int version)
@@ -640,6 +778,7 @@ namespace JRunner.Nand
         {
             foreach (FlashFileEntry file in fileSystem.Files)
             {
+                if (file.Data != null) continue;
                 file.Data = new byte[file.Length];
                 int block = file.StartBlock;
                 int copied = 0;
@@ -714,6 +853,7 @@ namespace JRunner.Nand
             int directoryIndex = 0;
             foreach (FlashFileEntry file in fileSystem.Files)
             {
+                if (file.AnchorOnly) continue;
                 if (directoryIndex >= 0x100)
                     throw new InvalidDataException("The filesystem has more than 256 directory entries.");
                 int page = 1 + 2 * (directoryIndex / 16);
@@ -1368,9 +1508,20 @@ namespace JRunner.Nand
                     targetSpare[targetMeta + 4] = (byte)(sequence >> 8);
                     targetSpare[targetMeta + 5] = (byte)sequence;
                     targetSpare[targetMeta + 6] = 0;
-                    targetSpare[targetMeta + 7] = 0x0A;
-                    targetSpare[targetMeta + 8] = 0x60;
-                    targetSpare[targetMeta + 9] = 0x04;
+                    if (sourceType >= 0x31 && sourceType <= 0x3B)
+                    {
+                        // Mobiles and the two related anchor files use these
+                        // bytes for payload length/free-page metadata.
+                        targetSpare[targetMeta + 7] = sourceSpare[sourceMeta + 7];
+                        targetSpare[targetMeta + 8] = sourceSpare[sourceMeta + 8];
+                        targetSpare[targetMeta + 9] = sourceSpare[sourceMeta + 9];
+                    }
+                    else
+                    {
+                        targetSpare[targetMeta + 7] = 0x0A;
+                        targetSpare[targetMeta + 8] = 0x60;
+                        targetSpare[targetMeta + 9] = 0x04;
+                    }
                     targetSpare[targetMeta + 12] = (byte)((sourceSpare[sourceMeta + 12] & 0xC0) |
                         (sourceType - 4));
                     if (sourceType == 0x30 && !preserveRoot)
@@ -1416,9 +1567,18 @@ namespace JRunner.Nand
                     targetSpare[targetMeta + 3] = (byte)(sequence >> 8);
                     targetSpare[targetMeta + 4] = 0;
                     targetSpare[targetMeta + 6] = 0;
-                    targetSpare[targetMeta + 7] = 0;
-                    targetSpare[targetMeta + 8] = 0;
-                    targetSpare[targetMeta + 9] = 0;
+                    if (sourceType >= 0x2D && sourceType <= 0x37)
+                    {
+                        targetSpare[targetMeta + 7] = sourceSpare[sourceMeta + 7];
+                        targetSpare[targetMeta + 8] = sourceSpare[sourceMeta + 8];
+                        targetSpare[targetMeta + 9] = sourceSpare[sourceMeta + 9];
+                    }
+                    else
+                    {
+                        targetSpare[targetMeta + 7] = 0;
+                        targetSpare[targetMeta + 8] = 0;
+                        targetSpare[targetMeta + 9] = 0;
+                    }
                     targetSpare[targetMeta + 12] = (byte)((sourceSpare[sourceMeta + 12] & 0xC0) |
                         (sourceType + 4));
                     if (sourceType == 0x2C && !preserveRoot)
