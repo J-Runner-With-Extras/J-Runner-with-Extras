@@ -30,19 +30,80 @@ namespace JRunner
         {
             return PopCountTable[value];
         }
-        public static string GenerateKey()
+        public static string GenerateKey(byte[] prefix)
         {
             var rng = RandomNumberGenerator.Create();
-            byte[] key = new byte[16];
+            byte[] key = new byte[16]; // initialized to zero
             byte[] generatedKey;
 
-            do
+            if (prefix != null && CanCompleteToWeight53(prefix))
             {
-                rng.GetNonZeroBytes(key);
+                int knownWeight = 0;
+                for (int i = 0; i < prefix.Length; i++)
+                {
+                    knownWeight += PopCount(prefix[i]);
+                }
+
+                int toSet = 53 - knownWeight;
+
+                Buffer.BlockCopy(prefix, 0, key, 0, prefix.Length);
+
+                int pos = prefix.Length * 8;
+                int freeBits = (13 - prefix.Length) * 8 + 2;
+
+                // Build the list of free bit positions (all currently 0)
+                int[] freePositions = new int[freeBits];
+                for (int i = 0; i < freeBits; i++)
+                {
+                    freePositions[i] = pos + i;
+                }
+
+                // Fisher-Yates shuffle using the RNG, so the chosen bits are uniformly random
+                for (int i = freeBits - 1; i > 0; i--)
+                {
+                    byte[] rb = new byte[4];
+                    rng.GetBytes(rb);
+                    int j = (int)(BitConverter.ToUInt32(rb, 0) % (uint)(i + 1));
+                    int temp = freePositions[i];
+                    freePositions[i] = freePositions[j];
+                    freePositions[j] = temp;
+                }
+
+                // Set exactly `toSet` of the free bits to 1, chosen at random
+                for (int i = 0; i < toSet; i++)
+                {
+                    int bitPos = freePositions[i];
+                    key[bitPos >> 3] |= (byte)(1 << (bitPos & 7));
+                }
+
+                VerifyKey(key, out generatedKey);
             }
-            while (!VerifyKey(key, out generatedKey));
+            else
+            {
+                do
+                {
+                    rng.GetNonZeroBytes(key);
+                }
+                while (!VerifyKey(key, out generatedKey));
+            }
 
             return BitConverter.ToString(generatedKey).Replace("-", string.Empty);
+        }
+
+        public static bool CanCompleteToWeight53(byte[] prefix)
+        {
+            if (prefix == null || prefix.Length < 1 || prefix.Length > 13) return false;
+
+            int knownWeight = 0;
+            for (int i = 0; i < prefix.Length; i++)
+            {
+                knownWeight += PopCount(prefix[i]);
+            }
+
+            int remainingBits = (13 * 8 + 2) - (prefix.Length * 8);
+            bool bCanMake53 = (knownWeight <= 53 && (53 - knownWeight) <= remainingBits);
+
+            return bCanMake53;
         }
 
         private static bool VerifyKey(byte[] key, out byte[] generatedKey)

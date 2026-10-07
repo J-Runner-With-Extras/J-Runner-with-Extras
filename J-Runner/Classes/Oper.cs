@@ -402,6 +402,26 @@ namespace JRunner
                 bytes[i / 2] = Convert.ToByte(hex.Substring(i, 2), 16);
             return bytes;
         }
+
+        public static byte[] StringToByteArrayPrefix(String hex)
+        {
+            int NumberChars = hex.Length;
+            if (NumberChars % 2 != 0)
+            {
+                hex = hex + "0";
+                NumberChars++;
+            }
+            if (NumberChars % 4 != 0)
+            {
+                hex = hex + "00";
+                NumberChars += 2;
+            }
+            byte[] bytes = new byte[NumberChars / 2];
+            for (int i = 0; i < NumberChars; i += 2)
+                bytes[i / 2] = Convert.ToByte(hex.Substring(i, 2), 16);
+            return bytes;
+        }
+
         public static byte[] StringToByteArray_v2(String hex)
         {
             int NumberChars = hex.Length;

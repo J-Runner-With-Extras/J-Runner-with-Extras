@@ -20,8 +20,29 @@ namespace JRunner.Forms
 
         private void btnGenKey_Click(object sender, EventArgs e)
         {
-            if ((ModifierKeys & Keys.Shift) == Keys.Shift) txtGenKey.Text = variables.superDevKey;
-            else txtGenKey.Text = CpuKeyGen.GenerateKey();
+            byte[] prefixBytes = null;
+
+            // Accept up to 13 bytes as a prefix for the generated CPU key
+            if (txtGenKey.TextLength > 0 && txtGenKey.TextLength < 13 * 2)
+            {
+                try
+                {
+                    prefixBytes = Oper.StringToByteArrayPrefix(txtGenKey.Text);
+                }
+                catch
+                {
+                    if (variables.debugMode) Console.WriteLine("CPU Key Generator: couldn't convert prefix bytes to hex string");
+                }
+            }
+
+            if ((ModifierKeys & Keys.Shift) == Keys.Shift)
+            {
+                txtGenKey.Text = variables.superDevKey;
+            }
+            else
+            {
+                txtGenKey.Text = CpuKeyGen.GenerateKey(prefixBytes);
+            }
         }
 
         private void btnInsertKey_Click(object sender, EventArgs e)
@@ -32,7 +53,20 @@ namespace JRunner.Forms
 
         private void btnValKey_Click(object sender, EventArgs e)
         {
-            if(Nand.Nand.VerifyKey(Oper.StringToByteArray(txtGenKey.Text)))
+            byte[] keyBytes;
+
+            try
+            {
+                keyBytes = Oper.StringToByteArray(txtGenKey.Text);
+            }
+            catch
+            {
+                MessageBox.Show("CPU Key contains invalid characters.", "Validate CPU Key", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                btnInsertKey.Enabled = false;
+                return;
+            }
+
+            if (Nand.Nand.VerifyKey(keyBytes))
             {
                 MessageBox.Show("CPU Key is valid!", "Validate CPU Key", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 btnInsertKey.Enabled = true;

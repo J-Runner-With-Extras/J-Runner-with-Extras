@@ -1747,7 +1747,12 @@ namespace JRunner
                         variables.filename2 = "";
                     }
                 }
-                catch (Exception ex) { Console.WriteLine(ex.InnerException.ToString()); }
+                catch (Exception ex)
+                {
+                    // If the inner exception is NULL, print the base exception
+                    string msg = ex.InnerException != null ? ex.InnerException.ToString() : ex.GetBaseException().ToString();
+                    Console.WriteLine(msg);
+                }
             }
         }
 
@@ -3311,6 +3316,23 @@ namespace JRunner
                 Nand.Nand.injectEncryptedKV(variables.filename1, ofd.FileName, Oper.StringToByteArray(variables.cpukey));
                 nand_init(true, true);
             }
+        }
+
+        private void wipeKVToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (MessageBox.Show("This is for advanced users only. Wiping the KV will produce a NAND image that will boot to manufacturing mode (christmas lights). Make sure you have a NAND backup. Continue?", "Are you sure?", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.No)
+            {
+                return;
+            }
+
+            if (!nand.ok)
+            {
+                Console.WriteLine("Couldn't wipe KV: no NAND loaded.");
+                return;
+            }
+
+            Nand.Nand.zeroKV(variables.filename1);
+            nand_init(true, true);
         }
 
         private void loadGlitch2XeLLToolStripMenuItem_Click(object sender, EventArgs e)
