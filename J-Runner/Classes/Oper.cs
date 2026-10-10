@@ -198,7 +198,7 @@ namespace JRunner
             return true;
         }
 
-        public static int ByteArrayFindPattern(byte[] data, byte?[] pattern)
+        public static int ByteArrayFindPattern(byte[] data, byte?[] pattern, int? offset = null)
         {
             if (data == null || pattern == null)
             {
@@ -210,7 +210,28 @@ namespace JRunner
                 return -1;
             }
 
-            for (int i = 0; i <= data.Length - pattern.Length; i++)
+            int lastStart = data.Length - pattern.Length;
+
+            int start;
+            int end;
+
+            if (offset.HasValue)
+            {
+                // Only check the specified offset
+                if (offset.Value < 0 || offset.Value > lastStart)
+                {
+                    return -1;
+                }
+
+                start = end = offset.Value;
+            }
+            else
+            {
+                start = 0;
+                end = lastStart;
+            }
+
+            for (int i = start; i <= end; i++)
             {
                 bool match = true;
 

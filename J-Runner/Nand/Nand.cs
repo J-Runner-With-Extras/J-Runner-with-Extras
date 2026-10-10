@@ -3375,6 +3375,13 @@ namespace JRunner.Nand
             int xellOffsetInPage = 0;
             int xellPageCount = 0;
 
+            byte?[] XellHeaderPattern = new byte?[] {
+                0x48, 0x00, 0x00, null,
+                0x48, 0x00, 0x00, null,
+                0x48, 0x00, 0x00, 0x00,
+                0x48, 0x00, 0x00, 0x00
+            };
+
             // Read in flash data
             byte[] flashData = File.ReadAllBytes(flashFilePath);
             byte[] xellData = File.ReadAllBytes(xellFilePath);
@@ -3459,7 +3466,7 @@ namespace JRunner.Nand
                 }
 
                 // Look for the XeLL header to see if we're at the right spot
-                if (Oper.ByteArrayCompare(flashData, Oper.StringToByteArray("48000020480000EC4800000048000000"), xellOffsetPhys, 0, 0x10))
+                if (Oper.ByteArrayFindPattern(flashData, XellHeaderPattern, xellOffsetPhys) != -1)
                 {
                     xellOffset = testXellOffset;
                     Console.WriteLine("XeLL found at offset 0x" + xellOffset.ToString("X"));
@@ -3495,7 +3502,7 @@ namespace JRunner.Nand
                     }
 
                     // Do a final sanity check to make sure something didn't go wrong
-                    if (!Oper.ByteArrayCompare(flashData, Oper.StringToByteArray("48000020480000EC4800000048000000"), xellOffsetPhys, 0, 0x10))
+                    if (Oper.ByteArrayFindPattern(flashData, XellHeaderPattern, xellOffsetPhys) == -1)
                     {
                         Console.WriteLine("Couldn't inject XeLL: couldn't detect XeLL in the resulting flash image");
                         return;
