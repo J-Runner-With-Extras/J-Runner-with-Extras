@@ -404,7 +404,8 @@ namespace JRunner
                 return flashconfig;
             }
 
-            if (!variables.flashconfigs.Contains(flashconfigStr))
+            SfcxConfig config = SfcxConfig.Decode(flashconfig);
+            if (!config.IsSupported && !config.IsEmmc)
             {
                 if (DialogResult.No == MessageBox.Show("Unrecognized flash config: 0x" + flashconfigStr + "\n\nAre you sure you wish to continue with the read/write operation?", "PicoFlasher Warning", MessageBoxButtons.YesNo, MessageBoxIcon.Warning))
                 {
@@ -419,31 +420,9 @@ namespace JRunner
 
         private uint getFlashSize(uint flash_config)
         {
-            uint size = 0;
-
-            uint major = (flash_config >> 17) & 3;
-            uint minor = (flash_config >> 4) & 3;
-            if (major >= 1)
-            {
-                if (minor == 0) // Corona 16MB
-                {
-                    if (((flash_config >> 17) & 0x03) != 0x01)
-                        size = 16;
-                }
-                else if (minor == 1) // Jasper 16MB, Trinity 16MB
-                {
-                    if (((flash_config >> 17) & 0x03) != 0x01)
-                        size = 64;
-                    else
-                        size = 16;
-                }
-                else if (minor == 2 || minor == 3) // Jasper, Trinity, Corona, 256MB/512MB
-                    size = (uint)(8 << (int)(((flash_config >> 19) & 0x3) + ((flash_config >> 21) & 0xF)));
-            }
-            else // Xenon, Zephyr, Falcon
-                size = (uint)(8 << (int)minor);
-
-            return size * 1024 * 1024;
+            SfcxConfig config = SfcxConfig.Decode(flash_config);
+            if (!config.IsSupported || config.TotalDataBytes > UInt32.MaxValue) return 0;
+            return (uint)config.TotalDataBytes;
         }
 
         private UInt32 UNSTUFF_BITS(UInt32[] resp, int start, int size)
@@ -478,6 +457,7 @@ namespace JRunner
                 cmd.lba = 0;
                 SendCmd(serial, cmd);
                 UInt32 flashconfig = RecvUInt32(serial);
+                SfcxConfig config = SfcxConfig.Decode(flashconfig);
 
                 byte emmc_det = 0;
                 if (Version >= 3)
@@ -487,38 +467,21 @@ namespace JRunner
                     emmc_det = RecvUInt8(serial);
                 }
 
-                if (flashconfig != 0x00000000 && flashconfig != 0xFFFFFFFF && flashconfig != 0xC0462002)
+                if (config.IsSupported)
                 {
                     Console.WriteLine("Flash Config: 0x" + flashconfig.ToString("X8"));
-                    if (flashconfig == 0x01198010)
-                        Console.WriteLine("Xenon, Zephyr, Falcon: 16MB");
-                    else if (flashconfig == 0x01198030)
-                        Console.WriteLine("Xenon, Zephyr, Falcon: 64MB");
-                    else if (flashconfig == 0x00023010)
-                        Console.WriteLine("Jasper, Trinity: 16MB");
-                    else if (flashconfig == 0x00043000)
-                        Console.WriteLine("Corona: 16MB");
-                    else if (flashconfig == 0x008A3020)
-                        Console.WriteLine("Jasper, Trinity: 256MB");
-                    else if (flashconfig == 0x00AA3020)
-                        Console.WriteLine("Jasper, Trinity: 512MB");
-                    else if (flashconfig == 0x008C3020)
-                        Console.WriteLine("Corona: 256MB");
-                    else if (flashconfig == 0x00AC3020)
-                        Console.WriteLine("Corona: 512MB");
-                    else
-                        Console.WriteLine("Unrecongized Flash Config");
+                    Console.WriteLine(config.Description);
                 }
-                else if (emmc_det == 0 && flashconfig == 0xC0462002)
+                else if (emmc_det == 0 && config.IsEmmc)
                 {
                     Console.WriteLine("Flash Config: 0x" + flashconfig.ToString("X8"));
-                    Console.WriteLine("Corona: 4GB (eMMC not connected)");
+                    Console.WriteLine("Corona/Winchester: 4GB (eMMC not connected)");
                 }
                 else if (emmc_det != 0)
                 {
                     bIsValidEmmcFlashConfig = true;
 
-                    Console.WriteLine("Corona: 4GB (eMMC connected)");
+                    Console.WriteLine("Corona/Winchester: 4GB (eMMC connected)");
 
                     cmd.cmd = COMMANDS.EMMC_INIT;
                     SendCmd(serial, cmd);
@@ -551,7 +514,7 @@ namespace JRunner
 
                         byte[] ext_csd = new byte[512];
                         got = 0;
-                        while (got < CSD.Length)
+                        while (got < ext_csd.Length)
                             got += serial.Read(ext_csd, got, ext_csd.Length - got);
 
                         if (variables.debugMode)
@@ -632,6 +595,34 @@ namespace JRunner
                                 Console.Write(", HS400_1.8V");
                             Console.WriteLine("");
                         }
+
+                        // Flash config alone cannot distinguish Corona from
+                        // Winchester eMMC. Read the same first 64KB used by
+                        // the SPI console check and let CB + SMC select the
+                        // exact motherboard (including Winchester CB 16128).
+                        Console.WriteLine("Checking CB...");
+                        const int sectorCount = 0x80;
+                        byte[] conf = new byte[sectorCount * 0x200];
+
+                        cmd.cmd = COMMANDS.EMMC_READ_STREAM;
+                        cmd.lba = sectorCount;
+                        SendCmd(serial, cmd);
+
+                        for (int sector = 0; sector < sectorCount; sector++)
+                        {
+                            UInt32 ret = RecvUInt32(serial);
+                            if (ret != 0)
+                                throw new IOException("PicoFlasher eMMC read error: 0x" + ret.ToString("X"));
+
+                            int sectorOffset = sector * 0x200;
+                            got = 0;
+                            while (got < 0x200)
+                                got += serial.Read(conf, sectorOffset + got, 0x200 - got);
+                        }
+
+                        variables.flashconfig = flashconfig.ToString("X8");
+                        variables.conf = conf;
+                        MainForm.mainForm.getcb_v(variables.flashconfig);
                     }
                 }
                 else
@@ -661,7 +652,80 @@ namespace JRunner
         {
             Thread getFlashConfigThread = new Thread(() =>
             {
-                this.getFlashConfigEmmc();
+                SerialPort serial = OpenSerial();
+                try
+                {
+                    if (serial == null) return;
+
+                    uint flashconfig = getFlashConfig(serial);
+                    SfcxConfig config = SfcxConfig.Decode(flashconfig);
+                    if (config.IsNoDevice)
+                    {
+                        Console.WriteLine("Console Not Found");
+                        Console.WriteLine("");
+                        return;
+                    }
+
+                    if (config.IsEmmc)
+                    {
+                        // Preserve the detailed eMMC detection/CID path. Exact
+                        // motherboard selection for eMMC requires a separate
+                        // bootloader read path.
+                        CloseSerial(serial);
+                        serial = null;
+                        getFlashConfigEmmc();
+                        return;
+                    }
+
+                    if (!config.IsSupported)
+                    {
+                        Console.WriteLine("Unsupported SFCX flash configuration");
+                        Console.WriteLine("");
+                        return;
+                    }
+
+                    Console.WriteLine(config.Description);
+                    Console.WriteLine("Checking CB...");
+
+                    const int transferBlocks = 4;
+                    const int pagesPerTransferBlock = 0x20;
+                    const int pageCount = transferBlocks * pagesPerTransferBlock;
+                    byte[] conf = new byte[transferBlocks * SfcxConfig.TransferRawBytes];
+
+                    CMD cmd = new CMD();
+                    cmd.cmd = COMMANDS.READ_FLASH_STREAM;
+                    cmd.lba = pageCount;
+                    SendCmd(serial, cmd);
+
+                    for (int page = 0; page < pageCount; page++)
+                    {
+                        UInt32 ret = RecvUInt32(serial);
+                        if (ret != 0)
+                            throw new IOException("PicoFlasher read error: 0x" + ret.ToString("X"));
+
+                        int pageOffset = page * SfcxConfig.RawBytesPerPage;
+                        int got = 0;
+                        while (got < SfcxConfig.RawBytesPerPage)
+                            got += serial.Read(conf, pageOffset + got, SfcxConfig.RawBytesPerPage - got);
+                    }
+
+                    variables.flashconfig = flashconfig.ToString("X8");
+                    variables.conf = conf;
+                    MainForm.mainForm.getcb_v(variables.flashconfig);
+                    Console.WriteLine("");
+                }
+                catch (Exception ex)
+                {
+                    variables.conf = null;
+                    Console.WriteLine("PicoFlasher console detection failed");
+                    Console.WriteLine(ex.Message);
+                    if (variables.debugMode) Console.WriteLine(ex.ToString());
+                    Console.WriteLine("");
+                }
+                finally
+                {
+                    if (serial != null) CloseSerial(serial);
+                }
             });
             getFlashConfigThread.Start();
         }
@@ -688,6 +752,7 @@ namespace JRunner
                     }
 
                     uint flashsize = getFlashSize(flashconfig);
+                    SfcxConfig config = SfcxConfig.Decode(flashconfig);
 
                     if (flashsize == 0)
                     {
@@ -697,7 +762,7 @@ namespace JRunner
                         return;
                     }
 
-                    if (flashsize == 268435456 || flashsize == 536870912)
+                    if (config.HasMemoryUnit)
                     {
                         DialogResult bbdr = MessageBox.Show("A big block nand has been detected\n\nDo you want to dump only the system partition? (recommended)", "Nand Dump Size", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
 
@@ -877,11 +942,8 @@ namespace JRunner
                         return;
                     }
 
-                    int layout = 1;
-                    if (flashconfig == 0xAA3020 || flashconfig == 0x8A3020 || flashconfig == 0xAC3020 || flashconfig == 0x8C3020)
-                        layout = 2;
-                    else if (flashconfig == 0x1198010)
-                        layout = 0;
+                    SfcxConfig config = SfcxConfig.Decode(flashconfig);
+                    int layout = config.IsSupported ? config.Layout : 1;
 
                     variables.writing = true;
                     MainForm.mainForm.PicoFlasherBusy(2);
@@ -891,18 +953,21 @@ namespace JRunner
 
                     BinaryReader br = new BinaryReader(File.Open(variables.filename1, FileMode.Open, FileAccess.Read));
 
-                    uint writeend = flashsize / (512 * 8);
+                    long rawFileLength = new FileInfo(variables.filename1).Length;
+                    uint fileWriteEnd = (uint)((rawFileLength + (0x210 * 8) - 1) / (0x210 * 8));
+                    uint writeend = Math.Min(flashsize / (512 * 8), fileWriteEnd);
                     if (start != 0 || end != 0)
-                        writeend = end;
+                        writeend = Math.Min(end, fileWriteEnd);
 
                     for (uint j = start; j < writeend; j++)
                     {
                         byte[] read = br.ReadBytes(0x210 * 8);
-                        if (read == null || read.Length % 0x210 != 0)
+                        if (read == null || read.Length == 0 || read.Length % 0x210 != 0)
                             break;
 
                         if (fixEcc == 1)
-                            read = JRunner.Nand.Nand.addecc_v2(read, false, (int)(j * 0x4200), layout);
+                            read = JRunner.Nand.Nand.addecc_v2(read, false, (int)(j * 0x4200), layout,
+                                config.IsSupported ? (int)config.PagesPerBlock : 0);
 
                         for (uint k = 0; k < read.Length / 0x210; k++)
                         {
@@ -930,7 +995,8 @@ namespace JRunner
                             }
                         }
 
-                        MainForm.mainForm.PicoFlasherBlocksUpdate((j / 4).ToString("X"), (int)((j * 100) / (flashsize / (512 * 8))));
+                        uint writeCount = Math.Max(1U, writeend - start);
+                        MainForm.mainForm.PicoFlasherBlocksUpdate((j / 4).ToString("X"), (int)(((j - start) * 100) / writeCount));
                     }
 
                     br.Close();

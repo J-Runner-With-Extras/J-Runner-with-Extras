@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             this.tabControl1 = new System.Windows.Forms.TabControl();
             this.tabPageNand = new System.Windows.Forms.TabPage();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
@@ -91,12 +92,28 @@
             this.labeldvdkey = new System.Windows.Forms.Label();
             this.tabPageBadBlocks = new System.Windows.Forms.TabPage();
             this.txtBadBlocks = new System.Windows.Forms.TextBox();
+            this.tabPageFilesystem = new System.Windows.Forms.TabPage();
+            this.listViewFilesystem = new System.Windows.Forms.ListView();
+            this.columnFilesystemName = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnFilesystemSize = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnFilesystemBlock = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.tabPageMobile = new System.Windows.Forms.TabPage();
+            this.listViewMobile = new System.Windows.Forms.ListView();
+            this.columnMobileName = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnMobileSize = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnMobilePage = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.contextMenuFilesystem = new System.Windows.Forms.ContextMenuStrip(this.components);
+            this.menuExtractFilesystemFile = new System.Windows.Forms.ToolStripMenuItem();
+            this.menuExtractAllFilesystem = new System.Windows.Forms.ToolStripMenuItem();
             this.tabControl1.SuspendLayout();
             this.tabPageNand.SuspendLayout();
             this.groupBox1.SuspendLayout();
             this.tabPageKV.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.tabPageBadBlocks.SuspendLayout();
+            this.tabPageFilesystem.SuspendLayout();
+            this.tabPageMobile.SuspendLayout();
+            this.contextMenuFilesystem.SuspendLayout();
             this.SuspendLayout();
             // 
             // tabControl1
@@ -104,6 +121,8 @@
             this.tabControl1.AllowDrop = true;
             this.tabControl1.Controls.Add(this.tabPageNand);
             this.tabControl1.Controls.Add(this.tabPageKV);
+            this.tabControl1.Controls.Add(this.tabPageFilesystem);
+            this.tabControl1.Controls.Add(this.tabPageMobile);
             this.tabControl1.Controls.Add(this.tabPageBadBlocks);
             this.tabControl1.Location = new System.Drawing.Point(0, 0);
             this.tabControl1.Name = "tabControl1";
@@ -800,6 +819,121 @@
             this.txtBadBlocks.Text = "No Nand Loaded";
             this.txtBadBlocks.DoubleClick += new System.EventHandler(this.txtBadBlocks_DoubleClick);
             // 
+            // tabPageFilesystem
+            // 
+            this.tabPageFilesystem.BackColor = System.Drawing.SystemColors.Control;
+            this.tabPageFilesystem.Controls.Add(this.listViewFilesystem);
+            this.tabPageFilesystem.Location = new System.Drawing.Point(4, 22);
+            this.tabPageFilesystem.Name = "tabPageFilesystem";
+            this.tabPageFilesystem.Size = new System.Drawing.Size(335, 273);
+            this.tabPageFilesystem.TabIndex = 3;
+            this.tabPageFilesystem.Text = "Filesystem";
+            // 
+            // listViewFilesystem
+            // 
+            this.listViewFilesystem.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
+            this.columnFilesystemName,
+            this.columnFilesystemSize,
+            this.columnFilesystemBlock});
+            this.listViewFilesystem.ContextMenuStrip = this.contextMenuFilesystem;
+            this.listViewFilesystem.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.listViewFilesystem.FullRowSelect = true;
+            this.listViewFilesystem.GridLines = true;
+            this.listViewFilesystem.HideSelection = false;
+            this.listViewFilesystem.Location = new System.Drawing.Point(0, 0);
+            this.listViewFilesystem.MultiSelect = false;
+            this.listViewFilesystem.Name = "listViewFilesystem";
+            this.listViewFilesystem.Size = new System.Drawing.Size(335, 273);
+            this.listViewFilesystem.TabIndex = 0;
+            this.listViewFilesystem.UseCompatibleStateImageBehavior = false;
+            this.listViewFilesystem.View = System.Windows.Forms.View.Details;
+            this.listViewFilesystem.DoubleClick += new System.EventHandler(this.listViewFilesystem_DoubleClick);
+            // 
+            // columnFilesystemName
+            // 
+            this.columnFilesystemName.Text = "File";
+            this.columnFilesystemName.Width = 155;
+            // 
+            // columnFilesystemSize
+            // 
+            this.columnFilesystemSize.Text = "Size";
+            this.columnFilesystemSize.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
+            this.columnFilesystemSize.Width = 82;
+            // 
+            // columnFilesystemBlock
+            // 
+            this.columnFilesystemBlock.Text = "Start";
+            this.columnFilesystemBlock.Width = 72;
+            // 
+            // tabPageMobile
+            // 
+            this.tabPageMobile.BackColor = System.Drawing.SystemColors.Control;
+            this.tabPageMobile.Controls.Add(this.listViewMobile);
+            this.tabPageMobile.Location = new System.Drawing.Point(4, 22);
+            this.tabPageMobile.Name = "tabPageMobile";
+            this.tabPageMobile.Size = new System.Drawing.Size(335, 273);
+            this.tabPageMobile.TabIndex = 4;
+            this.tabPageMobile.Text = "Mobile";
+            // 
+            // listViewMobile
+            // 
+            this.listViewMobile.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
+            this.columnMobileName,
+            this.columnMobileSize,
+            this.columnMobilePage});
+            this.listViewMobile.ContextMenuStrip = this.contextMenuFilesystem;
+            this.listViewMobile.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.listViewMobile.FullRowSelect = true;
+            this.listViewMobile.GridLines = true;
+            this.listViewMobile.HideSelection = false;
+            this.listViewMobile.Location = new System.Drawing.Point(0, 0);
+            this.listViewMobile.MultiSelect = false;
+            this.listViewMobile.Name = "listViewMobile";
+            this.listViewMobile.Size = new System.Drawing.Size(335, 273);
+            this.listViewMobile.TabIndex = 0;
+            this.listViewMobile.UseCompatibleStateImageBehavior = false;
+            this.listViewMobile.View = System.Windows.Forms.View.Details;
+            this.listViewMobile.DoubleClick += new System.EventHandler(this.listViewFilesystem_DoubleClick);
+            // 
+            // columnMobileName
+            // 
+            this.columnMobileName.Text = "File";
+            this.columnMobileName.Width = 155;
+            // 
+            // columnMobileSize
+            // 
+            this.columnMobileSize.Text = "Size";
+            this.columnMobileSize.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
+            this.columnMobileSize.Width = 82;
+            // 
+            // columnMobilePage
+            // 
+            this.columnMobilePage.Text = "Start";
+            this.columnMobilePage.Width = 72;
+            // 
+            // contextMenuFilesystem
+            // 
+            this.contextMenuFilesystem.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.menuExtractFilesystemFile,
+            this.menuExtractAllFilesystem});
+            this.contextMenuFilesystem.Name = "contextMenuFilesystem";
+            this.contextMenuFilesystem.Size = new System.Drawing.Size(129, 48);
+            this.contextMenuFilesystem.Opening += new System.ComponentModel.CancelEventHandler(this.contextMenuFilesystem_Opening);
+            // 
+            // menuExtractFilesystemFile
+            // 
+            this.menuExtractFilesystemFile.Name = "menuExtractFilesystemFile";
+            this.menuExtractFilesystemFile.Size = new System.Drawing.Size(128, 22);
+            this.menuExtractFilesystemFile.Text = "Extract";
+            this.menuExtractFilesystemFile.Click += new System.EventHandler(this.menuExtractFilesystemFile_Click);
+            // 
+            // menuExtractAllFilesystem
+            // 
+            this.menuExtractAllFilesystem.Name = "menuExtractAllFilesystem";
+            this.menuExtractAllFilesystem.Size = new System.Drawing.Size(128, 22);
+            this.menuExtractAllFilesystem.Text = "Extract All";
+            this.menuExtractAllFilesystem.Click += new System.EventHandler(this.menuExtractAllFilesystem_Click);
+            // 
             // NandInfo
             // 
             this.AllowDrop = true;
@@ -820,6 +954,9 @@
             this.groupBox2.PerformLayout();
             this.tabPageBadBlocks.ResumeLayout(false);
             this.tabPageBadBlocks.PerformLayout();
+            this.tabPageFilesystem.ResumeLayout(false);
+            this.tabPageMobile.ResumeLayout(false);
+            this.contextMenuFilesystem.ResumeLayout(false);
             this.ResumeLayout(false);
 
         }
@@ -889,5 +1026,18 @@
         private System.Windows.Forms.Label label5;
         private System.Windows.Forms.Label labelCBX;
         private System.Windows.Forms.TextBox textBoxCBX;
+        private System.Windows.Forms.TabPage tabPageFilesystem;
+        private System.Windows.Forms.ListView listViewFilesystem;
+        private System.Windows.Forms.ColumnHeader columnFilesystemName;
+        private System.Windows.Forms.ColumnHeader columnFilesystemSize;
+        private System.Windows.Forms.ColumnHeader columnFilesystemBlock;
+        private System.Windows.Forms.TabPage tabPageMobile;
+        private System.Windows.Forms.ListView listViewMobile;
+        private System.Windows.Forms.ColumnHeader columnMobileName;
+        private System.Windows.Forms.ColumnHeader columnMobileSize;
+        private System.Windows.Forms.ColumnHeader columnMobilePage;
+        private System.Windows.Forms.ContextMenuStrip contextMenuFilesystem;
+        private System.Windows.Forms.ToolStripMenuItem menuExtractFilesystemFile;
+        private System.Windows.Forms.ToolStripMenuItem menuExtractAllFilesystem;
     }
 }

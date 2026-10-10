@@ -769,6 +769,7 @@ namespace JRunner
             else if (size == 64) sizex = Nandsize.S64;
             else if (size == 256) sizex = Nandsize.S256;
             else if (size == 512) sizex = Nandsize.S512;
+            else if (size == 1024) sizex = Nandsize.S1024;
 
             ThreadStart starter = null;
             if (!DemoN.DemonDetected)
@@ -1030,23 +1031,12 @@ namespace JRunner
                 return error;
             }
             if (variables.debugMode) Console.WriteLine(variables.flashconfig);
-            if (flashconfig == "008A3020")
+            SfcxConfig config;
+            if (!SfcxConfig.TryParse(flashconfig, out config) || config.IsNoDevice)
             {
-                Console.WriteLine("Jasper, Trinity: 256MB");
+                return NandX.Errors.NoFlashConfig;
             }
-            else if (flashconfig == "00AA3020")
-            {
-                Console.WriteLine("Jasper, Trinity: 512MB");
-            }
-            else if (flashconfig == "008C3020")
-            {
-                Console.WriteLine("Corona: 256MB");
-            }
-            else if (flashconfig == "00AC3020")
-            {
-                Console.WriteLine("Corona: 512MB");
-            }
-            else if (flashconfig == "C0462002")
+            if (config.IsEmmc)
             {
                 error = NandX.Errors.WrongConfig;
 
@@ -1054,21 +1044,14 @@ namespace JRunner
                 MessageBox.Show("Unable to read/write eMMC type console with an SPI tool\n\nPlease use an eMMC tool", "Can't", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return error;
             }
-            else if (flashconfig == "01198010")
+            else if (config.IsSupported)
             {
-                Console.WriteLine("Xenon, Zephyr, Falcon: 16MB");
+                Console.WriteLine(config.Description);
             }
-            else if (flashconfig == "01198030")
+            else
             {
-                Console.WriteLine("Xenon, Zephyr, Falcon: 64MB");
-            }
-            else if (flashconfig == "00023010")
-            {
-                Console.WriteLine("Jasper, Trinity: 16MB");
-            }
-            else if (flashconfig == "00043000")
-            {
-                Console.WriteLine("Corona: 16MB");
+                Console.WriteLine("Unsupported SFCX flash configuration");
+                return NandX.Errors.WrongConfig;
             }
             try
             {
@@ -1088,19 +1071,82 @@ namespace JRunner
         public void getcb_v(string flashconfig)
         {
             if (variables.debugMode) Console.WriteLine("\nGetting cb {0}", flashconfig);
+            SfcxConfig config;
+            if (!SfcxConfig.TryParse(flashconfig, out config)) config = SfcxConfig.Decode(0);
             try
             {
                 if (variables.conf != null)
                 {
-                    int temp = Nand.Nand.getcb_build(variables.conf);
-                    if (temp >= 9188 && temp <= 9250)
+                    bool isSb;
+                    int temp = Nand.Nand.getcb_build(variables.conf, out isSb);
+                    if (!isSb && temp >= 16000)
                     {
-                        if (flashconfig == "00023010")
+                        if (config.IsEmmc)
+                        {
+                            variables.ctype = variables.ctypes[16];
+                            xPanel.setMBname(variables.ctype.Text);
+                        }
+                        else if (config.ControllerType == SfcxControllerType.Ksb && config.IsBigBlock)
+                        {
+                            variables.ctype = variables.ctypes[17];
+                            xPanel.setMBname(variables.ctype.Text);
+                        }
+                        else if (config.ControllerType == SfcxControllerType.Ksb)
+                        {
+                            variables.ctype = variables.ctypes[15];
+                            xPanel.setMBname(variables.ctype.Text);
+                        }
+                    }
+                    else if (isSb)
+                    {
+                        // SB build numbers vary between recoveries. The SB
+                        // magic identifies a devkit image; the decrypted SMC
+                        // motherboard type and flash geometry identify the
+                        // exact console without a version whitelist.
+                        int consoleIndex = -1;
+                        switch (variables.smcmbtype)
+                        {
+                            case 1: // Xenon
+                                consoleIndex = config.TotalSizeMb == 64 ? 7 : 8;
+                                break;
+                            case 2: // Zephyr
+                                consoleIndex = config.TotalSizeMb == 64 ? 13 : 3;
+                                break;
+                            case 3: // Falcon
+                                consoleIndex = config.TotalSizeMb == 64 ? 14 : 2;
+                                break;
+                            case 4: // Jasper
+                                if (config.ControllerType == SfcxControllerType.Psb && config.IsBigBlock) consoleIndex = 6;
+                                else if (config.ControllerType == SfcxControllerType.Xsb) consoleIndex = 5;
+                                else consoleIndex = 4;
+                                break;
+                            case 5: // Trinity
+                                consoleIndex = config.IsBigBlock ? 12 : 1;
+                                break;
+                            case 6: // Corona
+                                if (config.IsEmmc) consoleIndex = 11;
+                                else consoleIndex = config.IsBigBlock ? 9 : 10;
+                                break;
+                            case 7: // Winchester
+                                if (config.IsEmmc) consoleIndex = 16;
+                                else consoleIndex = config.IsBigBlock ? 17 : 15;
+                                break;
+                        }
+
+                        if (consoleIndex >= 0)
+                        {
+                            variables.ctype = variables.ctypes[consoleIndex];
+                            xPanel.setMBname(variables.ctype.Text);
+                        }
+                    }
+                    else if (temp >= 9188 && temp <= 9250)
+                    {
+                        if (config.ControllerType == SfcxControllerType.Psb && !config.IsBigBlock)
                         {
                             variables.ctype = variables.ctypes[1];
                             xPanel.setMBname(variables.ctype.Text);
                         }
-                        else if (flashconfig == "008A3020" || flashconfig == "00AA3020")
+                        else if (config.ControllerType == SfcxControllerType.Psb && config.IsBigBlock)
                         {
                             variables.ctype = variables.ctypes[12];
                             xPanel.setMBname(variables.ctype.Text);
@@ -1108,12 +1154,12 @@ namespace JRunner
                     }
                     else if (temp >= 4558 && temp <= 4580)
                     {
-                        if (flashconfig == "01198030")
+                        if (config.ControllerType == SfcxControllerType.Xsb && config.TotalSizeMb == 64)
                         {
                             variables.ctype = variables.ctypes[13];
                             xPanel.setMBname(variables.ctype.Text);
                         }
-                        else if (flashconfig == "01198010")
+                        else if (config.ControllerType == SfcxControllerType.Xsb)
                         {
                             variables.ctype = variables.ctypes[3];
                             xPanel.setMBname(variables.ctype.Text);
@@ -1121,17 +1167,17 @@ namespace JRunner
                     }
                     else if (temp >= 6712 && temp <= 6780)
                     {
-                        if (flashconfig == "01198010" || flashconfig == "01198030")
+                        if (config.ControllerType == SfcxControllerType.Xsb)
                         {
                             variables.ctype = variables.ctypes[5];
                             xPanel.setMBname(variables.ctype.Text);
                         }
-                        else if (flashconfig == "00023010")
+                        else if (config.ControllerType == SfcxControllerType.Psb && !config.IsBigBlock)
                         {
                             variables.ctype = variables.ctypes[4];
                             xPanel.setMBname(variables.ctype.Text);
                         }
-                        else if (flashconfig == "008A3020" || flashconfig == "00AA3020")
+                        else if (config.ControllerType == SfcxControllerType.Psb && config.IsBigBlock)
                         {
                             variables.ctype = variables.ctypes[6];
                             xPanel.setMBname(variables.ctype.Text);
@@ -1139,12 +1185,12 @@ namespace JRunner
                     }
                     else if (temp >= 13121 && temp <= 13200)
                     {
-                        if (flashconfig == "00043000")
+                        if (config.ControllerType == SfcxControllerType.Ksb && !config.IsBigBlock)
                         {
                             variables.ctype = variables.ctypes[10];
                             xPanel.setMBname(variables.ctype.Text);
                         }
-                        else if (flashconfig == "008C3020" || flashconfig == "00AC3020")
+                        else if (config.ControllerType == SfcxControllerType.Ksb && config.IsBigBlock)
                         {
                             variables.ctype = variables.ctypes[9];
                             xPanel.setMBname(variables.ctype.Text);
@@ -1152,12 +1198,12 @@ namespace JRunner
                     }
                     else if ((temp >= 1888 && temp <= 1960) || (temp >= 7373 && temp <= 7378) || temp == 8192)
                     {
-                        if (flashconfig == "01198030")
+                        if (config.ControllerType == SfcxControllerType.Xsb && config.TotalSizeMb == 64)
                         {
                             variables.ctype = variables.ctypes[7];
                             xPanel.setMBname(variables.ctype.Text);
                         }
-                        else if (flashconfig == "01198010")
+                        else if (config.ControllerType == SfcxControllerType.Xsb)
                         {
                             variables.ctype = variables.ctypes[8];
                             xPanel.setMBname(variables.ctype.Text);
@@ -1165,18 +1211,18 @@ namespace JRunner
                     }
                     else if (temp >= 5761 && temp <= 5780)
                     {
-                        if (flashconfig == "01198030")
+                        if (config.ControllerType == SfcxControllerType.Xsb && config.TotalSizeMb == 64)
                         {
                             variables.ctype = variables.ctypes[14];
                             xPanel.setMBname(variables.ctype.Text);
                         }
-                        else if (flashconfig == "01198010")
+                        else if (config.ControllerType == SfcxControllerType.Xsb)
                         {
                             variables.ctype = variables.ctypes[2];
                             xPanel.setMBname(variables.ctype.Text);
                         }
                     }
-                    Console.WriteLine("CB Version: {0}", temp);
+                    Console.WriteLine("{0} Version: {1}", isSb ? "SB" : "CB", temp);
                 }
                 else
                 {
@@ -1218,8 +1264,9 @@ namespace JRunner
                     error = getmbtype();
                     if (error == NandX.Errors.NoFlashConfig) return;
 
-                    if (variables.flashconfig == "008A3020" || variables.flashconfig == "008C3020") bb = 2;
-                    else if (variables.flashconfig == "00AA3020" || variables.flashconfig == "00AC3020") bb = 3;
+                    SfcxConfig config;
+                    if (SfcxConfig.TryParse(variables.flashconfig, out config) && config.IsSupported)
+                        bb = config.SelectionGroup;
                 }
 
                 if (bb > 0 && !DemoN.DemonDetected)
@@ -1296,19 +1343,10 @@ namespace JRunner
                 if (variables.debugMode) Console.WriteLine("Read Nand");
 
                 string flashconf = variables.flashconfig; // Set by flash config check
-                if (flashconf == "008A3020" || flashconf == "008C3020")
+                SfcxConfig config;
+                if (SfcxConfig.TryParse(flashconf, out config) && config.IsSupported)
                 {
-                    if (variables.fulldump) variables.nandsizex = Nandsize.S256;
-                    variables.nandsizex = Nandsize.S64;
-                }
-                else if (flashconf == "00AA3020" || flashconf == "00AC3020")
-                {
-                    if (variables.fulldump) variables.nandsizex = Nandsize.S512;
-                    variables.nandsizex = Nandsize.S64;
-                }
-                else if (flashconf == "01198030")
-                {
-                    variables.nandsizex = Nandsize.S64;
+                    variables.nandsizex = variables.fulldump ? config.FullNandSize : config.SystemNandSize;
                 }
                 else
                 {
@@ -1427,7 +1465,8 @@ namespace JRunner
                 double len = new FileInfo(variables.filename1).Length;
                 if (variables.debugMode) Console.WriteLine("File Length: {0}", len);
 
-                if (len == 553648128) variables.nandsizex = Nandsize.S512;
+                if (len == 1107296256) variables.nandsizex = Nandsize.S1024;
+                else if (len == 553648128) variables.nandsizex = Nandsize.S512;
                 else if (len == 276824064) variables.nandsizex = Nandsize.S256;
                 else if (len == 69206016) variables.nandsizex = Nandsize.S64;
                 else variables.nandsizex = Nandsize.S16;
@@ -1486,23 +1525,11 @@ namespace JRunner
                 if (variables.debugMode) Console.WriteLine("File Length = {0}", len);
 
                 string flashconf = variables.flashconfig; // Set by flash config check
-                if (flashconf == "008A3020" || flashconf == "008C3020")
+                SfcxConfig config;
+                if (SfcxConfig.TryParse(flashconf, out config) && config.IsSupported)
                 {
-                    if (len == 553648128) variables.nandsizex = Nandsize.S512; // Just in case, but this might be bad
-                    else if (len == 276824064) variables.nandsizex = Nandsize.S256;
-                    else if (len == 69206016) variables.nandsizex = Nandsize.S64;
-                    else variables.nandsizex = Nandsize.S16;
-                }
-                else if (flashconf == "00AA3020" || flashconf == "00AC3020")
-                {
-                    if (len == 553648128) variables.nandsizex = Nandsize.S512;
-                    else if (len == 276824064) variables.nandsizex = Nandsize.S256; // Just in case, but this might be bad
-                    else if (len == 69206016) variables.nandsizex = Nandsize.S64;
-                    else variables.nandsizex = Nandsize.S16;
-                }
-                else if (flashconf == "01198030")
-                {
-                    if (len == 69206016) variables.nandsizex = Nandsize.S64;
+                    if (len == config.TotalRawBytes) variables.nandsizex = config.FullNandSize;
+                    else if (len == config.SystemRawBytes) variables.nandsizex = config.SystemNandSize;
                     else variables.nandsizex = Nandsize.S16;
                 }
                 else
@@ -3517,6 +3544,16 @@ namespace JRunner
             }
 
             
+        }
+
+        private void convertNandToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            string initialInput = File.Exists(variables.filename1) ? variables.filename1 : String.Empty;
+            string detectedConsole = variables.ctype.ID >= 0
+                ? variables.ctype.Text
+                : variables.boardtype;
+            using (NandConverter converter = new NandConverter(initialInput, detectedConsole, xPanel_updateSource))
+                converter.ShowDialog(this);
         }
 
         private void injectGlitch3ToolStripMenuItem_Click(object sender, EventArgs e)

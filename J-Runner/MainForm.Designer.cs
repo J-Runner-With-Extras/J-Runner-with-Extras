@@ -119,6 +119,7 @@ namespace JRunner
             this.generateCpuKeyToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
             this.experimentalToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.convertNandToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.g3fixToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.zeroPairSbToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.injectGlitch3ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -966,6 +967,7 @@ namespace JRunner
             // experimentalToolStripMenuItem
             // 
             this.experimentalToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.convertNandToolStripMenuItem,
             this.g3fixToolStripMenuItem,
             this.zeroPairSbToolStripMenuItem,
             this.injectGlitch3ToolStripMenuItem,
@@ -974,6 +976,13 @@ namespace JRunner
             this.experimentalToolStripMenuItem.Name = "experimentalToolStripMenuItem";
             this.experimentalToolStripMenuItem.Size = new System.Drawing.Size(240, 22);
             this.experimentalToolStripMenuItem.Text = "Experimental Features";
+            // 
+            // convertNandToolStripMenuItem
+            // 
+            this.convertNandToolStripMenuItem.Name = "convertNandToolStripMenuItem";
+            this.convertNandToolStripMenuItem.Size = new System.Drawing.Size(252, 22);
+            this.convertNandToolStripMenuItem.Text = "NAND Image Converter...";
+            this.convertNandToolStripMenuItem.Click += new System.EventHandler(this.convertNandToolStripMenuItem_Click);
             // 
             // g3fixToolStripMenuItem
             // 
@@ -1713,6 +1722,7 @@ namespace JRunner
         private ToolStripMenuItem injectXeLLToolStripMenuItem;
         private ToolStripSeparator toolStripSeparator1;
         private ToolStripMenuItem experimentalToolStripMenuItem;
+        private ToolStripMenuItem convertNandToolStripMenuItem;
         private ToolStripMenuItem g3fixToolStripMenuItem;
         private ToolStripMenuItem zeroPairSbToolStripMenuItem;
         private ToolStripMenuItem injectGlitch3ToolStripMenuItem;

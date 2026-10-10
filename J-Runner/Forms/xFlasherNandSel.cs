@@ -5,7 +5,6 @@ namespace JRunner.Forms
 {
     public partial class xFlasherNandSel : Form
     {
-
         public delegate void ClickedSize(int size);
         public event ClickedSize SizeClick;
 
@@ -38,16 +37,18 @@ namespace JRunner.Forms
             this.Close();
         }
 
+        private void btn1024_Click(object sender, EventArgs e)
+        {
+            SizeClick(1024);
+            this.Close();
+        }
+
         public void setGroups(int bb)
         {
-            if (bb > 0) SmallBlockGroup.Enabled = false;
-            else SmallBlockGroup.Enabled = true;
-
-            if (bb == 2) btn512.Enabled = false;
-            else btn512.Enabled = true;
-
-            if (bb == 3) btn256.Enabled = false;
-            else btn256.Enabled = true;
+            SmallBlockGroup.Enabled = bb <= 0;
+            btn256.Enabled = bb == 0 || bb == 2;
+            btn512.Enabled = bb == 0 || bb == 3;
+            btn1024.Enabled = bb == 0 || bb == 4;
         }
     }
 }

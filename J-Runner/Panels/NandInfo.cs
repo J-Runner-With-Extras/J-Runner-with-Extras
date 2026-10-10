@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Windows.Forms;
 
 namespace JRunner.Panels
@@ -12,6 +14,28 @@ namespace JRunner.Panels
         public NandInfo()
         {
             InitializeComponent();
+            setFilesystemAndMobileTabsVisible(false);
+            variables.OnDebugModeChanged += (oldVal, newVal) => 
+            {
+                setFilesystemAndMobileTabsVisible(newVal);
+            };
+        }
+
+        private void setFilesystemAndMobileTabsVisible(bool visible) 
+        {
+            if (!visible) 
+            {
+                tabControl1.TabPages.Remove(tabPageFilesystem);
+                tabControl1.TabPages.Remove(tabPageMobile);
+            } 
+            else 
+            {
+                if (!tabControl1.TabPages.Contains(tabPageFilesystem))
+                    tabControl1.TabPages.Insert(2, tabPageFilesystem);
+
+                if (!tabControl1.TabPages.Contains(tabPageMobile))
+                    tabControl1.TabPages.Insert(3, tabPageMobile);
+            }
         }
 
         public NandInfo(Nand.PrivateN Nand)
@@ -73,6 +97,10 @@ namespace JRunner.Panels
 
             // Bad Blocks
             txtBadBlocks.Text = "No Nand Loaded";
+
+            // Filesystem
+            listViewFilesystem.Items.Clear();
+            listViewMobile.Items.Clear();
 
             // Reset Tab
             tabControl1.SelectedTab = tabPageNand;
@@ -280,6 +308,163 @@ namespace JRunner.Panels
                     add_badblocks_tab(text);
                 }
                 else add_badblocks_tab("No Bad Blocks");
+
+                populateFileSystem();
+            }
+        }
+
+        private void populateFileSystem()
+        {
+            IList<Nand.FSFile> files = null;
+            string error = null;
+            try
+            {
+                files = nand.GetFileSystemFiles();
+            }
+            catch (Exception ex)
+            {
+                error = ex.Message;
+                if (variables.debugMode) Console.WriteLine(ex.ToString());
+            }
+
+            Action update = delegate
+            {
+                listViewFilesystem.BeginUpdate();
+                listViewMobile.BeginUpdate();
+                try
+                {
+                    listViewFilesystem.Items.Clear();
+                    listViewMobile.Items.Clear();
+                    if (files != null)
+                    {
+                        foreach (Nand.FSFile file in files)
+                        {
+                            ListViewItem item = new ListViewItem(file.Filename);
+                            item.SubItems.Add(file.Length.ToString("N0", CultureInfo.CurrentCulture));
+                            item.SubItems.Add(file.StartLocation);
+                            item.Tag = file;
+                            (file.IsMobile ? listViewMobile : listViewFilesystem).Items.Add(item);
+                        }
+                    }
+                }
+                finally
+                {
+                    listViewFilesystem.EndUpdate();
+                    listViewMobile.EndUpdate();
+                }
+                if (error != null && variables.debugMode) Console.WriteLine(error);
+            };
+
+            if (listViewFilesystem.InvokeRequired) listViewFilesystem.Invoke(update);
+            else update();
+        }
+
+        private ListView activeFileList()
+        {
+            ListView source = contextMenuFilesystem.SourceControl as ListView;
+            if (source != null) return source;
+            return listViewMobile.Focused ? listViewMobile : listViewFilesystem;
+        }
+
+        private Nand.FSFile selectedFileSystemFile(ListView list)
+        {
+            if (list == null || list.SelectedItems.Count == 0) return null;
+            return list.SelectedItems[0].Tag as Nand.FSFile;
+        }
+
+        private void extractSelectedFileSystemFile(ListView list)
+        {
+            Nand.FSFile file = selectedFileSystemFile(list);
+            if (file == null)
+            {
+                MessageBox.Show("Select a filesystem file first.", "Extract Filesystem File",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            using (SaveFileDialog dialog = new SaveFileDialog())
+            {
+                dialog.Title = "Extract Filesystem File";
+                dialog.FileName = safeFileName(file.Filename);
+                dialog.Filter = "All Files (*.*)|*.*";
+                if (dialog.ShowDialog(this) != DialogResult.OK) return;
+                try
+                {
+                    byte[] data = nand.ExtractFileSystemFile(file.Filename);
+                    if (data == null) throw new InvalidDataException("The selected file was not found in the active filesystem.");
+                    File.WriteAllBytes(dialog.FileName, data);
+                }
+                catch (Exception ex)
+                {
+                    if (variables.debugMode) Console.WriteLine(ex.ToString());
+                    MessageBox.Show(ex.Message, "Filesystem Extraction Failed",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
+
+        private static string safeFileName(string filename)
+        {
+            string result = Path.GetFileName(filename);
+            foreach (char invalid in Path.GetInvalidFileNameChars()) result = result.Replace(invalid, '_');
+            return String.IsNullOrWhiteSpace(result) ? "filesystem_file.bin" : result;
+        }
+
+        private void contextMenuFilesystem_Opening(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            ListView list = activeFileList();
+            if (list != null)
+            {
+                System.Drawing.Point point = list.PointToClient(Cursor.Position);
+                ListViewItem item = list.GetItemAt(point.X, point.Y);
+                list.SelectedItems.Clear();
+                if (item != null)
+                {
+                    item.Selected = true;
+                    item.Focused = true;
+                }
+            }
+            menuExtractFilesystemFile.Enabled = selectedFileSystemFile(list) != null;
+            menuExtractAllFilesystem.Enabled = list != null && list.Items.Count != 0;
+        }
+
+        private void listViewFilesystem_DoubleClick(object sender, EventArgs e)
+        {
+            extractSelectedFileSystemFile(sender as ListView);
+        }
+
+        private void menuExtractFilesystemFile_Click(object sender, EventArgs e)
+        {
+            extractSelectedFileSystemFile(activeFileList());
+        }
+
+        private void menuExtractAllFilesystem_Click(object sender, EventArgs e)
+        {
+            ListView list = activeFileList();
+            if (list == null || list.Items.Count == 0) return;
+            using (FolderBrowserDialog dialog = new FolderBrowserDialog())
+            {
+                dialog.Description = list == listViewMobile
+                    ? "Select a folder for the extracted NAND Mobile files"
+                    : "Select a folder for the extracted NAND filesystem";
+                dialog.ShowNewFolderButton = true;
+                if (dialog.ShowDialog(this) != DialogResult.OK) return;
+
+                try
+                {
+                    List<string> names = new List<string>();
+                    foreach (ListViewItem item in list.Items)
+                        names.Add(((Nand.FSFile)item.Tag).Filename);
+                    IDictionary<string, byte[]> files = nand.ExtractFileSystemFiles(names);
+                    foreach (KeyValuePair<string, byte[]> file in files)
+                        File.WriteAllBytes(Path.Combine(dialog.SelectedPath, safeFileName(file.Key)), file.Value);
+                }
+                catch (Exception ex)
+                {
+                    if (variables.debugMode) Console.WriteLine(ex.ToString());
+                    MessageBox.Show(ex.Message, "Filesystem Extraction Failed",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
         }
 

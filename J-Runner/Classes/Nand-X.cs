@@ -304,22 +304,15 @@ namespace JRunner
                     if (!FlashConfig(MyUsbDevice, reader, out readBuffer, out ec, out bytesRead)) return Errors.FailedGetConfig; //1;
                     Array.Reverse(readBuffer, 0, 0x4);
                     if (print) Console.WriteLine("Flash Config: 0x" + BitConverter.ToString(readBuffer, 0, 0x4).Replace("-", ""));
-                    if (Oper.ByteArrayToString(readBuffer) == "00000000")
+                    SfcxConfig flashConfig;
+                    bool decoded = SfcxConfig.TryParse(BitConverter.ToString(readBuffer, 0, 0x4).Replace("-", ""), out flashConfig);
+                    if (!decoded || flashConfig.IsNoDevice)
                     {
                         Console.WriteLine("Console Not Found");
                         Console.WriteLine("");
                         return Errors.NoFlashConfig;// 2;
                     }
-                    bool found = false;
-                    foreach (string fconf in variables.flashconfigs)
-                    {
-                        if (string.Equals(BitConverter.ToString(readBuffer, 0, 0x4).Replace("-", ""), fconf))
-                        {
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (!found)
+                    if (!flashConfig.IsSupported && !flashConfig.IsEmmc)
                     {
                         Console.WriteLine("Unrecongized Flash Config");
                     }
@@ -420,21 +413,14 @@ namespace JRunner
                     if (!FlashConfig(MyUsbDevice, reader, out readBuffer, out ec, out bytesRead)) return Errors.FailedGetConfig; //1;
                     Array.Reverse(readBuffer, 0, 0x4);
                     if (print) Console.WriteLine("Flash Config: 0x" + BitConverter.ToString(readBuffer, 0, 0x4).Replace("-", ""));
-                    bool found = false;
-                    foreach (string fconf in variables.flashconfigs)
+                    SfcxConfig flashConfig;
+                    bool decoded = SfcxConfig.TryParse(BitConverter.ToString(readBuffer, 0, 0x4).Replace("-", ""), out flashConfig);
+                    if (!decoded || flashConfig.IsNoDevice)
                     {
-                        if (Oper.ByteArrayToString(readBuffer) == "00000000")
-                        {
-                            found = true;
-                            break;
-                        }
-                        if (string.Equals(BitConverter.ToString(readBuffer, 0, 0x4).Replace("-", ""), fconf))
-                        {
-                            found = true;
-                            break;
-                        }
+                        Console.WriteLine("Console Not Found");
+                        return Errors.NoFlashConfig;
                     }
-                    if (!found)
+                    if (!flashConfig.IsSupported)
                     {
                         Console.WriteLine("Unrecongized Flash Config");
                     }
@@ -517,31 +503,21 @@ namespace JRunner
                     if (!FlashConfig(MyUsbDevice, reader, out readBuffer, out ec, out bytesRead)) return Errors.FailedGetConfig; //1;
                     Array.Reverse(readBuffer, 0, 0x4);
                     if (print) Console.WriteLine("Flash Config: 0x" + BitConverter.ToString(readBuffer, 0, 0x4).Replace("-", ""));
-                    if (Oper.ByteArrayToString(readBuffer) == "00000000")
+                    SfcxConfig flashConfig;
+                    bool decoded = SfcxConfig.TryParse(BitConverter.ToString(readBuffer, 0, 0x4).Replace("-", ""), out flashConfig);
+                    if (!decoded || flashConfig.IsNoDevice)
                     {
                         Console.WriteLine("Console Not Found");
                         Console.WriteLine("");
                         return Errors.NoFlashConfig;// 2;
                     }
-                    bool found = false;
-                    foreach (string fconf in variables.flashconfigs)
-                    {
-                        if (string.Equals(BitConverter.ToString(readBuffer, 0, 0x4).Replace("-", ""), fconf))
-                        {
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (!found)
+                    if (!flashConfig.IsSupported)
                     {
                         Console.WriteLine("Unrecongized Flash Config");
                     }
                     string flashconfig = BitConverter.ToString(readBuffer, 0, 0x4).Replace("-", "");
 
-                    int layout = 1;
-                    if (flashconfig == "00AA3020" || flashconfig == "008A3020" || flashconfig == "00AC3020" || flashconfig == "008C3020") layout = 2;
-                    else if (flashconfig == "01198010") layout = 0;
-                    else layout = 1;
+                    int layout = flashConfig.IsSupported ? flashConfig.Layout : 1;
 
                     Console.WriteLine("");
 
@@ -605,14 +581,7 @@ namespace JRunner
 
                             if (fixecc) writeBuffer = Nand.Nand.addecc_v2(writeBuffer, false, i * 0x4200, layout);
 
-                            if (flashconfig == "00AA3020" || flashconfig == "008A3020" || flashconfig == "00AC3020" || flashconfig == "008C3020")
-                            {
-                                reserveblockpos = 0x1FF;
-                            }
-                            else
-                            {
-                                reserveblockpos = 0x3FF;
-                            }
+                            reserveblockpos = flashConfig.IsSupported ? flashConfig.RemapLastBlock : 0x3FF;
 
                             Console.WriteLine("Remapping Block {0:X} @ {1:X}", i, reserveblockpos - number);
                             int lengthTransfered = 0;
@@ -1023,22 +992,14 @@ namespace JRunner
                 flashconf = Oper.ByteArrayToString(readBuffer);
                 Console.WriteLine("Flash Config: 0x{0}", BitConverter.ToString(readBuffer, 0, 0x4).Replace("-", ""));
                 if (variables.debugMode) analyzeflashconfig(Oper.ByteArrayToInt(readBuffer));
-                if (flashconf == "00000000")
+                SfcxConfig config;
+                if (!SfcxConfig.TryParse(flashconf, out config) || config.IsNoDevice)
                 {
                     Console.WriteLine("Console Not Found");
                     return Errors.NoFlashConfig;// 2;
                 }
 
-                bool found = false;
-                foreach (string fconf in variables.flashconfigs)
-                {
-                    if (string.Equals(BitConverter.ToString(readBuffer, 0, 0x4).Replace("-", ""), fconf))
-                    {
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found)
+                if (!config.IsSupported && !config.IsEmmc)
                 {
                     Console.WriteLine("Unrecongized Flash Config");
                 }
