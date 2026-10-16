@@ -292,7 +292,7 @@ namespace JRunner
                 if (IsUsbDeviceConnected("7001", "600D")) // PicoFlasher
                 {
                     nTools.setImage(Properties.Resources.picoflasher);
-                    //PicoFlasherToolStripMenuItem.Visible = true;
+                    picoFlasherToolStripMenuItem.Visible = true;
                     device = DEVICE.PICOFLASHER;
                 }
                 else if (IsUsbDeviceConnected("C0CA", "1209")) // DirtyPico
@@ -758,7 +758,7 @@ namespace JRunner
             if (startblock < 0) startblock = 0;
             if (length < 0) length = 0;
 
-            if (device == DEVICE.PICOFLASHER) // Remove once PicoFlasher supports the filename properly
+            if (device == DEVICE.PICOFLASHER && function != "Erase") // Remove once PicoFlasher supports the filename properly
             {
                 MessageBox.Show("PicoFlasher does not support custom operations yet", "Can't", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
@@ -796,8 +796,7 @@ namespace JRunner
                 {
                     if (device == DEVICE.PICOFLASHER)
                     {
-                        MessageBox.Show("PicoFlasher can't erase", "Can't", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        return;
+                        picoflasher.Erase(size, (uint)startblock, (uint)length);
                     }
                     else if (device == DEVICE.XFLASHER_SPI)
                     {
@@ -4862,7 +4861,7 @@ namespace JRunner
                     if (e.Device.IdVendor == 0x600D && e.Device.IdProduct == 0x7001) // PicoFlasher
                     {
                         if (!DemoN.DemonDetected) nTools.setImage(Properties.Resources.picoflasher);
-                        //PicoFlasherToolStripMenuItem.Visible = true;
+                        picoFlasherToolStripMenuItem.Visible = true;
                         device = DEVICE.PICOFLASHER;
                     }
                     else if (e.Device.IdVendor == 0x1209 && e.Device.IdProduct == 0xC0CA) // DirtyPico
@@ -4919,7 +4918,7 @@ namespace JRunner
                     if (e.Device.IdVendor == 0x600D && e.Device.IdProduct == 0x7001)
                     {
                         if (!DemoN.DemonDetected) nTools.setImage(null);
-                        //PicoFlasherToolStripMenuItem.Visible = false;
+                        picoFlasherToolStripMenuItem.Visible = false;
                         device = DEVICE.NO_DEVICE;
                     }
                     else if (e.Device.IdVendor == 0x1209 && e.Device.IdProduct == 0xC0CA) // DirtyPico
@@ -5123,6 +5122,9 @@ namespace JRunner
                         case "AllowZeroPaired":
                             x.write(name, variables.allowZeroPaired.ToString());
                             break;
+                        case "PicoFlasherSpiClock":
+                            x.write(name, variables.picoSpiClockMhz.ToString());
+                            break;
                         default:
                             break;
                     }
@@ -5322,6 +5324,11 @@ namespace JRunner
                             bvalue = false;
                             if (!bool.TryParse(val, out bvalue)) bvalue = false;
                             variables.allowZeroPaired = bvalue;
+                            break;
+                        case "PicoFlasherSpiClock":
+                            ivalue = 0;
+                            int.TryParse(val, out ivalue);
+                            setPicoSpiClock(ivalue);
                             break;
                         default:
                             break;
@@ -5549,6 +5556,22 @@ namespace JRunner
         #endregion
 
         #region PicoFlasher interactions with UI
+        private void setPicoSpiClock(int mhz)
+        {
+            // Only the listed clocks are valid, anything else leaves it unchanged
+            if (!picoSpiClockToolStripMenuItem.DropDownItems.Cast<ToolStripMenuItem>().Any(item => Convert.ToInt32(item.Tag) == mhz))
+                mhz = 0;
+
+            variables.picoSpiClockMhz = mhz;
+            foreach (ToolStripMenuItem item in picoSpiClockToolStripMenuItem.DropDownItems)
+                item.Checked = Convert.ToInt32(item.Tag) == mhz;
+        }
+
+        private void picoSpiClockToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            setPicoSpiClock(Convert.ToInt32(((ToolStripMenuItem)sender).Tag));
+        }
+
         public void PicoFlasherInitNand(int idx)
         {
             if (idx == 0 && File.Exists(variables.filename))

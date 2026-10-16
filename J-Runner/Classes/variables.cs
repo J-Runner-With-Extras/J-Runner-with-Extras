@@ -145,6 +145,7 @@ namespace JRunner
         public static bool escapeloop = false, exitedxe = true, autoExtract = false, allmove = false;
         public static bool reading = false, writing;
         public static bool mtxUsbMode = false;
+        public static int picoSpiClockMhz = 0; // 0 leaves the PicoFlasher SPI clock unchanged
         public static bool noPatchWarnings = false;
         public static Color logbackground = Color.Black;
         public static Color logtext = Color.White;
@@ -164,7 +165,7 @@ namespace JRunner
         public static bool allowZeroPaired = false;
         public static string[] settings = { "XeBuild", "FileChecks", "COMPort", "Delay", "DashlaunchE", "IP", "NoReads", "IPStart", "IPEnd", "Dashlaunch", "PreferredDash", "KeepFiles", "RootDirOverride",
                                             "LPTtiming", "LPTport", "Server", "AutoExtract", "AllMove", "LogBackground", "LogText", "MtxUsbMode", "NoPatchWarnings", "PlaySuccess", "PlayError", "AutoDelXeLL",
-                                            "CpuKeyDbSerial", "BackupEn", "BackupType", "BackupNaming", "BackupRoot", "ShowAdvancedTabs", "NandTimingAlwaysOnTop", "AllowZeroPaired"};
+                                            "CpuKeyDbSerial", "BackupEn", "BackupType", "BackupNaming", "BackupRoot", "ShowAdvancedTabs", "NandTimingAlwaysOnTop", "AllowZeroPaired", "PicoFlasherSpiClock"};
 
         /// <summary>
         /// Network
