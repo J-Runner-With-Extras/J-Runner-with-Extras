@@ -205,7 +205,7 @@
     <Compile Include="Forms\CPUKeyGen.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Forms\CPUKeyGen.designer.cs">
+    <Compile Include="Forms\CPUKeyGen.Designer.cs">
       <DependentUpon>CPUKeyGen.cs</DependentUpon>
     </Compile>
     <Compile Include="Forms\EnterCPUKey.cs">
@@ -244,11 +244,11 @@
     <Compile Include="Forms\CreateDonorNand.Designer.cs">
       <DependentUpon>CreateDonorNand.cs</DependentUpon>
     </Compile>
-    <Compile Include="Forms\CustomXeBuild.cs">
+    <Compile Include="Forms\CustomXebuild.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Forms\CustomXeBuild.Designer.cs">
-      <DependentUpon>CustomXeBuild.cs</DependentUpon>
+    <Compile Include="Forms\CustomXebuild.Designer.cs">
+      <DependentUpon>CustomXebuild.cs</DependentUpon>
     </Compile>
     <Compile Include="Forms\DemonCom.cs">
       <SubType>Form</SubType>
@@ -256,11 +256,11 @@
     <Compile Include="Forms\DemonCom.Designer.cs">
       <DependentUpon>DemonCom.cs</DependentUpon>
     </Compile>
-    <Compile Include="Forms\DemoN_Uart.cs">
+    <Compile Include="Forms\demon_uart.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Forms\DemoN_Uart.Designer.cs">
-      <DependentUpon>DemoN_Uart.cs</DependentUpon>
+    <Compile Include="Forms\demon_uart.Designer.cs">
+      <DependentUpon>demon_uart.cs</DependentUpon>
     </Compile>
     <Compile Include="Forms\Issues.cs">
       <SubType>Form</SubType>
@@ -295,7 +295,7 @@
     <Compile Include="Forms\XB1HDD.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Forms\XB1HDD.designer.cs">
+    <Compile Include="Forms\XB1HDD.Designer.cs">
       <DependentUpon>XB1HDD.cs</DependentUpon>
     </Compile>
     <Compile Include="Forms\NandSel.cs">
@@ -638,14 +638,14 @@
       <DependentUpon>CreateDonorNand.cs</DependentUpon>
       <SubType>Designer</SubType>
     </EmbeddedResource>
-    <EmbeddedResource Include="Forms\CustomXeBuild.resx">
-      <DependentUpon>CustomXeBuild.cs</DependentUpon>
+    <EmbeddedResource Include="Forms\CustomXebuild.resx">
+      <DependentUpon>CustomXebuild.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Forms\DemonCom.resx">
       <DependentUpon>DemonCom.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Forms\DemoN_Uart.resx">
-      <DependentUpon>DemoN_Uart.cs</DependentUpon>
+    <EmbeddedResource Include="Forms\demon_uart.resx">
+      <DependentUpon>demon_uart.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Forms\Issues.resx">
       <DependentUpon>Issues.cs</DependentUpon>

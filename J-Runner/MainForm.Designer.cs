@@ -180,6 +180,14 @@ namespace JRunner
             this.installDriversToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.checkConsoleCBToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.flashOpenXeniumToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.picoFlasherToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.picoSpiClockToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.picoSpiClockUnchangedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.picoSpiClock20ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.picoSpiClock24ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.picoSpiClock28ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.picoSpiClock32ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.picoSpiClock34ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.nANDXToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.mtxUsbModeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.jRPBLToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -1166,6 +1174,7 @@ namespace JRunner
             this.advancedToolStripMenuItem,
             this.settingsToolStripMenuItem,
             this.xFlasherToolStripMenuItem,
+            this.picoFlasherToolStripMenuItem,
             this.nANDXToolStripMenuItem,
             this.jRPToolStripMenuItem,
             this.jRPBLToolStripMenuItem,
@@ -1477,6 +1486,78 @@ namespace JRunner
             this.flashOpenXeniumToolStripMenuItem.Text = "Program OpenXenium…";
             this.flashOpenXeniumToolStripMenuItem.Click += new System.EventHandler(this.flashOpenXeniumToolStripMenuItem_Click);
             // 
+            // picoFlasherToolStripMenuItem
+            // 
+            this.picoFlasherToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.picoSpiClockToolStripMenuItem});
+            this.picoFlasherToolStripMenuItem.Name = "picoFlasherToolStripMenuItem";
+            this.picoFlasherToolStripMenuItem.Size = new System.Drawing.Size(78, 20);
+            this.picoFlasherToolStripMenuItem.Text = "PicoFlasher";
+            this.picoFlasherToolStripMenuItem.Visible = false;
+            // 
+            // picoSpiClockToolStripMenuItem
+            // 
+            this.picoSpiClockToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.picoSpiClockUnchangedToolStripMenuItem,
+            this.picoSpiClock20ToolStripMenuItem,
+            this.picoSpiClock24ToolStripMenuItem,
+            this.picoSpiClock28ToolStripMenuItem,
+            this.picoSpiClock32ToolStripMenuItem,
+            this.picoSpiClock34ToolStripMenuItem});
+            this.picoSpiClockToolStripMenuItem.Name = "picoSpiClockToolStripMenuItem";
+            this.picoSpiClockToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.picoSpiClockToolStripMenuItem.Text = "SPI Clock";
+            // 
+            // picoSpiClockUnchangedToolStripMenuItem
+            // 
+            this.picoSpiClockUnchangedToolStripMenuItem.Checked = true;
+            this.picoSpiClockUnchangedToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.picoSpiClockUnchangedToolStripMenuItem.Name = "picoSpiClockUnchangedToolStripMenuItem";
+            this.picoSpiClockUnchangedToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.picoSpiClockUnchangedToolStripMenuItem.Tag = "0";
+            this.picoSpiClockUnchangedToolStripMenuItem.Text = "Unchanged";
+            this.picoSpiClockUnchangedToolStripMenuItem.Click += new System.EventHandler(this.picoSpiClockToolStripMenuItem_Click);
+            // 
+            // picoSpiClock20ToolStripMenuItem
+            // 
+            this.picoSpiClock20ToolStripMenuItem.Name = "picoSpiClock20ToolStripMenuItem";
+            this.picoSpiClock20ToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.picoSpiClock20ToolStripMenuItem.Tag = "20";
+            this.picoSpiClock20ToolStripMenuItem.Text = "20 MHz";
+            this.picoSpiClock20ToolStripMenuItem.Click += new System.EventHandler(this.picoSpiClockToolStripMenuItem_Click);
+            // 
+            // picoSpiClock24ToolStripMenuItem
+            // 
+            this.picoSpiClock24ToolStripMenuItem.Name = "picoSpiClock24ToolStripMenuItem";
+            this.picoSpiClock24ToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.picoSpiClock24ToolStripMenuItem.Tag = "24";
+            this.picoSpiClock24ToolStripMenuItem.Text = "24 MHz";
+            this.picoSpiClock24ToolStripMenuItem.Click += new System.EventHandler(this.picoSpiClockToolStripMenuItem_Click);
+            // 
+            // picoSpiClock28ToolStripMenuItem
+            // 
+            this.picoSpiClock28ToolStripMenuItem.Name = "picoSpiClock28ToolStripMenuItem";
+            this.picoSpiClock28ToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.picoSpiClock28ToolStripMenuItem.Tag = "28";
+            this.picoSpiClock28ToolStripMenuItem.Text = "28 MHz";
+            this.picoSpiClock28ToolStripMenuItem.Click += new System.EventHandler(this.picoSpiClockToolStripMenuItem_Click);
+            // 
+            // picoSpiClock32ToolStripMenuItem
+            // 
+            this.picoSpiClock32ToolStripMenuItem.Name = "picoSpiClock32ToolStripMenuItem";
+            this.picoSpiClock32ToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.picoSpiClock32ToolStripMenuItem.Tag = "32";
+            this.picoSpiClock32ToolStripMenuItem.Text = "32 MHz";
+            this.picoSpiClock32ToolStripMenuItem.Click += new System.EventHandler(this.picoSpiClockToolStripMenuItem_Click);
+            // 
+            // picoSpiClock34ToolStripMenuItem
+            // 
+            this.picoSpiClock34ToolStripMenuItem.Name = "picoSpiClock34ToolStripMenuItem";
+            this.picoSpiClock34ToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.picoSpiClock34ToolStripMenuItem.Tag = "34";
+            this.picoSpiClock34ToolStripMenuItem.Text = "34 MHz";
+            this.picoSpiClock34ToolStripMenuItem.Click += new System.EventHandler(this.picoSpiClockToolStripMenuItem_Click);
+            // 
             // nANDXToolStripMenuItem
             // 
             this.nANDXToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
@@ -1675,6 +1756,14 @@ namespace JRunner
         private ToolStripMenuItem updateJRPToolStripMenuItem;
         private ToolStripMenuItem nANDXToolStripMenuItem;
         private ToolStripMenuItem mtxUsbModeToolStripMenuItem;
+        private ToolStripMenuItem picoFlasherToolStripMenuItem;
+        private ToolStripMenuItem picoSpiClockToolStripMenuItem;
+        private ToolStripMenuItem picoSpiClockUnchangedToolStripMenuItem;
+        private ToolStripMenuItem picoSpiClock20ToolStripMenuItem;
+        private ToolStripMenuItem picoSpiClock24ToolStripMenuItem;
+        private ToolStripMenuItem picoSpiClock28ToolStripMenuItem;
+        private ToolStripMenuItem picoSpiClock32ToolStripMenuItem;
+        private ToolStripMenuItem picoSpiClock34ToolStripMenuItem;
         private ToolStripMenuItem reportIssueToolStripMenuItem;
         private UI.MenuButton btnIPGetCPU;
         private ContextMenuStrip getCpuKeyMenu;

@@ -5,7 +5,6 @@ using System.IO;
 using System.IO.Ports;
 using System.Linq;
 using System.Media;
-using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
@@ -21,10 +20,13 @@ namespace JRunner
         public delegate void log_t(string text);
         public event log_t log;
 
+        // Set while an operation holds the command port
         public bool InUse = false;
 
+        // Protocol version of the connected firmware
         public UInt32 Version = 0;
 
+        // Commands are a 1 byte opcode and a 32 bit little endian argument
         enum COMMANDS : byte
         {
             GET_VERSION = 0x00,
@@ -33,10 +35,16 @@ namespace JRunner
             WRITE_FLASH,
             READ_FLASH_STREAM,
             ERASE_FLASH,
+            WRITE_FLASH_STREAM,
 
             SET_SMC_WORKAROUND = 0x20,
             STOP_SMC,
             START_SMC,
+            SET_SMC_DBG_EN,
+            READ_REG,
+            WRITE_REG,
+            I2C_TRANSFER,
+            SET_SPI_CLOCK,
 
             EMMC_DETECT = 0x50,
             EMMC_INIT,
@@ -46,6 +54,7 @@ namespace JRunner
             EMMC_READ,
             EMMC_READ_STREAM,
             EMMC_WRITE,
+            EMMC_WRITE_STREAM,
 
             ISD1200_INIT = 0xA0,
             ISD1200_DEINIT,
@@ -60,12 +69,36 @@ namespace JRunner
             REBOOT_TO_BOOTLOADER = 0xFE
         }
 
-        [StructLayout(LayoutKind.Sequential, Pack = 1)]
-        struct CMD
+        // On eMMC we only need the first 48MB
+        private const uint EmmcSystemBytes = 48 * 1024 * 1024;
+
+        // Progress is reported in J-Runner blocks of 0x20 pages
+        private const uint PagesPerBlock = 0x20;
+
+        // Pages per serial write of a write stream
+        private const uint StreamWritePages = 8;
+
+        // A failure status reported by the firmware
+        private class StatusException : Exception
         {
-            public COMMANDS cmd;
-            public UInt32 lba;
+            public StatusException(string what, UInt32 status)
+                : base("Error: " + status.ToString("X") + " (" + what + ")")
+            {
+            }
         }
+
+        // What was found on the other end of the PicoFlasher
+        private class Target
+        {
+            public UInt32 FlashConfig;
+            public SfcxConfig Config;
+            public bool IsEmmc;
+        }
+
+        private readonly object sync = new object();
+
+        // Command port of the operation in progress
+        private SerialPort serial;
 
         private static List<string> ComPortNamesWine(string vid, string pid)
         {
@@ -136,9 +169,13 @@ namespace JRunner
                 }
             }
 
-            foreach (string s in res)
+            // The helper script may not have produced the file in time
+            if (res != null)
             {
-                results.Add(s);
+                foreach (string s in res)
+                {
+                    results.Add(s);
+                }
             }
 
             return results;
@@ -212,17 +249,111 @@ namespace JRunner
             return ordered;
         }
 
-        private SerialPort OpenSerial()
+        private void Send(COMMANDS cmd, UInt32 lba = 0, byte[] data = null, int offset = 0, int count = 0)
         {
-            if (InUse)
-                return null;
+            byte[] buf = new byte[5 + count];
+            buf[0] = (byte)cmd;
+            buf[1] = (byte)lba;
+            buf[2] = (byte)(lba >> 8);
+            buf[3] = (byte)(lba >> 16);
+            buf[4] = (byte)(lba >> 24);
+            if (count > 0)
+                Buffer.BlockCopy(data, offset, buf, 5, count);
 
-            List<string> ports = null;
-            
-            SerialPort serial = new SerialPort();
+            serial.Write(buf, 0, buf.Length);
+        }
+
+        // A timeout throws, a zeroed buffer would read as success
+        private void Recv(byte[] buf, int offset, int count)
+        {
+            while (count > 0)
+            {
+                int got = serial.Read(buf, offset, count);
+                offset += got;
+                count -= got;
+            }
+        }
+
+        private byte[] Recv(int count)
+        {
+            byte[] buf = new byte[count];
+            Recv(buf, 0, count);
+            return buf;
+        }
+
+        private UInt32 RecvUInt32()
+        {
+            return BitConverter.ToUInt32(Recv(4), 0);
+        }
+
+        private byte RecvUInt8()
+        {
+            return Recv(1)[0];
+        }
+
+        // Discard what an abandoned stream left on the line: let the firmware
+        // time out the stream (100ms idle), then drop data until the line is quiet
+        private void Drain()
+        {
+            Thread.Sleep(250);
+            serial.DiscardInBuffer();
+
+            // Polled, read timeouts never fire under Wine
+            Stopwatch quiet = Stopwatch.StartNew();
+            while (quiet.ElapsedMilliseconds < 100)
+            {
+                if (serial.BytesToRead > 0)
+                {
+                    serial.DiscardInBuffer();
+                    quiet.Restart();
+                }
+                else
+                {
+                    Thread.Sleep(10);
+                }
+            }
+        }
+
+        private void ClosePort()
+        {
+            try
+            {
+                if (serial != null && serial.IsOpen)
+                {
+                    if (Version >= 4)
+                    {
+                        // Restart the SMC before we close the serial port.
+                        // This allows us to leave the PicoFlasher connected
+                        // and use things like debug UART
+                        Send(COMMANDS.START_SMC);
+                    }
+
+                    serial.Close();
+                }
+            }
+            catch { }
+
+            serial = null;
+            InUse = false;
+        }
+
+        // Claims the command port for one operation and stops the SMC for flash
+        // access, the SMC runs again between operations so the console can be used
+        private bool OpenPort()
+        {
+            lock (sync)
+            {
+                if (InUse)
+                {
+                    Console.WriteLine("PicoFlasher is busy");
+                    return false;
+                }
+                InUse = true;
+            }
 
             try
             {
+                List<string> ports;
                 if (WineMethods.IsWine())
                 {
                     ports = ComPortNamesWine("600D", "7001");
@@ -234,38 +365,52 @@ namespace JRunner
 
                 if (ports.Count <= 0)
                 {
+                    ClosePort();
                     MessageBox.Show("Can't find PicoFlasher COM port\n\nUpdate the PicoFlasher firmware and check your drivers", "Can't", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return null;
+                    return false;
                 }
 
-                if(variables.debugMode) Console.WriteLine(ports[0]);
+                if (variables.debugMode) Console.WriteLine(ports[0]);
 
-                serial.PortName = ports[0];
+                serial = new SerialPort(ports[0]);
                 serial.ReadTimeout = 5000;
                 serial.WriteTimeout = 5000;
-
                 serial.Open();
 
-                CMD cmd = new CMD();
-                cmd.cmd = COMMANDS.GET_VERSION;
-                cmd.lba = 0;
+                // A previous session may have abandoned a stream
+                Drain();
 
-                SendCmd(serial, cmd);
-
-                Version = RecvUInt32(serial);
+                Version = 0;
+                Send(COMMANDS.GET_VERSION);
+                Version = RecvUInt32();
 
                 if (variables.debugMode) Console.WriteLine($"PicoFlasher Version: {Version}");
 
                 if (Version < 2)
                 {
-                    serial.Close();
+                    ClosePort();
                     MessageBox.Show("PicoFlasher firmware is too old\n\nUpdate the PicoFlasher firmware to continue", "Can't", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return null;
+                    return false;
                 }
 
                 if (Version < 3)
                 {
                     Console.WriteLine("PicoFlasher: v" + Version + " firmware doesn't support eMMC, only SPI mode is available");
+                }
+
+                // The firmware keeps the clock until it is reset, so it is set for every operation
+                if (variables.picoSpiClockMhz != 0)
+                {
+                    if (Version >= 5)
+                    {
+                        Send(COMMANDS.SET_SPI_CLOCK, (uint)variables.picoSpiClockMhz * 1000);
+                        UInt32 hz = RecvUInt32();
+                        Console.WriteLine("PicoFlasher: SPI clock {0:F3} MHz", hz / 1e6);
+                    }
+                    else
+                    {
+                        Console.WriteLine("PicoFlasher: v" + Version + " firmware doesn't support setting the SPI clock");
+                    }
                 }
 
                 if (Version >= 4)
@@ -276,23 +421,19 @@ namespace JRunner
                     // as 4 or later. This is a new feature of the hax360 version of PicoFlasher
                     // that does not hold the SMC in reset unless we're actually flashing the
                     // NAND. See https://codeberg.org/hax360/PicoFlasher for more details.
-                    cmd.cmd = COMMANDS.SET_SMC_WORKAROUND;
-                    cmd.lba = 0; // 0 = false, 1 = true. SMC workaround is enabled by default
-                    SendCmd(serial, cmd);
+                    Send(COMMANDS.SET_SMC_WORKAROUND, 0); // 0 = false, 1 = true. SMC workaround is enabled by default
 
-                    // Now that the workaround mode is disabled, we can stop the SMC manually
-                    cmd.cmd = COMMANDS.STOP_SMC;
-                    cmd.lba = 0;
-                    SendCmd(serial, cmd);
-
-                    // Wait for 500ms to allow the SMC to stop
-                    Thread.Sleep(500);
+                    // Now that the workaround mode is disabled, we can stop the SMC manually.
+                    // The firmware handles no further commands until the SMC is stopped.
+                    Send(COMMANDS.STOP_SMC);
                 }
 
-                InUse = true;
+                return true;
             }
             catch (Exception ex)
             {
+                ClosePort();
+
                 if (variables.debugMode) Console.WriteLine(ex.ToString());
                 else Console.WriteLine(ex.GetType());
 
@@ -302,127 +443,108 @@ namespace JRunner
                 }
 
                 MessageBox.Show("PicoFlasher COM port could not be found\n\nYou may need to update the PicoFlasher firmware or check your connections to continue", "Can't", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
             }
-
-            return serial;
         }
 
-        private void CloseSerial(SerialPort serial)
+        // Runs an operation on its own thread with the port open and the SMC
+        // stopped, after runs once the operation succeeded and the SMC is running
+        private void RunOperation(string name, Action body, Action after = null)
         {
-            try
+            Thread thread = new Thread(() =>
             {
-                if (Version >= 4)
+                if (!OpenPort())
+                    return;
+
+                bool done = false;
+                try
                 {
-                    // Restart the SMC before we close the serial port.
-                    // This allows us to leave the PicoFlasher connected
-                    // and use things like debug UART
-                    CMD startSmcCmd = new CMD();
-                    startSmcCmd.cmd = COMMANDS.START_SMC;
-                    startSmcCmd.lba = 0;
-                    SendCmd(serial, startSmcCmd);
+                    body();
+                    done = true;
+                }
+                catch (OperationCanceledException)
+                {
+                    Console.WriteLine(name + " Cancelled");
+                    Console.WriteLine("");
+                }
+                catch (StatusException ex)
+                {
+                    Console.WriteLine(ex.Message);
+                    Console.WriteLine(name + " Failed!");
+                    Console.WriteLine("");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("PicoFlasher has encountered an error");
+                    Console.WriteLine("Try to unplug and replug the device");
+                    if (variables.debugMode) Console.WriteLine(ex.ToString());
+                    else Console.WriteLine(ex.GetType());
+                    Console.WriteLine("");
+                }
+                finally
+                {
+                    ClosePort();
                 }
 
-                serial.Close();
-            }
-            catch { }
-
-            InUse = false;
+                if (done && after != null)
+                    after();
+            });
+            thread.Start();
         }
 
-        private void SendCmd(SerialPort serial, CMD cmd)
-        {
-            int size = Marshal.SizeOf(cmd);
-            byte[] arr = new byte[size];
-
-            IntPtr ptr = Marshal.AllocHGlobal(size);
-            Marshal.StructureToPtr(cmd, ptr, true);
-            Marshal.Copy(ptr, arr, 0, size);
-            Marshal.FreeHGlobal(ptr);
-
-            try
-            {
-                serial.Write(arr, 0, arr.Length);
-            }
-            catch(Exception ex)
-            {
-                if (variables.debugMode) Console.WriteLine($"PicoFlasher: SendCmd failed ({ex.Message})");
-            }
-        }
-
-        private UInt32 RecvUInt32(SerialPort serial)
-        {
-            byte[] rxbuffer = new byte[4];
-            int got = 0;
-
-            try
-            {
-                while (got < rxbuffer.Length)
-                    got += serial.Read(rxbuffer, got, rxbuffer.Length - got);
-            }
-            catch (Exception ex)
-            {
-                if (variables.debugMode) Console.WriteLine($"PicoFlasher: RecvUInt32 failed ({ex.Message})");
-            }
-
-            return BitConverter.ToUInt32(rxbuffer, 0);
-        }
-
-        private byte RecvUInt8(SerialPort serial)
-        {
-            byte[] rxbuffer = new byte[1];
-            int got = 0;
-
-            try
-            {
-                while (got < rxbuffer.Length)
-                    got += serial.Read(rxbuffer, got, rxbuffer.Length - got);
-            }
-            catch (Exception ex)
-            {
-                if (variables.debugMode) Console.WriteLine($"PicoFlasher: RecvUInt8 failed ({ex.Message})");
-            }
-
-            return rxbuffer[0];
-        }
-
-        private uint getFlashConfig(SerialPort serial)
+        // Identifies the connected console, null if there is none to operate on
+        private Target DetectConsole()
         {
             Console.WriteLine("Checking Console...");
-            CMD cmd = new CMD();
-            cmd.cmd = COMMANDS.GET_FLASH_CONFIG;
-            cmd.lba = 0;
 
-            SendCmd(serial, cmd);
+            Target target = new Target();
+            Send(COMMANDS.GET_FLASH_CONFIG);
+            target.FlashConfig = RecvUInt32();
+            target.Config = SfcxConfig.Decode(target.FlashConfig);
 
-            UInt32 flashconfig = RecvUInt32(serial);
-            string flashconfigStr = flashconfig.ToString("X8");
+            Console.WriteLine("Flash Config: 0x" + target.FlashConfig.ToString("X8"));
 
-            Console.WriteLine("Flash Config: 0x" + flashconfigStr);
-
-            if (flashconfig == 0x00000000 || flashconfig == 0xFFFFFFFF)
+            // Older eMMC PicoFlasher firmware using the eMMC header returns
+            // flashconfig 0xFFFFFFFF instead of the console's eMMC flashconfig
+            if ((target.Config.IsEmmc || target.FlashConfig == 0xFFFFFFFF) && Version >= 3)
             {
-                return flashconfig;
-            }
-
-            SfcxConfig config = SfcxConfig.Decode(flashconfig);
-            if (!config.IsSupported && !config.IsEmmc)
-            {
-                if (DialogResult.No == MessageBox.Show("Unrecognized flash config: 0x" + flashconfigStr + "\n\nAre you sure you wish to continue with the read/write operation?", "PicoFlasher Warning", MessageBoxButtons.YesNo, MessageBoxIcon.Warning))
+                for (int i = 0; i < 10 && !target.IsEmmc; i++)
                 {
-                    Console.WriteLine("Unrecognized flash config 0x" + flashconfigStr + ". Aborting operation.");
-                    Console.WriteLine("");
-                    return 0;
+                    Send(COMMANDS.EMMC_DETECT);
+                    target.IsEmmc = RecvUInt8() != 0;
+
+                    if (variables.debugMode)
+                        Console.WriteLine(target.IsEmmc ? "PicoFlasher: eMMC detected." : "PicoFlasher: eMMC flashconfig, but eMMC was not detected. Retrying.");
                 }
             }
 
-            return flashconfig;
-        }
+            if (target.IsEmmc)
+            {
+                Console.WriteLine("Corona/Winchester: 4GB (eMMC connected)");
+                return target;
+            }
 
-        private uint getFlashSize(uint flash_config)
-        {
-            SfcxConfig config = SfcxConfig.Decode(flash_config);
-            if (!config.IsSupported || config.TotalDataBytes > UInt32.MaxValue) return 0;
-            return (uint)config.TotalDataBytes;
+            if (target.Config.IsEmmc)
+            {
+                Console.WriteLine("Corona/Winchester: 4GB (eMMC not connected)");
+                Console.WriteLine("Console Not Found");
+                return null;
+            }
+
+            if (target.Config.IsNoDevice)
+            {
+                Console.WriteLine("Console Not Found");
+                return null;
+            }
+
+            if (!target.Config.IsSupported)
+            {
+                Console.WriteLine("Unsupported SFCX flash configuration");
+                return null;
+            }
+
+            Console.WriteLine(target.Config.Description);
+            return target;
         }
 
         private UInt32 UNSTUFF_BITS(UInt32[] resp, int start, int size)
@@ -440,993 +562,540 @@ namespace JRunner
             return __res & __mask;
         }
 
-        private bool getFlashConfigEmmc()
+        // Initialises the eMMC for access, its registers are shown in debug mode
+        private void InitEmmc()
         {
-            bool bIsValidEmmcFlashConfig = false;
+            Send(COMMANDS.EMMC_INIT);
+            UInt32 emmc_init_ret = RecvUInt32();
+            if (emmc_init_ret != 0)
+                throw new StatusException("eMMC init", emmc_init_ret);
 
-            SerialPort serial = OpenSerial();
+            Send(COMMANDS.EMMC_GET_CID);
+            byte[] CID = Recv(16);
 
-            try
+            Send(COMMANDS.EMMC_GET_CSD);
+            byte[] CSD = Recv(16);
+
+            Send(COMMANDS.EMMC_GET_EXT_CSD);
+            byte[] ext_csd = Recv(512);
+
+            if (!variables.debugMode)
+                return;
+
+            Console.Write("CID: ");
+            for (int i = 0; i < CID.Length; i++)
+                Console.Write(CID[i].ToString("X2"));
+            Console.WriteLine("");
+
+            Console.Write("CSD: ");
+            for (int i = 0; i < CSD.Length; i++)
+                Console.Write(CSD[i].ToString("X2"));
+            Console.WriteLine("");
+
+            UInt32[] csd = new UInt32[4];
+            Buffer.BlockCopy(CSD, 0, csd, 0, CSD.Length);
+
+            for (int i = 0; i < 4; i++)
             {
-                if (serial == null)
-                    return false;
-
-                Console.WriteLine("Checking Console...");
-                CMD cmd = new CMD();
-                cmd.cmd = COMMANDS.GET_FLASH_CONFIG;
-                cmd.lba = 0;
-                SendCmd(serial, cmd);
-                UInt32 flashconfig = RecvUInt32(serial);
-                SfcxConfig config = SfcxConfig.Decode(flashconfig);
-
-                byte emmc_det = 0;
-                if (Version >= 3)
-                {
-                    cmd.cmd = COMMANDS.EMMC_DETECT;
-                    SendCmd(serial, cmd);
-                    emmc_det = RecvUInt8(serial);
-                }
-
-                if (config.IsSupported)
-                {
-                    Console.WriteLine("Flash Config: 0x" + flashconfig.ToString("X8"));
-                    Console.WriteLine(config.Description);
-                }
-                else if (emmc_det == 0 && config.IsEmmc)
-                {
-                    Console.WriteLine("Flash Config: 0x" + flashconfig.ToString("X8"));
-                    Console.WriteLine("Corona/Winchester: 4GB (eMMC not connected)");
-                }
-                else if (emmc_det != 0)
-                {
-                    bIsValidEmmcFlashConfig = true;
-
-                    Console.WriteLine("Corona/Winchester: 4GB (eMMC connected)");
-
-                    cmd.cmd = COMMANDS.EMMC_INIT;
-                    SendCmd(serial, cmd);
-                    UInt32 emmc_init_ret = RecvUInt32(serial);
-
-                    if (emmc_init_ret != 0)
-                    {
-                        Console.WriteLine("eMMC init failed: " + emmc_init_ret);
-                    }
-                    else
-                    {
-                        cmd.cmd = COMMANDS.EMMC_GET_CID;
-                        SendCmd(serial, cmd);
-
-                        byte[] CID = new byte[16];
-                        int got = 0;
-                        while (got < CID.Length)
-                            got += serial.Read(CID, got, CID.Length - got);
-
-                        cmd.cmd = COMMANDS.EMMC_GET_CSD;
-                        SendCmd(serial, cmd);
-
-                        byte[] CSD = new byte[16];
-                        got = 0;
-                        while (got < CSD.Length)
-                            got += serial.Read(CSD, got, CSD.Length - got);
-
-                        cmd.cmd = COMMANDS.EMMC_GET_EXT_CSD;
-                        SendCmd(serial, cmd);
-
-                        byte[] ext_csd = new byte[512];
-                        got = 0;
-                        while (got < ext_csd.Length)
-                            got += serial.Read(ext_csd, got, ext_csd.Length - got);
-
-                        if (variables.debugMode)
-                        {
-                            Console.Write("CID: ");
-                            for (int i = 0; i < CID.Length; i++)
-                                Console.Write(CID[i].ToString("X2"));
-                            Console.WriteLine("");
-
-                            Console.Write("CSD: ");
-                            for (int i = 0; i < CSD.Length; i++)
-                                Console.Write(CSD[i].ToString("X2"));
-                            Console.WriteLine("");
-                        }
-
-                        UInt32[] csd = new UInt32[4];
-                        Buffer.BlockCopy(CSD, 0, csd, 0, CSD.Length);
-
-                        for (int i = 0; i < 4; i++)
-                        {
-                            byte[] bytes = BitConverter.GetBytes(csd[i]);
-                            Array.Reverse(bytes);
-                            csd[i] = BitConverter.ToUInt32(bytes, 0);
-                        }
-
-                        if (variables.debugMode)
-                        {
-                            Console.WriteLine("CSD_STRUCTURE: " + UNSTUFF_BITS(csd, 126, 2).ToString("X"));
-                            Console.WriteLine("TAAC: " + UNSTUFF_BITS(csd, 112, 8).ToString("X"));
-                            Console.WriteLine("TRAN_SPEED: " + UNSTUFF_BITS(csd, 96, 8).ToString("X"));
-                            Console.WriteLine("READ_BL_LEN: " + UNSTUFF_BITS(csd, 80, 4).ToString("X"));
-                            Console.WriteLine("READ_BL_PARTIAL: " + UNSTUFF_BITS(csd, 79, 1).ToString("X"));
-                            Console.WriteLine("C_SIZE: " + UNSTUFF_BITS(csd, 62, 12).ToString("X"));
-                            Console.WriteLine("C_SIZE_MULT: " + UNSTUFF_BITS(csd, 47, 3).ToString("X"));
-                            Console.WriteLine("ERASE_GRP_SIZE: " + UNSTUFF_BITS(csd, 42, 5).ToString("X"));
-
-                            Console.WriteLine("Extended CSD V1." + ext_csd[194].ToString()); // EXT_CSD_STRUCTURE
-                            Console.WriteLine(" Spec Version:  " + UNSTUFF_BITS(csd, 122, 4).ToString("X2"));
-                            Console.WriteLine(" Extended Rev:  1." + ext_csd[192].ToString()); // EXT_CSD_REV
-                        }
-
-                        byte[] devver = new byte[4];
-                        Buffer.BlockCopy(ext_csd, 262, devver, 0, 2); // EXT_CSD_DEVICE_VERSION
-
-                        if (variables.debugMode)
-                        {
-                            Console.WriteLine(" Dev Version:   " + BitConverter.ToUInt32(devver, 0).ToString());
-                            Console.WriteLine(" Cmd Classes:   " + UNSTUFF_BITS(csd, 84, 12).ToString("X2"));
-                            Console.WriteLine(" Capacity:      " + ((UNSTUFF_BITS(csd, 62, 12) == 0xfff && UNSTUFF_BITS(csd, 47, 3) == 7) ? "High" : "Low"));
-                        }
-
-                        byte card_type = ext_csd[196]; // EXT_CSD_CARD_TYPE
-                        int speed = 0;
-                        if ((card_type & (1 << 0)) != 0) // EXT_CSD_CARD_TYPE_HS_26
-                            speed = (26 << 16) | 26;
-                        if ((card_type & (1 << 1)) != 0) // EXT_CSD_CARD_TYPE_HS_52
-                            speed = (52 << 16) | 52;
-                        if ((card_type & (1 << 2)) != 0) // EXT_CSD_CARD_TYPE_DDR_1_8V
-                            speed = (52 << 16) | 104;
-                        if ((card_type & (1 << 4)) != 0) // EXT_CSD_CARD_TYPE_HS200_1_8V
-                            speed = (200 << 16) | 200;
-                        if ((card_type & (1 << 6)) != 0) // EXT_CSD_CARD_TYPE_HS400_1_8V
-                            speed = (200 << 16) | 400;
-
-                        if (variables.debugMode)
-                        {
-                            Console.WriteLine(" Max Rate:      " + (speed & 0xFFFF).ToString() + " MB/s (" + ((speed >> 16) & 0xFFFF).ToString() + " MHz)");
-                            Console.Write(" Type Support:  ");
-                            if ((card_type & (1 << 0)) != 0) // EXT_CSD_CARD_TYPE_HS_26
-                                Console.Write("HS26");
-                            if ((card_type & (1 << 1)) != 0) // EXT_CSD_CARD_TYPE_HS_52
-                                Console.Write(", HS52");
-                            if ((card_type & (1 << 2)) != 0) // EXT_CSD_CARD_TYPE_DDR_1_8V
-                                Console.Write(", DDR52_1.8V");
-                            if ((card_type & (1 << 4)) != 0) // EXT_CSD_CARD_TYPE_HS200_1_8V
-                                Console.Write(", HS200_1.8V");
-                            if ((card_type & (1 << 6)) != 0) // EXT_CSD_CARD_TYPE_HS400_1_8V
-                                Console.Write(", HS400_1.8V");
-                            Console.WriteLine("");
-                        }
-
-                        // Flash config alone cannot distinguish Corona from
-                        // Winchester eMMC. Read the same first 64KB used by
-                        // the SPI console check and let CB + SMC select the
-                        // exact motherboard (including Winchester CB 16128).
-                        Console.WriteLine("Checking CB...");
-                        const int sectorCount = 0x80;
-                        byte[] conf = new byte[sectorCount * 0x200];
-
-                        cmd.cmd = COMMANDS.EMMC_READ_STREAM;
-                        cmd.lba = sectorCount;
-                        SendCmd(serial, cmd);
-
-                        for (int sector = 0; sector < sectorCount; sector++)
-                        {
-                            UInt32 ret = RecvUInt32(serial);
-                            if (ret != 0)
-                                throw new IOException("PicoFlasher eMMC read error: 0x" + ret.ToString("X"));
-
-                            int sectorOffset = sector * 0x200;
-                            got = 0;
-                            while (got < 0x200)
-                                got += serial.Read(conf, sectorOffset + got, 0x200 - got);
-                        }
-
-                        variables.flashconfig = flashconfig.ToString("X8");
-                        variables.conf = conf;
-                        MainForm.mainForm.getcb_v(variables.flashconfig);
-                    }
-                }
-                else
-                {
-                    Console.WriteLine("Flash Config: 0x" + flashconfig.ToString("X8"));
-                    Console.WriteLine("Console Not Found");
-                }
-
-                Console.WriteLine("");
-                CloseSerial(serial);
-            }
-            catch (Exception ex)
-            {
-                CloseSerial(serial);
-
-                Console.WriteLine("PicoFlasher has encountered an error");
-                Console.WriteLine("Try to unplug and replug the device");
-                if (variables.debugMode) Console.WriteLine(ex.ToString());
-                else Console.WriteLine(ex.GetType());
-                Console.WriteLine("");
+                byte[] bytes = BitConverter.GetBytes(csd[i]);
+                Array.Reverse(bytes);
+                csd[i] = BitConverter.ToUInt32(bytes, 0);
             }
 
-            return bIsValidEmmcFlashConfig;
+            Console.WriteLine("CSD_STRUCTURE: " + UNSTUFF_BITS(csd, 126, 2).ToString("X"));
+            Console.WriteLine("TAAC: " + UNSTUFF_BITS(csd, 112, 8).ToString("X"));
+            Console.WriteLine("TRAN_SPEED: " + UNSTUFF_BITS(csd, 96, 8).ToString("X"));
+            Console.WriteLine("READ_BL_LEN: " + UNSTUFF_BITS(csd, 80, 4).ToString("X"));
+            Console.WriteLine("READ_BL_PARTIAL: " + UNSTUFF_BITS(csd, 79, 1).ToString("X"));
+            Console.WriteLine("C_SIZE: " + UNSTUFF_BITS(csd, 62, 12).ToString("X"));
+            Console.WriteLine("C_SIZE_MULT: " + UNSTUFF_BITS(csd, 47, 3).ToString("X"));
+            Console.WriteLine("ERASE_GRP_SIZE: " + UNSTUFF_BITS(csd, 42, 5).ToString("X"));
+
+            Console.WriteLine("Extended CSD V1." + ext_csd[194].ToString()); // EXT_CSD_STRUCTURE
+            Console.WriteLine(" Spec Version:  " + UNSTUFF_BITS(csd, 122, 4).ToString("X2"));
+            Console.WriteLine(" Extended Rev:  1." + ext_csd[192].ToString()); // EXT_CSD_REV
+
+            byte[] devver = new byte[4];
+            Buffer.BlockCopy(ext_csd, 262, devver, 0, 2); // EXT_CSD_DEVICE_VERSION
+
+            Console.WriteLine(" Dev Version:   " + BitConverter.ToUInt32(devver, 0).ToString());
+            Console.WriteLine(" Cmd Classes:   " + UNSTUFF_BITS(csd, 84, 12).ToString("X2"));
+            Console.WriteLine(" Capacity:      " + ((UNSTUFF_BITS(csd, 62, 12) == 0xfff && UNSTUFF_BITS(csd, 47, 3) == 7) ? "High" : "Low"));
+
+            byte card_type = ext_csd[196]; // EXT_CSD_CARD_TYPE
+            int speed = 0;
+            if ((card_type & (1 << 0)) != 0) // EXT_CSD_CARD_TYPE_HS_26
+                speed = (26 << 16) | 26;
+            if ((card_type & (1 << 1)) != 0) // EXT_CSD_CARD_TYPE_HS_52
+                speed = (52 << 16) | 52;
+            if ((card_type & (1 << 2)) != 0) // EXT_CSD_CARD_TYPE_DDR_1_8V
+                speed = (52 << 16) | 104;
+            if ((card_type & (1 << 4)) != 0) // EXT_CSD_CARD_TYPE_HS200_1_8V
+                speed = (200 << 16) | 200;
+            if ((card_type & (1 << 6)) != 0) // EXT_CSD_CARD_TYPE_HS400_1_8V
+                speed = (200 << 16) | 400;
+
+            Console.WriteLine(" Max Rate:      " + (speed & 0xFFFF).ToString() + " MB/s (" + ((speed >> 16) & 0xFFFF).ToString() + " MHz)");
+            Console.Write(" Type Support:  ");
+            if ((card_type & (1 << 0)) != 0) // EXT_CSD_CARD_TYPE_HS_26
+                Console.Write("HS26");
+            if ((card_type & (1 << 1)) != 0) // EXT_CSD_CARD_TYPE_HS_52
+                Console.Write(", HS52");
+            if ((card_type & (1 << 2)) != 0) // EXT_CSD_CARD_TYPE_DDR_1_8V
+                Console.Write(", DDR52_1.8V");
+            if ((card_type & (1 << 4)) != 0) // EXT_CSD_CARD_TYPE_HS200_1_8V
+                Console.Write(", HS200_1.8V");
+            if ((card_type & (1 << 6)) != 0) // EXT_CSD_CARD_TYPE_HS400_1_8V
+                Console.Write(", HS400_1.8V");
+            Console.WriteLine("");
+        }
+
+        // Selects the pages of a start/end block range, 0/0 selects all total pages
+        private static void PageRange(uint start, uint end, uint total, out uint first, out uint count)
+        {
+            first = 0;
+            count = total;
+            if (start == 0 && end == 0)
+                return;
+
+            first = Math.Min(start * PagesPerBlock, total);
+            count = Math.Max(Math.Min(end * PagesPerBlock, total), first) - first;
+        }
+
+        private static void ShowProgress(uint lba, uint first, uint count)
+        {
+            MainForm.mainForm.PicoFlasherBlocksUpdate((lba / PagesPerBlock).ToString("X"), (int)((lba - first) * 100L / count));
+        }
+
+        // eMMC blocks have no spare area unlike NAND pages
+        private static int PageSize(bool emmc)
+        {
+            return emmc ? 0x200 : SfcxConfig.RawBytesPerPage;
+        }
+
+        // Reads count NAND pages or eMMC blocks starting at first into output,
+        // a read from 0 uses a read stream
+        private void ReadPages(bool emmc, uint first, uint count, Stream output, bool progress)
+        {
+            bool stream = first == 0;
+            int pageSize = PageSize(emmc);
+            byte[] page = new byte[pageSize];
+
+            if (stream)
+                Send(emmc ? COMMANDS.EMMC_READ_STREAM : COMMANDS.READ_FLASH_STREAM, count);
+
+            for (uint lba = first; lba < first + count; lba++)
+            {
+                if (variables.escapeloop)
+                {
+                    // A cancelled stream keeps sending until the firmware times it out
+                    if (stream)
+                        Drain();
+                    throw new OperationCanceledException();
+                }
+
+                if (!stream)
+                    Send(emmc ? COMMANDS.EMMC_READ : COMMANDS.READ_FLASH, lba);
+
+                // A failure ends a stream with only its status
+                UInt32 ret = RecvUInt32();
+                if (ret != 0)
+                    throw new StatusException("read at page 0x" + lba.ToString("X"), ret);
+
+                Recv(page, 0, pageSize);
+                output.Write(page, 0, pageSize);
+
+                if (progress && (lba - first) % PagesPerBlock == 0)
+                    ShowProgress(lba, first, count);
+            }
+        }
+
+        private byte[] ReadPages(bool emmc, uint count)
+        {
+            using (MemoryStream output = new MemoryStream())
+            {
+                ReadPages(emmc, 0, count, output, false);
+                return output.ToArray();
+            }
+        }
+
+        // Reads count pages of pageSize bytes from input
+        private static byte[] ReadInput(BinaryReader input, uint count, int pageSize)
+        {
+            byte[] data = input.ReadBytes((int)count * pageSize);
+            if (data.Length != count * pageSize)
+                throw new EndOfStreamException();
+            return data;
+        }
+
+        // Writes count NAND pages or eMMC blocks from input starting at first, one per command
+        private void WritePagesSingle(bool emmc, uint first, uint count, BinaryReader input)
+        {
+            int pageSize = PageSize(emmc);
+
+            for (uint lba = first; lba < first + count; lba++)
+            {
+                if (variables.escapeloop)
+                    throw new OperationCanceledException();
+
+                byte[] page = ReadInput(input, 1, pageSize);
+                Send(emmc ? COMMANDS.EMMC_WRITE : COMMANDS.WRITE_FLASH, lba, page, 0, pageSize);
+
+                UInt32 ret = RecvUInt32();
+                if (ret != 0)
+                    throw new StatusException("write at page 0x" + lba.ToString("X"), ret);
+
+                if ((lba - first) % PagesPerBlock == 0)
+                    ShowProgress(lba, first, count);
+            }
+        }
+
+        // Streams count NAND pages or eMMC blocks from input starting at 0,
+        // the status arrives after the last one or on the first failure
+        private void WritePagesStream(bool emmc, uint count, BinaryReader input)
+        {
+            int pageSize = PageSize(emmc);
+            bool cancelled = false;
+            UInt32 ret = 0;
+
+            Send(emmc ? COMMANDS.EMMC_WRITE_STREAM : COMMANDS.WRITE_FLASH_STREAM, count);
+
+            for (uint lba = 0; lba < count; )
+            {
+                if (variables.escapeloop)
+                {
+                    cancelled = true;
+                    break;
+                }
+
+                // Stop sending as soon as the device reports a failure
+                if (serial.BytesToRead > 0)
+                {
+                    ret = RecvUInt32();
+                    if (ret == 0)
+                        throw new IOException("PicoFlasher: unexpected write stream status at page 0x" + lba.ToString("X"));
+                    break;
+                }
+
+                // Batched to keep the number of serial writes down
+                uint pages = Math.Min(count - lba, StreamWritePages);
+                byte[] data = ReadInput(input, pages, pageSize);
+                serial.Write(data, 0, data.Length);
+
+                ShowProgress(lba, 0, count);
+                lba += pages;
+            }
+
+            // The 1 byte trailer is a short packet, which completes the
+            // device's CDC transfer holding the last page
+            serial.Write(new byte[] { 0 }, 0, 1);
+
+            if (!cancelled && ret == 0)
+                ret = RecvUInt32();
+
+            if (cancelled || ret != 0)
+            {
+                // The firmware drops a cancelled stream, or discards the pages
+                // still in flight after a failure, once the line is idle
+                Drain();
+
+                if (cancelled)
+                    throw new OperationCanceledException();
+                throw new StatusException("write stream", ret);
+            }
+        }
+
+        // Writes count NAND pages or eMMC blocks from input starting at first,
+        // a write from 0 on v5 firmware uses a write stream
+        private void WritePages(bool emmc, uint first, uint count, BinaryReader input)
+        {
+            if (Version >= 5 && first == 0)
+                WritePagesStream(emmc, count, input);
+            else
+                WritePagesSingle(emmc, first, count, input);
+        }
+
+        private static string ElapsedTime(Stopwatch watch)
+        {
+            return string.Format("{0}:{1:D2}", (int)watch.Elapsed.TotalMinutes, watch.Elapsed.Seconds);
+        }
+
+        private static void PlaySuccess()
+        {
+            if (variables.playSuccess)
+            {
+                SoundPlayer success = new SoundPlayer(Properties.Resources.chime);
+                success.Play();
+            }
         }
 
         public void printFlashConfig()
         {
-            Thread getFlashConfigThread = new Thread(() =>
+            RunOperation("Console check", () =>
             {
-                SerialPort serial = OpenSerial();
-                try
+                variables.conf = null;
+
+                Target target = DetectConsole();
+                if (target == null)
                 {
-                    if (serial == null) return;
-
-                    uint flashconfig = getFlashConfig(serial);
-                    SfcxConfig config = SfcxConfig.Decode(flashconfig);
-                    if (config.IsNoDevice)
-                    {
-                        Console.WriteLine("Console Not Found");
-                        Console.WriteLine("");
-                        return;
-                    }
-
-                    if (config.IsEmmc)
-                    {
-                        // Preserve the detailed eMMC detection/CID path. Exact
-                        // motherboard selection for eMMC requires a separate
-                        // bootloader read path.
-                        CloseSerial(serial);
-                        serial = null;
-                        getFlashConfigEmmc();
-                        return;
-                    }
-
-                    if (!config.IsSupported)
-                    {
-                        Console.WriteLine("Unsupported SFCX flash configuration");
-                        Console.WriteLine("");
-                        return;
-                    }
-
-                    Console.WriteLine(config.Description);
-                    Console.WriteLine("Checking CB...");
-
-                    const int transferBlocks = 4;
-                    const int pagesPerTransferBlock = 0x20;
-                    const int pageCount = transferBlocks * pagesPerTransferBlock;
-                    byte[] conf = new byte[transferBlocks * SfcxConfig.TransferRawBytes];
-
-                    CMD cmd = new CMD();
-                    cmd.cmd = COMMANDS.READ_FLASH_STREAM;
-                    cmd.lba = pageCount;
-                    SendCmd(serial, cmd);
-
-                    for (int page = 0; page < pageCount; page++)
-                    {
-                        UInt32 ret = RecvUInt32(serial);
-                        if (ret != 0)
-                            throw new IOException("PicoFlasher read error: 0x" + ret.ToString("X"));
-
-                        int pageOffset = page * SfcxConfig.RawBytesPerPage;
-                        int got = 0;
-                        while (got < SfcxConfig.RawBytesPerPage)
-                            got += serial.Read(conf, pageOffset + got, SfcxConfig.RawBytesPerPage - got);
-                    }
-
-                    variables.flashconfig = flashconfig.ToString("X8");
-                    variables.conf = conf;
-                    MainForm.mainForm.getcb_v(variables.flashconfig);
                     Console.WriteLine("");
-                }
-                catch (Exception ex)
-                {
-                    variables.conf = null;
-                    Console.WriteLine("PicoFlasher console detection failed");
-                    Console.WriteLine(ex.Message);
-                    if (variables.debugMode) Console.WriteLine(ex.ToString());
-                    Console.WriteLine("");
-                }
-                finally
-                {
-                    if (serial != null) CloseSerial(serial);
-                }
-            });
-            getFlashConfigThread.Start();
-        }
-
-        private void ReadNand(int iterations, uint start = 0, uint end = 0)
-        {
-            Thread readerThread = new Thread(() =>
-            {
-                SerialPort serial = OpenSerial();
-
-                try
-                {
-                    if (serial == null)
-                        return;
-
-                    uint flashconfig = getFlashConfig(serial);
-
-                    if (flashconfig == 0x00000000 || flashconfig == 0xFFFFFFFF)
-                    {
-                        Console.WriteLine("Console Not Found");
-                        Console.WriteLine("");
-                        CloseSerial(serial);
-                        return;
-                    }
-
-                    uint flashsize = getFlashSize(flashconfig);
-                    SfcxConfig config = SfcxConfig.Decode(flashconfig);
-
-                    if (flashsize == 0)
-                    {
-                        Console.WriteLine("Unknown Flash Size");
-                        Console.WriteLine("");
-                        CloseSerial(serial);
-                        return;
-                    }
-
-                    if (config.HasMemoryUnit)
-                    {
-                        DialogResult bbdr = MessageBox.Show("A big block nand has been detected\n\nDo you want to dump only the system partition? (recommended)", "Nand Dump Size", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
-
-                        if (bbdr == DialogResult.Cancel)
-                        {
-                            CloseSerial(serial);
-                            return;
-                        }
-                        else if (bbdr == DialogResult.Yes)
-                        {
-                            flashsize = 67108864;
-                        }
-                    }
-
-                    for (int i = 0; i < iterations; i++)
-                    {
-                        variables.filename = variables.outfolder + "\\nanddump" + (i + 1) + ".bin";
-                        if (File.Exists(variables.filename))
-                        {
-                            if (DialogResult.Cancel == MessageBox.Show("A nand dump already exists!\n\nContinuing will cause the contents to be overwritten!", "File Conflict", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning))
-                            {
-                                Console.WriteLine("Cancelled");
-                                Console.WriteLine("");
-                                CloseSerial(serial);
-                                return;
-                            };
-                        }
-
-                        variables.reading = true;
-                        MainForm.mainForm.PicoFlasherBusy(1);
-
-                        Console.WriteLine("");
-                        Console.WriteLine("Reading Nand to {0}", variables.filename);
-
-                        BinaryWriter bw = new BinaryWriter(File.Open(variables.filename, FileMode.Create, FileAccess.Write));
-
-                        if (start == 0 && end == 0)
-                        {
-                            CMD cmd = new CMD();
-                            cmd.cmd = COMMANDS.READ_FLASH_STREAM;
-                            cmd.lba = flashsize / 512;
-
-                            SendCmd(serial, cmd);
-
-                            for (uint j = 0; j < flashsize / 512; j++)
-                            {
-                                if (variables.escapeloop)
-                                {
-                                    i = iterations + 1;
-                                    break;
-                                }
-
-                                UInt32 ret = RecvUInt32(serial);
-
-                                if (ret != 0)
-                                {
-                                    Console.WriteLine("Error: " + ret.ToString("X"));
-                                    Console.WriteLine("");
-                                    break;
-                                }
-
-                                byte[] rxbuffer = new byte[0x210];
-                                int got = 0;
-                                while (got < rxbuffer.Length)
-                                    got += serial.Read(rxbuffer, got, rxbuffer.Length - got);
-
-                                bw.Write(rxbuffer);
-
-                                if (j % 0x20 == 0)
-                                    MainForm.mainForm.PicoFlasherBlocksUpdate((j / 0x20).ToString("X"), (int)((j * 100) / (flashsize / 512)));
-                            }
-                        }
-                        else
-                        {
-                            for (uint j = (start * 0x20); j < (end * 0x20); j++)
-                            {
-                                if (variables.escapeloop)
-                                {
-                                    i = iterations + 1;
-                                    break;
-                                }
-
-                                CMD cmd = new CMD();
-                                cmd.cmd = COMMANDS.READ_FLASH;
-                                cmd.lba = j;
-
-                                SendCmd(serial, cmd);
-
-                                UInt32 ret = RecvUInt32(serial);
-
-                                if (ret != 0)
-                                {
-                                    Console.WriteLine("Error: " + ret.ToString("X"));
-                                    Console.WriteLine("");
-                                    break;
-                                }
-
-                                byte[] rxbuffer = new byte[0x210];
-                                int got = 0;
-                                while (got < rxbuffer.Length)
-                                    got += serial.Read(rxbuffer, got, rxbuffer.Length - got);
-
-                                bw.Write(rxbuffer);
-
-                                if (j % 0x20 == 0)
-                                    MainForm.mainForm.PicoFlasherBlocksUpdate((j / 0x20).ToString("X"), (int)((j * 100) / (flashsize / 512)));
-                            }
-                        }
-
-                        bw.Close();
-
-                        variables.reading = false;
-                        MainForm.mainForm.PicoFlasherBusy(0);
-
-                        Console.WriteLine("Read Successful!");
-                        Console.WriteLine("");
-
-                        if (variables.playSuccess)
-                        {
-                            SoundPlayer success = new SoundPlayer(Properties.Resources.chime);
-                            success.Play();
-                        }
-
-                        Thread.Sleep(1000);
-                        MainForm.mainForm.PicoFlasherInitNand(i);
-
-                        if (i + 1 < iterations)
-                            Thread.Sleep(1000);
-                    }
-
-                    CloseSerial(serial);
-                }
-                catch (Exception ex)
-                {
-                    CloseSerial(serial);
-
-                    Console.WriteLine("PicoFlasher has encountered an error");
-                    Console.WriteLine("Try to unplug and replug the device");
-                    if (variables.debugMode) Console.WriteLine(ex.ToString());
-                    else Console.WriteLine(ex.GetType());
-                    Console.WriteLine("");
-                }
-            });
-            readerThread.Start();
-        }
-
-        private void WriteNand(int fixEcc, uint start = 0, uint end = 0, bool isEccOrXell = false)
-        {
-            if (string.IsNullOrWhiteSpace(variables.filename1)) return;
-            if (!File.Exists(variables.filename1)) return;
-
-            Thread writerThread = new Thread(() =>
-            {
-                SerialPort serial = OpenSerial();
-
-                try
-                {
-                    if (serial == null)
-                        return;
-
-                    uint flashconfig = getFlashConfig(serial);
-
-                    if (flashconfig == 0x00000000 || flashconfig == 0xFFFFFFFF)
-                    {
-                        Console.WriteLine("Console Not Found");
-                        Console.WriteLine("");
-                        CloseSerial(serial);
-                        return;
-                    }
-
-                    uint flashsize = getFlashSize(flashconfig);
-                    if (flashsize == 0)
-                    {
-                        Console.WriteLine("Unknown Flash Size");
-                        Console.WriteLine("");
-                        CloseSerial(serial);
-                        return;
-                    }
-
-                    SfcxConfig config = SfcxConfig.Decode(flashconfig);
-                    int layout = config.IsSupported ? config.Layout : 1;
-
-                    variables.writing = true;
-                    MainForm.mainForm.PicoFlasherBusy(2);
-
-                    Console.WriteLine("");
-                    Console.WriteLine("Writing {0} to Nand", Path.GetFileName(variables.filename1));
-
-                    BinaryReader br = new BinaryReader(File.Open(variables.filename1, FileMode.Open, FileAccess.Read));
-
-                    long rawFileLength = new FileInfo(variables.filename1).Length;
-                    uint fileWriteEnd = (uint)((rawFileLength + (0x210 * 8) - 1) / (0x210 * 8));
-                    uint writeend = Math.Min(flashsize / (512 * 8), fileWriteEnd);
-                    if (start != 0 || end != 0)
-                        writeend = Math.Min(end, fileWriteEnd);
-
-                    for (uint j = start; j < writeend; j++)
-                    {
-                        byte[] read = br.ReadBytes(0x210 * 8);
-                        if (read == null || read.Length == 0 || read.Length % 0x210 != 0)
-                            break;
-
-                        if (fixEcc == 1)
-                            read = JRunner.Nand.Nand.addecc_v2(read, false, (int)(j * 0x4200), layout,
-                                config.IsSupported ? (int)config.PagesPerBlock : 0);
-
-                        for (uint k = 0; k < read.Length / 0x210; k++)
-                        {
-                            if (variables.escapeloop) break;
-
-                            CMD cmd = new CMD();
-                            cmd.cmd = COMMANDS.WRITE_FLASH;
-                            cmd.lba = j * 8 + k;
-
-                            int size = Marshal.SizeOf(cmd) + 0x210;
-                            byte[] arr = new byte[size];
-                            IntPtr ptr = Marshal.AllocHGlobal(size);
-                            Marshal.StructureToPtr(cmd, ptr, true);
-                            Marshal.Copy(ptr, arr, 0, size);
-                            Marshal.FreeHGlobal(ptr);
-                            Buffer.BlockCopy(read, (int)k * 0x210, arr, Marshal.SizeOf(cmd), 0x210);
-                            serial.Write(arr, 0, arr.Length);
-
-                            UInt32 ret = RecvUInt32(serial);
-                            if (ret != 0)
-                            {
-                                Console.WriteLine("Error: " + ret.ToString("X"));
-                                Console.WriteLine("");
-                                break;
-                            }
-                        }
-
-                        uint writeCount = Math.Max(1U, writeend - start);
-                        MainForm.mainForm.PicoFlasherBlocksUpdate((j / 4).ToString("X"), (int)(((j - start) * 100) / writeCount));
-                    }
-
-                    br.Close();
-
-                    variables.writing = false;
-                    MainForm.mainForm.PicoFlasherBusy(0);
-
-                    CloseSerial(serial);
-
-                    Console.WriteLine("Write Successful!");
-                    Console.WriteLine("");
-
-                    if (variables.playSuccess)
-                    {
-                        SoundPlayer success = new SoundPlayer(Properties.Resources.chime);
-                        success.Play();
-                    }
-
-                    if (isEccOrXell)
-                    {
-                        Thread.Sleep(500);
-                        MainForm.mainForm.afterWriteXeLLCleanup();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    CloseSerial(serial);
-
-                    Console.WriteLine("PicoFlasher has encountered an error");
-                    Console.WriteLine("Try to unplug and replug the device");
-                    if (variables.debugMode) Console.WriteLine(ex.ToString());
-                    else Console.WriteLine(ex.GetType());
-                    Console.WriteLine("");
-                }
-            });
-            writerThread.Start();
-        }
-
-        private void ReadEmmc(int iterations, uint start = 0, uint end = 0)
-        {
-            bool isValidEmmcFlashconfig = getFlashConfigEmmc();
-
-            if (!isValidEmmcFlashconfig)
-            {
-                if (DialogResult.No == MessageBox.Show("Unrecognized eMMC flashconfig.\n\nAre you sure you wish to continue with the read operation?", "PicoFlasher Warning", MessageBoxButtons.YesNo, MessageBoxIcon.Warning))
-                {
                     return;
                 }
-            }
 
-            Thread readerThread = new Thread(() =>
-            {
-                SerialPort serial = OpenSerial();
-
-                try
+                byte[] conf;
+                Console.WriteLine("Checking CB...");
+                if (target.IsEmmc)
                 {
-                    if (serial == null)
-                        return;
+                    InitEmmc();
 
-                    uint flashsize = 48 * 1024 * 1024; // On EMMC we only need the first 48MB
-
-                    for (int i = 0; i < iterations; i++)
-                    {
-                        variables.filename = variables.outfolder + "\\nanddump" + (i + 1) + ".bin";
-                        if (File.Exists(variables.filename))
-                        {
-                            if (DialogResult.Cancel == MessageBox.Show("A nand dump already exists!\n\nContinuing will cause the contents to be overwritten!", "File Conflict", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning))
-                            {
-                                Console.WriteLine("Cancelled");
-                                Console.WriteLine("");
-                                CloseSerial(serial);
-                                return;
-                            };
-                        }
-
-                        variables.reading = true;
-                        MainForm.mainForm.PicoFlasherBusy(1);
-                        Console.WriteLine("Reading Nand to {0}", variables.filename);
-
-                        BinaryWriter bw = new BinaryWriter(File.Open(variables.filename, FileMode.Create, FileAccess.Write));
-
-                        if (start == 0 && end == 0)
-                        {
-                            CMD cmd = new CMD();
-                            cmd.cmd = COMMANDS.EMMC_READ_STREAM;
-                            cmd.lba = flashsize / 512;
-
-                            SendCmd(serial, cmd);
-
-                            for (uint j = 0; j < flashsize / 512; j++)
-                            {
-                                if (variables.escapeloop)
-                                {
-                                    i = iterations + 1;
-                                    break;
-                                }
-
-                                UInt32 ret = RecvUInt32(serial);
-
-                                if (ret != 0)
-                                {
-                                    Console.WriteLine("Error: " + ret.ToString("X"));
-                                    Console.WriteLine("");
-                                    break;
-                                }
-
-                                byte[] rxbuffer = new byte[0x200];
-                                int got = 0;
-                                while (got < rxbuffer.Length)
-                                    got += serial.Read(rxbuffer, got, rxbuffer.Length - got);
-
-                                bw.Write(rxbuffer);
-
-                                if (j % 0x20 == 0)
-                                    MainForm.mainForm.PicoFlasherBlocksUpdate((j / 0x20).ToString("X"), (int)((j * 100) / (flashsize / 512)));
-                            }
-                        }
-                        else
-                        {
-                            for (uint j = (start * 0x20); j < (end * 0x20); j++)
-                            {
-                                if (variables.escapeloop)
-                                {
-                                    i = iterations + 1;
-                                    break;
-                                }
-
-                                CMD cmd = new CMD();
-                                cmd.cmd = COMMANDS.EMMC_READ;
-                                cmd.lba = j;
-
-                                SendCmd(serial, cmd);
-
-                                UInt32 ret = RecvUInt32(serial);
-
-                                if (ret != 0)
-                                {
-                                    Console.WriteLine("Error: " + ret.ToString("X"));
-                                    Console.WriteLine("");
-                                    break;
-                                }
-
-                                byte[] rxbuffer = new byte[0x200];
-                                int got = 0;
-                                while (got < rxbuffer.Length)
-                                    got += serial.Read(rxbuffer, got, rxbuffer.Length - got);
-
-                                bw.Write(rxbuffer);
-
-                                if (j % 0x20 == 0)
-                                    MainForm.mainForm.PicoFlasherBlocksUpdate((j / 0x20).ToString("X"), (int)((j * 100) / (flashsize / 512)));
-                            }
-                        }
-
-                        bw.Close();
-
-                        variables.reading = false;
-                        MainForm.mainForm.PicoFlasherBusy(0);
-
-                        Console.WriteLine("Read Successful!");
-                        Console.WriteLine("");
-
-                        if (variables.playSuccess)
-                        {
-                            SoundPlayer success = new SoundPlayer(Properties.Resources.chime);
-                            success.Play();
-                        }
-
-                        Thread.Sleep(1000);
-                        MainForm.mainForm.PicoFlasherInitNand(i);
-
-                        if (i + 1 < iterations)
-                            Thread.Sleep(1000);
-                    }
-
-                    CloseSerial(serial);
+                    // Flash config alone cannot distinguish Corona from
+                    // Winchester eMMC. Read the same first 64KB used by
+                    // the SPI console check and let CB + SMC select the
+                    // exact motherboard (including Winchester CB 16128).
+                    conf = ReadPages(true, 0x80);
                 }
-                catch (Exception ex)
+                else
                 {
-                    CloseSerial(serial);
-
-                    Console.WriteLine("PicoFlasher has encountered an error");
-                    Console.WriteLine("Try to unplug and replug the device");
-                    if (variables.debugMode) Console.WriteLine(ex.ToString());
-                    else Console.WriteLine(ex.GetType());
-                    Console.WriteLine("");
+                    conf = ReadPages(false, 4 * PagesPerBlock);
                 }
+
+                variables.flashconfig = target.FlashConfig.ToString("X8");
+                variables.conf = conf;
+                MainForm.mainForm.getcb_v(variables.flashconfig);
+                Console.WriteLine("");
             });
-            readerThread.Start();
-        }
-
-        private void WriteEmmc(uint start = 0, uint end = 0, bool isEccOrXell = false)
-        {
-            if (string.IsNullOrWhiteSpace(variables.filename1)) return;
-            if (!File.Exists(variables.filename1)) return;
-
-            bool isValidEmmcFlashconfig = getFlashConfigEmmc();
-
-            if (!isValidEmmcFlashconfig)
-            {
-                if (DialogResult.No == MessageBox.Show("Unrecognized eMMC flashconfig.\n\nAre you sure you wish to continue with the write operation?", "PicoFlasher Warning", MessageBoxButtons.YesNo, MessageBoxIcon.Warning))
-                {
-                    return;
-                }
-            }
-
-            Thread writerThread = new Thread(() =>
-            {
-                SerialPort serial = OpenSerial();
-
-                try
-                {
-                    if (serial == null)
-                        return;
-
-                    uint flashsize = 48 * 1024 * 1024; // On EMMC we only need the first 48MB
-
-                    variables.writing = true;
-                    MainForm.mainForm.PicoFlasherBusy(2);
-                    Console.WriteLine("Writing {0} to Nand", Path.GetFileName(variables.filename1));
-
-                    BinaryReader br = new BinaryReader(File.Open(variables.filename1, FileMode.Open, FileAccess.Read));
-
-                    uint writeend = flashsize / (512 * 8);
-                    if (start != 0 || end != 0)
-                        writeend = end;
-
-                    for (uint j = start; j < writeend; j++)
-                    {
-                        byte[] read = br.ReadBytes(0x200 * 8);
-                        if (read == null || read.Length % 0x200 != 0)
-                            break;
-
-                        for (uint k = 0; k < read.Length / 0x200; k++)
-                        {
-                            if (variables.escapeloop) break;
-
-                            CMD cmd = new CMD();
-                            cmd.cmd = COMMANDS.EMMC_WRITE;
-                            cmd.lba = j * 8 + k;
-
-                            int size = Marshal.SizeOf(cmd) + 0x200;
-                            byte[] arr = new byte[size];
-                            IntPtr ptr = Marshal.AllocHGlobal(size);
-                            Marshal.StructureToPtr(cmd, ptr, true);
-                            Marshal.Copy(ptr, arr, 0, size);
-                            Marshal.FreeHGlobal(ptr);
-                            Buffer.BlockCopy(read, (int)k * 0x200, arr, Marshal.SizeOf(cmd), 0x200);
-                            serial.Write(arr, 0, arr.Length);
-
-                            UInt32 ret = RecvUInt32(serial);
-                            if (ret != 0)
-                            {
-                                Console.WriteLine("Error: " + ret.ToString("X"));
-                                Console.WriteLine("");
-                                break;
-                            }
-                        }
-
-                        MainForm.mainForm.PicoFlasherBlocksUpdate((j / 4).ToString("X"), (int)((j * 100) / (flashsize / (512 * 8))));
-                    }
-
-                    br.Close();
-
-                    variables.writing = false;
-                    MainForm.mainForm.PicoFlasherBusy(0);
-
-                    CloseSerial(serial);
-
-                    Console.WriteLine("Write Successful!");
-                    Console.WriteLine("");
-
-                    if (variables.playSuccess)
-                    {
-                        SoundPlayer success = new SoundPlayer(Properties.Resources.chime);
-                        success.Play();
-                    }
-
-                    if (isEccOrXell)
-                    {
-                        Thread.Sleep(500);
-                        MainForm.mainForm.afterWriteXeLLCleanup();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    CloseSerial(serial);
-
-                    Console.WriteLine("PicoFlasher has encountered an error");
-                    Console.WriteLine("Try to unplug and replug the device");
-                    if (variables.debugMode) Console.WriteLine(ex.ToString());
-                    else Console.WriteLine(ex.GetType());
-                    Console.WriteLine("");
-                }
-            });
-            writerThread.Start();
         }
 
         public void Read(int iterations, uint start = 0, uint end = 0)
         {
-            Thread mainReadThread = new Thread(() =>
+            Console.WriteLine("PicoFlasher: Beginning Read");
+
+            RunOperation("Read", () =>
             {
-                byte emmc_det = 0;
-
-                Console.WriteLine("PicoFlasher: Beginning Read");
-
-                SerialPort serial = OpenSerial();
-
-                if (serial == null)
+                Target target = DetectConsole();
+                if (target == null)
                 {
-                    Console.WriteLine("PicoFlasher Error: OpenSerial returned null");
-                    return;
-                }
-
-                UInt32 flashconfig = getFlashConfig(serial);
-
-                // Old-school emmc picoflasher that uses the emmc header does a braindead
-                // thing where it returns flashconfig 0xFFFFFFFF instead of something useful
-                // such as the proper flashconfig for an emmc console 
-                if ((flashconfig & 0xF0000000) == 0xC0000000 || flashconfig == 0xFFFFFFFF)
-                {
-                    if (Version >= 3)
-                    {
-                        for (int i = 0; i < 10; i++)
-                        {
-                            CMD cmd = new CMD();
-                            cmd.cmd = COMMANDS.EMMC_DETECT;
-                            cmd.lba = 0;
-                            SendCmd(serial, cmd);
-                            emmc_det = RecvUInt8(serial);
-
-                            if (emmc_det != 0)
-                            {
-                                if (variables.debugMode) Console.WriteLine("PicoFlasher: eMMC detected.");
-                                break;
-                            }
-
-                            if (variables.debugMode) Console.WriteLine("PicoFlasher: eMMC flashconfig, but eMMC was not detected. Retrying.");
-                        }
-                    }
-
-                    if (emmc_det == 0)
-                    {
-                        if (variables.debugMode) Console.WriteLine("PicoFlasher error: eMMC flashconfig, but eMMC was not detected.");
-                    }
-                }
-
-                CloseSerial(serial);
-
-                if (flashconfig == 0x00000000 ||
-                    (((flashconfig & 0xF0000000) == 0xC0000000 || flashconfig == 0xFFFFFFFF) && emmc_det == 0))
-                {
-                    Console.WriteLine("Console Not Found");
                     Console.WriteLine("");
                     return;
                 }
 
-                if (emmc_det == 0)
-                    ReadNand(iterations, start, end);
+                uint total;
+                if (target.IsEmmc)
+                {
+                    InitEmmc();
+                    total = EmmcSystemBytes / 0x200;
+                }
                 else
-                    ReadEmmc(iterations, start, end);
+                {
+                    total = (uint)(target.Config.TotalDataBytes / SfcxConfig.DataBytesPerPage);
+
+                    if (target.Config.HasMemoryUnit)
+                    {
+                        DialogResult bbdr = MessageBox.Show("A big block nand has been detected\n\nDo you want to dump only the system partition? (recommended)", "Nand Dump Size", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
+
+                        if (bbdr == DialogResult.Cancel)
+                            return;
+                        else if (bbdr == DialogResult.Yes)
+                            total = (uint)(target.Config.SystemDataBytes / SfcxConfig.DataBytesPerPage);
+                    }
+                }
+
+                uint first, count;
+                PageRange(start, end, total, out first, out count);
+
+                for (int i = 0; i < iterations; i++)
+                {
+                    variables.filename = variables.outfolder + "\\nanddump" + (i + 1) + ".bin";
+                    if (File.Exists(variables.filename))
+                    {
+                        if (DialogResult.Cancel == MessageBox.Show("A nand dump already exists!\n\nContinuing will cause the contents to be overwritten!", "File Conflict", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning))
+                        {
+                            Console.WriteLine("Cancelled");
+                            Console.WriteLine("");
+                            return;
+                        }
+                    }
+
+                    Console.WriteLine("");
+                    Console.WriteLine("Reading Nand to {0}", variables.filename);
+
+                    Stopwatch watch = Stopwatch.StartNew();
+                    variables.reading = true;
+                    MainForm.mainForm.PicoFlasherBusy(1);
+                    try
+                    {
+                        using (FileStream output = File.Open(variables.filename, FileMode.Create, FileAccess.Write))
+                            ReadPages(target.IsEmmc, first, count, output, true);
+                    }
+                    finally
+                    {
+                        variables.reading = false;
+                        MainForm.mainForm.PicoFlasherBusy(0);
+                    }
+
+                    Console.WriteLine("Read Successful! Time Elapsed: {0}", ElapsedTime(watch));
+                    Console.WriteLine("");
+                    PlaySuccess();
+
+                    Thread.Sleep(1000);
+                    MainForm.mainForm.PicoFlasherInitNand(i);
+
+                    if (i + 1 < iterations)
+                        Thread.Sleep(1000);
+                }
             });
-            mainReadThread.Start();
         }
 
         public void Write(int fixEcc, uint start = 0, uint end = 0, bool isEccOrXell = false)
         {
-            Thread mainWriteThread = new Thread(() =>
+            string filename = variables.filename1;
+            if (string.IsNullOrWhiteSpace(filename)) return;
+            if (!File.Exists(filename)) return;
+
+            Console.WriteLine("PicoFlasher: Beginning Write");
+
+            RunOperation("Write", () =>
             {
-                byte emmc_det = 0;
-
-                Console.WriteLine("PicoFlasher: Beginning Write");
-
-                SerialPort serial = OpenSerial();
-
-                if (serial == null)
+                Target target = DetectConsole();
+                if (target == null)
                 {
-                    Console.WriteLine("PicoFlasher Error: OpenSerial returned null");
-                    return;
-                }
-
-                UInt32 flashconfig = getFlashConfig(serial);
-
-                // Old-school emmc picoflasher that uses the emmc header does a braindead
-                // thing where it returns flashconfig 0xFFFFFFFF instead of something useful
-                // such as the proper flashconfig for an emmc console 
-                if ((flashconfig & 0xF0000000) == 0xC0000000 || flashconfig == 0xFFFFFFFF)
-                {
-                    if (Version >= 3)
-                    {
-                        for (int i = 0; i < 10; i++)
-                        {
-                            CMD cmd = new CMD();
-                            cmd.cmd = COMMANDS.EMMC_DETECT;
-                            cmd.lba = 0;
-                            SendCmd(serial, cmd);
-                            emmc_det = RecvUInt8(serial);
-
-                            if (emmc_det != 0)
-                            {
-                                if (variables.debugMode) Console.WriteLine("PicoFlasher: eMMC detected.");
-                                break;
-                            }
-
-                            if (variables.debugMode) Console.WriteLine("PicoFlasher: eMMC flashconfig, but eMMC was not detected. Retrying.");
-                        }
-                    }
-
-                    if (emmc_det == 0)
-                    {
-                        if (variables.debugMode) Console.WriteLine("PicoFlasher error: eMMC flashconfig, but eMMC was not detected.");
-                    }
-                }
-
-                CloseSerial(serial);
-
-                if (flashconfig == 0x00000000 ||
-                    (((flashconfig & 0xF0000000) == 0xC0000000 || flashconfig == 0xFFFFFFFF) && emmc_det == 0))
-                {
-                    Console.WriteLine("Console Not Found");
                     Console.WriteLine("");
                     return;
                 }
 
-                if (emmc_det == 0)
-                    WriteNand(fixEcc, start, end, isEccOrXell);
+                uint total;
+                if (target.IsEmmc)
+                {
+                    InitEmmc();
+                    total = EmmcSystemBytes / 0x200;
+                }
                 else
-                    WriteEmmc(start, end, isEccOrXell);
+                {
+                    total = (uint)(target.Config.TotalDataBytes / SfcxConfig.DataBytesPerPage);
+                }
+
+                uint first, count;
+                PageRange(start, end, total, out first, out count);
+
+                // The image is written from its start, the ECC is regenerated
+                // for the pages it lands on before anything is written
+                Stream image;
+                if (fixEcc == 1 && !target.IsEmmc)
+                {
+                    SfcxConfig config = target.Config;
+                    image = new MemoryStream(JRunner.Nand.Nand.addecc_v2(File.ReadAllBytes(filename), false,
+                        (int)(first * SfcxConfig.RawBytesPerPage), config.Layout, (int)config.PagesPerBlock));
+                }
+                else
+                {
+                    image = File.Open(filename, FileMode.Open, FileAccess.Read);
+                }
+
+                using (BinaryReader input = new BinaryReader(image))
+                {
+                    // Up to the image's last whole page
+                    count = (uint)Math.Min(count, image.Length / PageSize(target.IsEmmc));
+
+                    Console.WriteLine("");
+                    Console.WriteLine("Writing {0} to Nand", Path.GetFileName(filename));
+
+                    Stopwatch watch = Stopwatch.StartNew();
+                    variables.writing = true;
+                    MainForm.mainForm.PicoFlasherBusy(2);
+                    try
+                    {
+                        WritePages(target.IsEmmc, first, count, input);
+                    }
+                    finally
+                    {
+                        variables.writing = false;
+                        MainForm.mainForm.PicoFlasherBusy(0);
+                    }
+
+                    Console.WriteLine("Write Successful! Time Elapsed: {0}", ElapsedTime(watch));
+                }
+
+                Console.WriteLine("");
+                PlaySuccess();
+            },
+            () =>
+            {
+                if (isEccOrXell)
+                {
+                    Thread.Sleep(500);
+                    MainForm.mainForm.afterWriteXeLLCleanup();
+                }
             });
-            mainWriteThread.Start();
+        }
+
+        // Erases length J-Runner blocks from start, length 0 erases size MB
+        public void Erase(int size, uint start, uint length)
+        {
+            Console.WriteLine("PicoFlasher: Beginning Erase");
+
+            RunOperation("Erase", () =>
+            {
+                if (Version < 4)
+                {
+                    Console.WriteLine("PicoFlasher: v" + Version + " firmware doesn't support erasing");
+                    Console.WriteLine("");
+                    return;
+                }
+
+                Target target = DetectConsole();
+                if (target == null)
+                {
+                    Console.WriteLine("");
+                    return;
+                }
+
+                if (target.IsEmmc)
+                {
+                    Console.WriteLine("PicoFlasher: eMMC can't be erased");
+                    Console.WriteLine("");
+                    return;
+                }
+
+                if (length == 0)
+                    length = (uint)size * 1024 * 1024 / (PagesPerBlock * SfcxConfig.DataBytesPerPage);
+
+                uint total = (uint)(target.Config.TotalDataBytes / SfcxConfig.DataBytesPerPage);
+                uint first, count;
+                PageRange(start, start + length, total, out first, out count);
+
+                // SFCX erases whole physical blocks, each one the range touches is erased
+                uint pagesPerEraseBlock = target.Config.PagesPerBlock;
+
+                Console.WriteLine("");
+                Console.WriteLine("Erasing Nand");
+
+                Stopwatch watch = Stopwatch.StartNew();
+                MainForm.mainForm.PicoFlasherBusy(3);
+                try
+                {
+                    for (uint lba = first / pagesPerEraseBlock * pagesPerEraseBlock; lba < first + count; lba += pagesPerEraseBlock)
+                    {
+                        if (variables.escapeloop)
+                            throw new OperationCanceledException();
+
+                        Send(COMMANDS.ERASE_FLASH, lba);
+
+                        UInt32 ret = RecvUInt32();
+                        if (ret != 0)
+                            throw new StatusException("erase at page 0x" + lba.ToString("X"), ret);
+
+                        ShowProgress(Math.Max(lba, first), first, count);
+                    }
+                }
+                finally
+                {
+                    MainForm.mainForm.PicoFlasherBusy(0);
+                }
+
+                Console.WriteLine("Erase Successful! Time Elapsed: {0}", ElapsedTime(watch));
+                Console.WriteLine("");
+                PlaySuccess();
+            });
         }
 
         public int Open()
@@ -1439,96 +1108,101 @@ namespace JRunner
             return 1;
         }
 
+        // The ISD1200 commands were removed from the firmware before protocol v5,
+        // which would take the data of an ISD write as commands
+        private void IsdSend(COMMANDS cmd, UInt32 arg = 0, byte[] data = null, int offset = 0, int count = 0)
+        {
+            if (Version >= 5)
+                throw new NotSupportedException("PicoFlasher v" + Version + " firmware does not support ISD1200 flashing, use a software flasher");
+
+            Send(cmd, arg, data, offset, count);
+        }
+
+        // Sends one ISD1200 command in its own session, false if the port could not be opened
+        private bool IsdCommand(COMMANDS cmd, UInt32 arg, out byte reply)
+        {
+            reply = 0;
+            if (!OpenPort())
+                return false;
+
+            try
+            {
+                IsdSend(cmd, arg);
+                reply = RecvUInt8();
+                return true;
+            }
+            finally
+            {
+                ClosePort();
+            }
+        }
+
+        // Reads the whole ISD1200 flash, null if the port could not be opened
+        private byte[] IsdReadFlash()
+        {
+            if (!OpenPort())
+                return null;
+
+            try
+            {
+                byte[] data = new byte[0xB000];
+
+                for (uint i = 0; i < 0xB000 / 512; i++)
+                {
+                    IsdSend(COMMANDS.ISD1200_READ_FLASH, i);
+                    Recv(data, (int)i * 512, 512);
+
+                    UpdateProgress?.Invoke((int)((i * 100) / (0xB000 / 512)));
+                }
+                UpdateProgress?.Invoke(100);
+
+                return data;
+            }
+            finally
+            {
+                ClosePort();
+            }
+        }
+
         public int PowerUp()
         {
-            SerialPort serial = OpenSerial();
-            if (serial == null)
-                return 0;
-
-            CMD cmd = new CMD();
-            cmd.cmd = COMMANDS.ISD1200_INIT;
-            cmd.lba = 0;
-
-            SendCmd(serial, cmd);
-
-            int ret = RecvUInt8(serial);
-
-            CloseSerial(serial);
-            return ret == 0 ? 1 : 0;
+            byte ret;
+            return IsdCommand(COMMANDS.ISD1200_INIT, 0, out ret) && ret == 0 ? 1 : 0;
         }
 
         public int GetID()
         {
-            SerialPort serial = OpenSerial();
-            if (serial == null)
+            byte id;
+            if (!IsdCommand(COMMANDS.ISD1200_READ_ID, 0, out id))
                 return 0;
 
-            CMD cmd = new CMD();
-            cmd.cmd = COMMANDS.ISD1200_READ_ID;
-            cmd.lba = 0;
-
-            SendCmd(serial, cmd);
-
-            int id = RecvUInt8(serial);
-
-            CloseSerial(serial);
-
-            if (id == 0x01)
+            switch (id)
             {
-                return 1;
+                case 0x01:
+                    return 1;
+                case 0x10:
+                    return 2;
+                case 0x11:
+                    return 3;
+                default:
+                    return 0;
             }
-            else if (id == 0x10)
-            {
-                return 2;
-            }
-            else if (id == 0x11)
-            {
-                return 3;
-            }
-
-            return 0;
         }
 
         public void PowerDown()
         {
-            SerialPort serial = OpenSerial();
-            if (serial == null)
-                return;
-
-            CMD cmd = new CMD();
-            cmd.cmd = COMMANDS.ISD1200_DEINIT;
-            cmd.lba = 0;
-
-            SendCmd(serial, cmd);
-
-            RecvUInt8(serial);
-
-            CloseSerial(serial);
+            byte ret;
+            IsdCommand(COMMANDS.ISD1200_DEINIT, 0, out ret);
         }
 
         public void Reset()
         {
-            SerialPort serial = OpenSerial();
-            if (serial == null)
-                return;
-
-            CMD cmd = new CMD();
-            cmd.cmd = COMMANDS.ISD1200_RESET;
-            cmd.lba = 0;
-
-            SendCmd(serial, cmd);
-
-            RecvUInt8(serial);
-
-            CloseSerial(serial);
+            byte ret;
+            IsdCommand(COMMANDS.ISD1200_RESET, 0, out ret);
         }
 
         public int ISD_Read_Flash(string filename)
         {
-            SerialPort serial = OpenSerial();
-            if (serial == null)
-                return 0;
-
             if (File.Exists(filename))
             {
                 if (DialogResult.Cancel == MessageBox.Show("A nand dump already exists!\n\nContinuing will cause the contents to be overwritten!", "File Conflict", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning))
@@ -1536,97 +1210,52 @@ namespace JRunner
                     Console.WriteLine("Cancelled");
                     Console.WriteLine("");
                     return 0;
-                };
+                }
             }
 
-            BinaryWriter bw = new BinaryWriter(File.Open(filename, FileMode.Create, FileAccess.Write));
+            byte[] data = IsdReadFlash();
+            if (data == null)
+                return 0;
 
-            for (uint i = 0; i < 0xB000 / 512; i++)
-            {
-                CMD cmd = new CMD();
-                cmd.cmd = COMMANDS.ISD1200_READ_FLASH;
-                cmd.lba = i;
-
-                SendCmd(serial, cmd);
-
-                byte[] rxbuffer = new byte[512];
-                int got = 0;
-                while (got < rxbuffer.Length)
-                    got += serial.Read(rxbuffer, got, rxbuffer.Length - got);
-
-                bw.Write(rxbuffer);
-
-                UpdateProgress((int)((i * 100) / (0xB000 / 512)));
-            }
-            UpdateProgress(100);
-
-            bw.Close();
-
-            CloseSerial(serial);
-
+            File.WriteAllBytes(filename, data);
             return 1;
         }
 
         public int ISD_Erase_Flash()
         {
-            SerialPort serial = OpenSerial();
-            if (serial == null)
-                return 0;
-
-            CMD cmd = new CMD();
-            cmd.cmd = COMMANDS.ISD1200_ERASE_FLASH;
-            cmd.lba = 0;
-
-            SendCmd(serial, cmd);
-
-            int ret = RecvUInt8(serial);
-
-            CloseSerial(serial);
-            return ret == 0 ? 1 : 0;
+            byte ret;
+            return IsdCommand(COMMANDS.ISD1200_ERASE_FLASH, 0, out ret) && ret == 0 ? 1 : 0;
         }
 
         public void ISD_Write_Flash(string filename)
         {
-            SerialPort serial = OpenSerial();
-            if (serial == null)
+            byte[] file = File.ReadAllBytes(filename);
+
+            if (!OpenPort())
                 return;
 
-            BinaryReader br = new BinaryReader(File.Open(filename, FileMode.Open, FileAccess.Read));
-
-            for (uint i = 0; i < 0xB000 / 16; i++)
+            try
             {
-                byte[] read = br.ReadBytes(16);
-                if (read == null || read.Length != 16)
-                    break;
-
-                CMD cmd = new CMD();
-                cmd.cmd = COMMANDS.ISD1200_WRITE_FLASH;
-                cmd.lba = i;
-
-                int size = Marshal.SizeOf(cmd) + read.Length;
-                byte[] arr = new byte[size];
-                IntPtr ptr = Marshal.AllocHGlobal(size);
-                Marshal.StructureToPtr(cmd, ptr, true);
-                Marshal.Copy(ptr, arr, 0, size);
-                Marshal.FreeHGlobal(ptr);
-                read.CopyTo(arr, Marshal.SizeOf(cmd));
-                serial.Write(arr, 0, arr.Length);
-
-                UInt32 ret = RecvUInt32(serial);
-                if (ret != 0)
+                for (uint i = 0; i < Math.Min(file.Length, 0xB000) / 16; i++)
                 {
-                    Console.WriteLine("Error: " + ret.ToString("X"));
-                    Console.WriteLine("");
-                    break;
+                    IsdSend(COMMANDS.ISD1200_WRITE_FLASH, i, file, (int)i * 16, 16);
+
+                    UInt32 ret = RecvUInt32();
+                    if (ret != 0)
+                    {
+                        Console.WriteLine("Error: " + ret.ToString("X"));
+                        Console.WriteLine("");
+                        break;
+                    }
+
+                    UpdateProgress?.Invoke((int)((i * 100) / (0xB000 / 16)));
                 }
-
-                UpdateProgress((int)((i * 100) / (0xB000 / 16)));
+                UpdateProgress?.Invoke(100);
             }
-            UpdateProgress(100);
-
-            br.Close();
-
-            CloseSerial(serial);
+            finally
+            {
+                ClosePort();
+            }
         }
 
         public Boolean ISD_Verify_Flash(string filename)
@@ -1642,69 +1271,25 @@ namespace JRunner
                 log("Image file must be 44Kb\n");
                 return false;
             }
-            BinaryReader rw = new BinaryReader(File.Open(filename, FileMode.Open, FileAccess.Read));
-            byte[] file = rw.ReadBytes(0xB000);
-            rw.Close();
+            byte[] file = File.ReadAllBytes(filename);
 
-            SerialPort serial = OpenSerial();
-            if (serial == null)
+            byte[] data = IsdReadFlash();
+            if (data == null)
                 return false;
-
-            byte[] data = new byte[0xB000];
-
-            for (uint i = 0; i < 0xB000 / 512; i++)
-            {
-                CMD cmd = new CMD();
-                cmd.cmd = COMMANDS.ISD1200_READ_FLASH;
-                cmd.lba = i;
-
-                SendCmd(serial, cmd);
-
-                int got = 0;
-                while (got < 512)
-                    got += serial.Read(data, (int) i * 512 + got, 512 - got);
-
-                UpdateProgress((int)((i * 100) / (0xB000 / 512)));
-            }
-            UpdateProgress(100);
-
-            CloseSerial(serial);
 
             return Oper.ByteArrayCompare(file, data);
         }
 
         public void ISD_Play(ushort index)
         {
-            SerialPort serial = OpenSerial();
-            if (serial == null)
-                return;
-
-            CMD cmd = new CMD();
-            cmd.cmd = COMMANDS.ISD1200_PLAY_VOICE;
-            cmd.lba = index;
-
-            SendCmd(serial, cmd);
-
-            RecvUInt8(serial);
-
-            CloseSerial(serial);
+            byte ret;
+            IsdCommand(COMMANDS.ISD1200_PLAY_VOICE, index, out ret);
         }
 
         public void ISD_Exec(ushort index)
         {
-            SerialPort serial = OpenSerial();
-            if (serial == null)
-                return;
-
-            CMD cmd = new CMD();
-            cmd.cmd = COMMANDS.ISD1200_EXEC_MACRO;
-            cmd.lba = index;
-
-            SendCmd(serial, cmd);
-
-            RecvUInt8(serial);
-
-            CloseSerial(serial);
+            byte ret;
+            IsdCommand(COMMANDS.ISD1200_EXEC_MACRO, index, out ret);
         }
     }
 }
