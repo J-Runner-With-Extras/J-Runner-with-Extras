@@ -2157,8 +2157,6 @@ namespace JRunner
                 variables.foundXlUsb = false;
                 variables.foundXlHdd = false;
                 variables.foundXlBoth = false;
-                variables.foundUsbdSec = false;
-                variables.foundCoronaKeyFix = false;
 
                 FileStream fs = new FileStream(variables.filename1, FileMode.Open);
                 byte[] patchesByte = new byte[0x5F230];
@@ -2235,12 +2233,13 @@ namespace JRunner
                 // Elpis/Rhea Xenon
                 if ((nand.bl.CB_A >= 7373 && nand.bl.CB_A <= 7378) || (nand.bl.CB_B >= 7373 && nand.bl.CB_B <= 7378)) xPanel.setElpisChecked(true);
 
+                // Zeus/Kronos Xenon/Zephyr/Falcon
+                if ((nand.bl.CB_A >= 6712 && nand.bl.CB_A <= 6754) || (nand.bl.CB_B >= 6712 && nand.bl.CB_B <= 6754)) xPanel.setZeusKronosChecked(true);
+
                 // Patches
                 xPanel.setXLUSBChecked(variables.foundXlUsb);
                 xPanel.setXLHDDChecked(variables.foundXlHdd);
                 xPanel.setXLBothChecked(variables.foundXlBoth);
-                xPanel.setUsbdSecChecked(variables.foundUsbdSec);
-                xPanel.setCoronaKeyFixChecked(variables.foundCoronaKeyFix);
 
                 variables.gotvalues = !string.IsNullOrEmpty(variables.cpukey);
 

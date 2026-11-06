@@ -32,7 +32,6 @@
             this.groupBox7 = new System.Windows.Forms.GroupBox();
             this.MainTabs = new System.Windows.Forms.TabControl();
             this.tabXeBuild = new System.Windows.Forms.TabPage();
-            this.chkElpis = new System.Windows.Forms.CheckBox();
             this.Rgh3Label2 = new System.Windows.Forms.Label();
             this.Rgh3Label = new System.Windows.Forms.Label();
             this.Rgh3Mhz = new System.Windows.Forms.ComboBox();
@@ -41,7 +40,6 @@
             this.chkCR4 = new System.Windows.Forms.CheckBox();
             this.chkCleanSMC = new System.Windows.Forms.CheckBox();
             this.chkXdkBuild = new System.Windows.Forms.CheckBox();
-            this.chk0Fuse = new System.Windows.Forms.CheckBox();
             this.rbtnDevGL = new System.Windows.Forms.RadioButton();
             this.chkSMCP = new System.Windows.Forms.CheckBox();
             this.labelCB = new System.Windows.Forms.Label();
@@ -62,8 +60,6 @@
             this.rbtnGlitch = new System.Windows.Forms.RadioButton();
             this.tabPatches = new System.Windows.Forms.TabPage();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
-            this.chkCoronaKeyFix = new System.Windows.Forms.CheckBox();
-            this.chkUsbdSec = new System.Windows.Forms.CheckBox();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
             this.chkXLBoth = new System.Windows.Forms.CheckBox();
             this.chkXLHdd = new System.Windows.Forms.CheckBox();
@@ -105,6 +101,8 @@
             this.chkNoWrite = new System.Windows.Forms.CheckBox();
             this.btnXEUpdate = new System.Windows.Forms.Button();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
+            this.chkElpis = new System.Windows.Forms.CheckBox();
+            this.chkZeusKronos = new System.Windows.Forms.CheckBox();
             this.groupBox7.SuspendLayout();
             this.MainTabs.SuspendLayout();
             this.tabXeBuild.SuspendLayout();
@@ -144,7 +142,6 @@
             // tabXeBuild
             // 
             this.tabXeBuild.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(240)))), ((int)(((byte)(240)))), ((int)(((byte)(240)))));
-            this.tabXeBuild.Controls.Add(this.chkElpis);
             this.tabXeBuild.Controls.Add(this.Rgh3Label2);
             this.tabXeBuild.Controls.Add(this.Rgh3Label);
             this.tabXeBuild.Controls.Add(this.Rgh3Mhz);
@@ -153,7 +150,6 @@
             this.tabXeBuild.Controls.Add(this.chkCR4);
             this.tabXeBuild.Controls.Add(this.chkCleanSMC);
             this.tabXeBuild.Controls.Add(this.chkXdkBuild);
-            this.tabXeBuild.Controls.Add(this.chk0Fuse);
             this.tabXeBuild.Controls.Add(this.rbtnDevGL);
             this.tabXeBuild.Controls.Add(this.chkSMCP);
             this.tabXeBuild.Controls.Add(this.labelCB);
@@ -176,19 +172,6 @@
             this.tabXeBuild.Size = new System.Drawing.Size(323, 110);
             this.tabXeBuild.TabIndex = 0;
             this.tabXeBuild.Text = "Home";
-            // 
-            // chkElpis
-            // 
-            this.chkElpis.AutoSize = true;
-            this.chkElpis.ForeColor = System.Drawing.SystemColors.ControlText;
-            this.chkElpis.Location = new System.Drawing.Point(229, 21);
-            this.chkElpis.Name = "chkElpis";
-            this.chkElpis.Size = new System.Drawing.Size(79, 17);
-            this.chkElpis.TabIndex = 100;
-            this.chkElpis.Text = "Elpis/Rhea";
-            this.toolTip1.SetToolTip(this.chkElpis, "Use 7378 CB_B for consoles with Elpis or Rhea GPUs");
-            this.chkElpis.UseVisualStyleBackColor = true;
-            this.chkElpis.CheckedChanged += new System.EventHandler(this.chkElpis_CheckedChanged);
             // 
             // Rgh3Label2
             // 
@@ -289,19 +272,6 @@
         " in the common folder");
             this.chkXdkBuild.UseVisualStyleBackColor = true;
             this.chkXdkBuild.CheckedChanged += new System.EventHandler(this.chkXdkBuild_CheckedChanged);
-            // 
-            // chk0Fuse
-            // 
-            this.chk0Fuse.AutoSize = true;
-            this.chk0Fuse.ForeColor = System.Drawing.SystemColors.ControlText;
-            this.chk0Fuse.Location = new System.Drawing.Point(229, 74);
-            this.chk0Fuse.Name = "chk0Fuse";
-            this.chk0Fuse.Size = new System.Drawing.Size(58, 17);
-            this.chk0Fuse.TabIndex = 22;
-            this.chk0Fuse.Text = "0 Fuse";
-            this.toolTip1.SetToolTip(this.chk0Fuse, "Check if building for a 0 Fuse console");
-            this.chk0Fuse.UseVisualStyleBackColor = true;
-            this.chk0Fuse.CheckedChanged += new System.EventHandler(this.chk0Fuse_CheckedChanged);
             // 
             // rbtnDevGL
             // 
@@ -525,40 +495,14 @@
             // 
             // groupBox2
             // 
-            this.groupBox2.Controls.Add(this.chkCoronaKeyFix);
-            this.groupBox2.Controls.Add(this.chkUsbdSec);
+            this.groupBox2.Controls.Add(this.chkZeusKronos);
+            this.groupBox2.Controls.Add(this.chkElpis);
             this.groupBox2.Location = new System.Drawing.Point(210, 3);
             this.groupBox2.Name = "groupBox2";
             this.groupBox2.Size = new System.Drawing.Size(104, 61);
             this.groupBox2.TabIndex = 8;
             this.groupBox2.TabStop = false;
-            this.groupBox2.Text = "Other Patches";
-            // 
-            // chkCoronaKeyFix
-            // 
-            this.chkCoronaKeyFix.AutoSize = true;
-            this.chkCoronaKeyFix.Enabled = false;
-            this.chkCoronaKeyFix.Location = new System.Drawing.Point(21, 37);
-            this.chkCoronaKeyFix.Name = "chkCoronaKeyFix";
-            this.chkCoronaKeyFix.Size = new System.Drawing.Size(60, 17);
-            this.chkCoronaKeyFix.TabIndex = 1;
-            this.chkCoronaKeyFix.Text = "Key Fix";
-            this.toolTip1.SetToolTip(this.chkCoronaKeyFix, "Patch Freeboot to fix an issue on Corona that may affect certain games");
-            this.chkCoronaKeyFix.UseVisualStyleBackColor = true;
-            this.chkCoronaKeyFix.CheckedChanged += new System.EventHandler(this.chkCoronaKeyFix_CheckedChanged);
-            // 
-            // chkUsbdSec
-            // 
-            this.chkUsbdSec.AutoSize = true;
-            this.chkUsbdSec.Enabled = false;
-            this.chkUsbdSec.Location = new System.Drawing.Point(21, 18);
-            this.chkUsbdSec.Name = "chkUsbdSec";
-            this.chkUsbdSec.Size = new System.Drawing.Size(70, 17);
-            this.chkUsbdSec.TabIndex = 0;
-            this.chkUsbdSec.Text = "UsbdSec";
-            this.toolTip1.SetToolTip(this.chkUsbdSec, "Patch Freeboot to allow use of custom USB peripherals, like controllers");
-            this.chkUsbdSec.UseVisualStyleBackColor = true;
-            this.chkUsbdSec.CheckedChanged += new System.EventHandler(this.chkUsbdSec_CheckedChanged);
+            this.groupBox2.Text = "GPU Patches";
             // 
             // groupBox1
             // 
@@ -1028,6 +972,33 @@
             this.btnXEUpdate.UseVisualStyleBackColor = true;
             this.btnXEUpdate.Click += new System.EventHandler(this.btnXEUpdate_Click);
             // 
+            // chkElpis
+            // 
+            this.chkElpis.AutoSize = true;
+            this.chkElpis.ForeColor = System.Drawing.SystemColors.ControlText;
+            this.chkElpis.Location = new System.Drawing.Point(6, 18);
+            this.chkElpis.Name = "chkElpis";
+            this.chkElpis.Size = new System.Drawing.Size(79, 17);
+            this.chkElpis.TabIndex = 101;
+            this.chkElpis.Text = "Elpis/Rhea";
+            this.toolTip1.SetToolTip(this.chkElpis, "Use 7378 CB_B for consoles with Elpis or Rhea GPUs");
+            this.chkElpis.UseVisualStyleBackColor = true;
+            this.chkElpis.CheckedChanged += new System.EventHandler(this.chkElpis_CheckedChanged);
+            // 
+            // chkZeusKronos
+            // 
+            this.chkZeusKronos.AutoSize = true;
+            this.chkZeusKronos.ForeColor = System.Drawing.SystemColors.ControlText;
+            this.chkZeusKronos.Location = new System.Drawing.Point(6, 37);
+            this.chkZeusKronos.Name = "chkZeusKronos";
+            this.chkZeusKronos.Size = new System.Drawing.Size(88, 17);
+            this.chkZeusKronos.TabIndex = 102;
+            this.chkZeusKronos.Text = "Zeus/Kronos";
+            this.toolTip1.SetToolTip(this.chkZeusKronos, "Use Jasper CB_B for Xenon, Zephyr, or Falcon consoles that have a Zeus or Kronos " +
+        "GPU installed");
+            this.chkZeusKronos.UseVisualStyleBackColor = true;
+            this.chkZeusKronos.CheckedChanged += new System.EventHandler(this.chkZeusKronos_CheckedChanged);
+            // 
             // XeBuildPanel
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -1106,7 +1077,6 @@
         private System.Windows.Forms.ComboBox comboCB;
         private System.Windows.Forms.CheckBox chkSMCP;
         private System.Windows.Forms.RadioButton rbtnDevGL;
-        private System.Windows.Forms.CheckBox chk0Fuse;
         private System.Windows.Forms.CheckBox chkXdkBuild;
         private System.Windows.Forms.CheckBox chkCleanSMC;
         private System.Windows.Forms.CheckBox chkCR4;
@@ -1121,7 +1091,6 @@
         private System.Windows.Forms.CheckBox chkXLHdd;
         private System.Windows.Forms.Button btnShowAdvanced;
         private System.Windows.Forms.GroupBox groupBox2;
-        private System.Windows.Forms.CheckBox chkUsbdSec;
         private System.Windows.Forms.TabPage tabUpdate;
         private System.Windows.Forms.Label lblDash;
         private System.Windows.Forms.Label lblD;
@@ -1133,8 +1102,8 @@
         private System.Windows.Forms.CheckBox chkNoWrite;
         private System.Windows.Forms.Button btnXEUpdate;
         private System.Windows.Forms.CheckBox chkXLBoth;
-        private System.Windows.Forms.CheckBox chkCoronaKeyFix;
-        private System.Windows.Forms.CheckBox chkElpis;
         private System.Windows.Forms.Label Rgh3Label2;
+        private System.Windows.Forms.CheckBox chkZeusKronos;
+        private System.Windows.Forms.CheckBox chkElpis;
     }
 }

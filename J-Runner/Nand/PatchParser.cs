@@ -132,14 +132,6 @@ namespace JRunner.Nand
                                 {
                                     variables.foundXlUsb = true;
                                 }
-                                else if (patch.name == "UsbdSec")
-                                {
-                                    variables.foundUsbdSec = true;
-                                }
-                                else if (patch.name == "CoronaKeyFix")
-                                {
-                                    variables.foundCoronaKeyFix = true;
-                                }
                             }
                         }
                     }
